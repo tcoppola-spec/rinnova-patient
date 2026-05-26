@@ -1,22 +1,14 @@
 /**
  * VisitCard
  *
- * A single visit row in the timeline. Shows the date, provider, list of
- * treatments with their colors + summaries + doses, and optional cost.
- *
- * Tapping the card will eventually open the detail modal (built in Step 4).
- * For now, tapping shows an alert.
+ * A single visit row in the timeline. Tapping calls onClick prop —
+ * the parent decides what to do (typically open the detail modal).
  *
  * Props:
- *   visit: a visit object from data.visits, with nested treatments.
- *     treatments[].treatment_areas are NOT shown in the card (they're
- *     shown in the detail modal via the face diagram).
+ *   visit: a visit object with nested treatments
+ *   onClick: function to call when the card is tapped
  */
-function VisitCard({ visit }) {
-  function handleClick() {
-    alert(`Visit detail (face diagram + areas) comes in Step 4.`)
-  }
-
+function VisitCard({ visit, onClick }) {
   // Format the date nicely: "April 24, 2026"
   const visitDateFormatted = new Date(visit.visit_date + 'T00:00:00').toLocaleDateString('en-US', {
     year: 'numeric',
@@ -24,7 +16,6 @@ function VisitCard({ visit }) {
     day: 'numeric',
   })
 
-  // Currency format the cost if present (e.g., 2500.00 → "$2,500")
   const costFormatted = visit.cost != null
     ? new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -34,7 +25,7 @@ function VisitCard({ visit }) {
     : null
 
   return (
-    <button type="button" onClick={handleClick} className="visit-card">
+    <button type="button" onClick={onClick} className="visit-card">
       <div className="visit-card-head">
         <div className="visit-card-date">{visitDateFormatted}</div>
         {visit.provider_name && (

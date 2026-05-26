@@ -10,6 +10,7 @@ import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
 import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
+import VisitDetailModal from './VisitDetailModal'
 import './App.css'
 
 function App() {
@@ -17,6 +18,9 @@ function App() {
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const { data, loading: dataLoading, error: dataError } = usePatientData()
+
+  // Which visit's modal is currently open (null = no modal)
+  const [openVisit, setOpenVisit] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -96,7 +100,10 @@ function App() {
 
         <LogVisitPrompt />
 
-        <VisitsTimeline visits={visits} />
+        <VisitsTimeline
+          visits={visits}
+          onVisitClick={(visit) => setOpenVisit(visit)}
+        />
 
         <PhotosSection photos={photos} />
 
@@ -106,6 +113,13 @@ function App() {
 
         <PageFooter />
       </div>
+
+      {openVisit && (
+        <VisitDetailModal
+          visit={openVisit}
+          onClose={() => setOpenVisit(null)}
+        />
+      )}
     </div>
   )
 }

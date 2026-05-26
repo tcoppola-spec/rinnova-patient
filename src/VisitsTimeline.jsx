@@ -1,15 +1,6 @@
 import VisitCard from './VisitCard'
 
-/**
- * VisitsTimeline
- *
- * The "Your visits" section. Section header with the visit count,
- * then a stack of VisitCard components.
- *
- * Props:
- *   visits: array of visit objects (already sorted by date desc by the hook)
- */
-function VisitsTimeline({ visits }) {
+function VisitsTimeline({ visits, onVisitClick }) {
   if (!visits || visits.length === 0) {
     return (
       <section className="section">
@@ -33,7 +24,11 @@ function VisitsTimeline({ visits }) {
       </div>
       <div className="visits-list">
         {visits.map((visit) => (
-          <VisitCard key={visit.id} visit={visit} />
+          <VisitCard
+            key={visit.id}
+            visit={visit}
+            onClick={() => onVisitClick(visit)}
+          />
         ))}
       </div>
     </section>
