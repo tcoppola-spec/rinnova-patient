@@ -1,3 +1,4 @@
+cat > src/App.css << 'EOF'
 /* ============ APP SHELL & UTILITY ============ */
 
 .loading-state {
@@ -190,18 +191,7 @@
   margin-left: 12px;
 }
 
-/* ============ DEV NOTE (TEMPORARY) ============ */
-
-.dev-note {
-  margin-top: 24px;
-  padding: 12px 16px;
-  background: var(--line-soft);
-  border-radius: 10px;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-}
-/* ============ SECTION (reusable section header pattern) ============ */
+/* ============ SECTION (reusable header pattern) ============ */
 
 .section {
   margin-top: 28px;
@@ -243,7 +233,7 @@
 .visits-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .visit-card {
@@ -265,102 +255,55 @@
   box-shadow: 0 2px 8px rgba(23, 23, 46, 0.04);
 }
 
-.visit-card-head {
-  margin-bottom: 14px;
-}
-
 .visit-card-date {
-  font-family: var(--f-display);
-  font-size: 17px;
-  font-weight: 400;
-  color: var(--ink);
-  letter-spacing: -0.01em;
-  margin-bottom: 2px;
-}
-
-.visit-card-provider {
-  font-size: 12.5px;
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
 }
 
-.visit-card-treatments {
+.visit-card-regions {
+  font-family: var(--f-display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.visit-card-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.visit-card-cta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--magenta);
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 6px 0;
+  align-items: center;
+  gap: 4px;
 }
 
-.treatment-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
+/* Treatment dot colors — used by modal treatment list and legend */
 .treatment-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 6px;
+  display: inline-block;
 }
 
-/* Color keys for treatments — locked from design system */
 .treatment-dot-xeomin { background: var(--purple); }
 .treatment-dot-radiesse { background: var(--magenta); }
 .treatment-dot-radiesse-light { background: var(--coral); }
 .treatment-dot-rha { background: var(--orange); }
 
-.treatment-row-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.treatment-row-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink);
-  margin-bottom: 2px;
-}
-
-.treatment-row-summary {
-  font-size: 12.5px;
-  color: var(--body);
-  line-height: 1.45;
-  margin-bottom: 2px;
-}
-
-.treatment-row-dose {
-  font-size: 11.5px;
-  color: var(--muted);
-  font-family: var(--f-body);
-}
-
-.visit-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line-soft);
-}
-
-.visit-card-cost {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.visit-card-cost-empty {
-  color: var(--magenta);
-  font-weight: 400;
-  font-size: 12px;
-}
-
-.visit-card-chevron {
-  color: var(--muted);
-  font-size: 18px;
-  line-height: 1;
-}
 /* ============ ADD PROMPT (reusable "+ Add X" button) ============ */
 
 .add-prompt {
@@ -551,6 +494,7 @@
   color: var(--muted);
   margin-top: 4px;
 }
+
 /* ============ MODAL ============ */
 
 .modal-backdrop {
@@ -578,7 +522,6 @@
   box-shadow: 0 -8px 32px rgba(23, 23, 46, 0.18);
 }
 
-/* On desktop, constrain modal to the phone-width column for visual consistency */
 @media (min-width: 600px) {
   .modal-sheet {
     left: 50%;
@@ -655,17 +598,6 @@
 .modal-provider {
   font-size: 13px;
   color: var(--muted);
-}
-
-.modal-diagram-placeholder {
-  margin: 16px 0 24px;
-  padding: 32px;
-  background: var(--line-soft);
-  border-radius: 16px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  font-style: italic;
 }
 
 .modal-treatments {
@@ -791,6 +723,7 @@
   font-size: 12px;
   color: var(--magenta);
 }
+
 /* ============ FACE DIAGRAM ============ */
 
 .face-diagram-wrap {
@@ -808,7 +741,6 @@
   height: auto;
 }
 
-/* Face features (brows, eyes, nose lines, lips line) */
 .face-diagram-svg .face-feature {
   fill: none;
   stroke: #B89B7E;
@@ -816,13 +748,11 @@
   stroke-linejoin: round;
 }
 
-/* Treatment dots — render with a soft outline for visibility on the cream face */
 .face-diagram-svg .area-dot circle {
   stroke: #FFFFFF;
   stroke-width: 1.5;
 }
 
-/* Color legend below the face */
 .face-diagram-legend {
   display: flex;
   flex-wrap: wrap;
@@ -849,3 +779,4 @@
   font-size: 12px;
   color: var(--body);
 }
+EOF
