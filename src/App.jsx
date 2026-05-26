@@ -1,83 +1,89 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import { usePatientData } from './usePatientData'
+import './App.css'
 
 function App() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Patient data (only meaningful once authenticated)
+  const { data, loading: dataLoading, error: dataError } = usePatientData()
 
   useEffect(() => {
-    // Check current session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      setLoading(false)
+      setAuthLoading(false)
     })
 
-    // Listen for auth state changes (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      setLoading(false)
+      setAuthLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // Redirect to login if not authenticated (once loading is done)
   useEffect(() => {
-    if (!loading && !session) {
+    if (!authLoading && !session) {
       navigate('/login')
     }
-  }, [loading, session, navigate])
+  }, [authLoading, session, navigate])
+
+  // Log the patient data to console once it loads — so we can verify everything
+  useEffect(() => {
+    if (data) {
+      console.log('🎯 Patient data loaded:', data)
+    }
+  }, [data])
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    // The auth state change listener above will update session to null,
-    // and the redirect effect will send us to /login automatically.
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-        <p style={{ color: '#666' }}>Loading...</p>
+      <div className="app-shell">
+        <div className="loading-state">Loading…</div>
       </div>
     )
   }
 
   if (!session) {
-    // We're about to redirect; render nothing in the meantime
     return null
   }
 
-  // Logged in — show a basic placeholder
   return (
-    <div style={{ padding: '40px', maxWidth: '600px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', margin: 0 }}>Rinnova</h1>
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            background: 'transparent',
-            color: '#666',
-            border: '1px solid #ccc',
-            borderRadius: '6px',
-            cursor: 'pointer',
-          }}
-        >
-          Sign out
-        </button>
-      </div>
+    <div className="app-shell">
+      <div className="placeholder">
+        <header className="placeholder-header">
+          <h1 className="brand-mark">Rinnova</h1>
+          <button onClick={handleLogout} className="signout-btn">Sign out</button>
+        </header>
 
-      <p style={{ fontSize: '16px', color: '#333', marginBottom: '8px' }}>
-        Signed in as <strong>{session.user.email}</strong>
-      </p>
-
-      <div style={{ marginTop: '32px', padding: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
-        <p style={{ margin: 0, color: '#166534' }}>
-          ✅ Auth is working. Patient page UI comes in Chunk 3.
+        <p className="placeholder-greeting">
+          Signed in as <strong>{session.user.email}</strong>
         </p>
+
+        <div className="placeholder-card">
+          {dataLoading && <p>📡 Fetching your patient data…</p>}
+          {dataError && <p>⚠️ Error: {dataError}</p>}
+          {data && (
+            <>
+              <p style={{ marginBottom: '8px' }}>✅ Data loaded for <strong>{data.patient.first_name} {data.patient.last_name}</strong></p>
+              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                {data.visits.length} visit{data.visits.length !== 1 ? 's' : ''} ·{' '}
+                {data.products.length} product{data.products.length !== 1 ? 's' : ''} ·{' '}
+                {data.photos.length} photo{data.photos.length !== 1 ? 's' : ''}
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '12px' }}>
+                Open browser console to see the full data structure.
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
