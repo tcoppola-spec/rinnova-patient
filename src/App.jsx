@@ -2,14 +2,20 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { usePatientData } from './usePatientData'
+import Greeting from './Greeting'
+import HeroCard from './HeroCard'
+import LogVisitPrompt from './LogVisitPrompt'
+import VisitsTimeline from './VisitsTimeline'
+import PhotosSection from './PhotosSection'
+import ProductsSection from './ProductsSection'
+import SubscriptionsSection from './SubscriptionsSection'
+import PageFooter from './PageFooter'
 import './App.css'
 
 function App() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
-
-  // Patient data (only meaningful once authenticated)
   const { data, loading: dataLoading, error: dataError } = usePatientData()
 
   useEffect(() => {
@@ -32,13 +38,6 @@ function App() {
     }
   }, [authLoading, session, navigate])
 
-  // Log the patient data to console once it loads — so we can verify everything
-  useEffect(() => {
-    if (data) {
-      console.log('🎯 Patient data loaded:', data)
-    }
-  }, [data])
-
   async function handleLogout() {
     await supabase.auth.signOut()
   }
@@ -55,35 +54,57 @@ function App() {
     return null
   }
 
+  if (dataLoading) {
+    return (
+      <div className="app-shell">
+        <div className="loading-state">Loading your record…</div>
+      </div>
+    )
+  }
+
+  if (dataError) {
+    return (
+      <div className="app-shell">
+        <div className="error-state">
+          <p>Something went wrong loading your record.</p>
+          <p className="error-detail">{dataError}</p>
+          <button onClick={handleLogout} className="signout-btn" style={{ marginTop: 16 }}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const { patient, visits, photos, products, subscriptions } = data
+  const lastVisit = visits[0]
+
   return (
     <div className="app-shell">
-      <div className="placeholder">
-        <header className="placeholder-header">
-          <h1 className="brand-mark">Rinnova</h1>
+      <div className="page">
+        <div className="utility-bar">
           <button onClick={handleLogout} className="signout-btn">Sign out</button>
-        </header>
-
-        <p className="placeholder-greeting">
-          Signed in as <strong>{session.user.email}</strong>
-        </p>
-
-        <div className="placeholder-card">
-          {dataLoading && <p>📡 Fetching your patient data…</p>}
-          {dataError && <p>⚠️ Error: {dataError}</p>}
-          {data && (
-            <>
-              <p style={{ marginBottom: '8px' }}>✅ Data loaded for <strong>{data.patient.first_name} {data.patient.last_name}</strong></p>
-              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
-                {data.visits.length} visit{data.visits.length !== 1 ? 's' : ''} ·{' '}
-                {data.products.length} product{data.products.length !== 1 ? 's' : ''} ·{' '}
-                {data.photos.length} photo{data.photos.length !== 1 ? 's' : ''}
-              </p>
-              <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '12px' }}>
-                Open browser console to see the full data structure.
-              </p>
-            </>
-          )}
         </div>
+
+        <Greeting firstName={patient.first_name} />
+
+        <HeroCard
+          lastVisitDate={lastVisit?.visit_date}
+          providerName={patient.primary_provider?.name || patient.provider_name}
+          providerPhone={patient.primary_provider?.phone || patient.provider_phone}
+        />
+
+        <LogVisitPrompt />
+
+        <VisitsTimeline visits={visits} />
+
+        <PhotosSection photos={photos} />
+
+        <ProductsSection products={products} />
+
+        <SubscriptionsSection subscriptions={subscriptions} />
+
+        <PageFooter />
       </div>
     </div>
   )
