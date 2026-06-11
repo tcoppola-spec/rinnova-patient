@@ -1,6 +1,17 @@
 import VisitCard from './VisitCard'
 
-function VisitsTimeline({ visits, onVisitClick }) {
+/**
+ * VisitsTimeline
+ *
+ * The "Your visits" section. Section header with the visit count,
+ * then a stack of VisitCard components.
+ *
+ * Props:
+ *   visits: array of visit objects
+ *   onVisitClick: function called when a visit is tapped
+ *   onRefetch: function called by VisitCard after a cost save
+ */
+function VisitsTimeline({ visits, onVisitClick, onRefetch }) {
   if (!visits || visits.length === 0) {
     return (
       <section className="section">
@@ -28,6 +39,7 @@ function VisitsTimeline({ visits, onVisitClick }) {
             key={visit.id}
             visit={visit}
             onClick={() => onVisitClick(visit)}
+            onRefetch={onRefetch}
           />
         ))}
       </div>

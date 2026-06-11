@@ -780,3 +780,480 @@ cat > src/App.css << 'EOF'
   color: var(--body);
 }
 EOF
+/* ============ VISIT CARD COST EDITOR (Chunk 4) ============ */
+
+/* The visit card is now a div container with two zones */
+.visit-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.visit-card:hover {
+  border-color: var(--muted);
+  box-shadow: 0 2px 8px rgba(23, 23, 46, 0.04);
+}
+
+/* Main tappable area (opens modal) */
+.visit-card-main {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 16px 18px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Cost zone — separate tap target inside the card */
+.visit-card-cost-zone {
+  border-top: 1px solid var(--line-soft);
+  background: var(--line-soft);
+}
+
+/* Trigger button — shows current cost or "+ Add" */
+.cost-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--body);
+  transition: background 0.15s ease;
+}
+
+.cost-trigger:hover {
+  background: var(--line);
+}
+
+.cost-trigger-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cost-trigger-value {
+  font-weight: 500;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.cost-trigger-empty {
+  font-size: 12px;
+  color: var(--magenta);
+  font-weight: 500;
+}
+
+/* Editor mode — input + save/cancel */
+.cost-editor {
+  padding: 10px 14px;
+}
+
+.cost-editor-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cost-editor-prefix {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cost-editor-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 14px;
+  color: var(--ink);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cost-editor-input:focus {
+  border-color: var(--magenta);
+}
+
+.cost-editor-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cost-editor-save {
+  padding: 6px 14px;
+  background: var(--magenta);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.cost-editor-save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.cost-editor-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cost-editor-cancel {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.cost-editor-cancel:hover:not(:disabled) {
+  background: var(--line);
+  color: var(--ink);
+}
+
+.cost-editor-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cost-editor-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #DC2626;
+}
+
+/* ============ CHUNK 4 UI OVERRIDES — subtle cost link ============ */
+
+.visit-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.visit-card:hover {
+  border-color: var(--muted);
+  box-shadow: 0 2px 8px rgba(23, 23, 46, 0.04);
+}
+
+.visit-card-main {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 16px 18px 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.visit-card-cost-row {
+  padding: 4px 18px 14px;
+  background: transparent;
+  border: none;
+}
+
+.cost-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.cost-link:hover {
+  color: var(--ink);
+  text-decoration-color: var(--magenta);
+}
+
+.cost-link-empty {
+  color: var(--magenta);
+  text-decoration-color: rgba(214, 51, 132, 0.35);
+  font-weight: 500;
+}
+
+.cost-link-empty:hover {
+  color: var(--magenta);
+  text-decoration-color: var(--magenta);
+}
+
+.cost-link-filled {
+  color: var(--body);
+}
+
+.cost-link-filled:hover {
+  color: var(--ink);
+}
+
+.cost-pencil {
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.cost-link-filled:hover .cost-pencil {
+  color: var(--magenta);
+}
+
+.cost-editor {
+  padding: 0;
+}
+
+/* ============ INLINE FORM (Chunk 4 — add product) ============ */
+
+.add-product-form {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease;
+  margin-bottom: 8px;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--magenta);
+}
+
+.form-input:disabled,
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.4;
+}
+
+.form-error {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #DC2626;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-save-btn {
+  padding: 8px 18px;
+  background: var(--magenta);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.form-save-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.form-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-cancel-btn {
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.form-cancel-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+.form-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============ PRODUCT DELETE (Chunk 4) ============ */
+
+.product-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.product-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-trash-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.product-trash-btn:hover {
+  background: var(--line-soft);
+  color: #DC2626;
+}
+
+.product-confirm-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.product-confirm-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.product-confirm-yes {
+  padding: 4px 10px;
+  background: #DC2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.product-confirm-yes:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.product-confirm-yes:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.product-confirm-no {
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.product-confirm-no:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+.product-confirm-no:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Override destructive button colors — use coral, not red (Chunk 4 polish) */
+
+.product-confirm-yes {
+  background: var(--coral);
+}
+
+.product-confirm-yes:hover:not(:disabled) {
+  background: var(--coral);
+  opacity: 0.9;
+}
+
+.product-trash-btn:hover {
+  background: var(--line-soft);
+  color: var(--coral);
+}
+
+/* Override the destructive button to use magenta instead of coral (Chunk 4 polish v2) */
+
+.product-confirm-yes {
+  background: var(--magenta);
+}
+
+.product-confirm-yes:hover:not(:disabled) {
+  background: var(--magenta);
+  opacity: 0.9;
+}
+
+.product-trash-btn:hover {
+  background: var(--line-soft);
+  color: var(--magenta);
+}

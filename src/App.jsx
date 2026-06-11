@@ -17,9 +17,7 @@ function App() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const { data, loading: dataLoading, error: dataError } = usePatientData()
-
-  // Which visit's modal is currently open (null = no modal)
+  const { data, loading: dataLoading, error: dataError, refetch } = usePatientData()
   const [openVisit, setOpenVisit] = useState(null)
 
   useEffect(() => {
@@ -27,12 +25,10 @@ function App() {
       setSession(session)
       setAuthLoading(false)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setAuthLoading(false)
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -103,11 +99,12 @@ function App() {
         <VisitsTimeline
           visits={visits}
           onVisitClick={(visit) => setOpenVisit(visit)}
+          onRefetch={refetch}
         />
 
         <PhotosSection photos={photos} />
 
-        <ProductsSection products={products} />
+        <ProductsSection products={products} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />
 
