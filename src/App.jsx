@@ -102,7 +102,7 @@ function App() {
           onRefetch={refetch}
         />
 
-        <PhotosSection photos={photos} />
+        <PhotosSection photos={photos} onRefetch={refetch} />
 
         <ProductsSection products={products} onRefetch={refetch} />
 

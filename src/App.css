@@ -1257,3 +1257,245 @@ EOF
   background: var(--line-soft);
   color: var(--magenta);
 }
+
+/* ============ ADD PHOTO FORM (Chunk 5) ============ */
+
+.add-photo-form {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.add-photo-preview {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 240px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.add-photo-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Photo grid rendering */
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ============ PHOTO UPLOADING PLACEHOLDER (Chunk 5) ============ */
+
+.photo-tile-uploading {
+  background: var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-uploading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.photo-uploading-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--magenta);
+  animation: photo-spin 0.8s linear infinite;
+}
+
+@keyframes photo-spin {
+  to { transform: rotate(360deg); }
+}
+
+.photo-uploading-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ============ PHOTO LIGHTBOX (Chunk 5 Step 4) ============ */
+
+.lightbox-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 -8px 32px rgba(23, 23, 46, 0.18);
+}
+
+@media (min-width: 600px) {
+  .lightbox-sheet {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: var(--phone-width);
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+.lightbox-body {
+  padding: 24px 24px 32px;
+}
+
+.lightbox-image-wrap {
+  width: 100%;
+  background: var(--line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  max-height: 60vh;
+}
+
+.lightbox-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.lightbox-image-loading,
+.lightbox-image-error {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lightbox-meta {
+  margin-bottom: 24px;
+}
+
+.lightbox-date {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.lightbox-caption-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lightbox-caption-text {
+  flex: 1;
+  font-size: 15px;
+  color: var(--ink);
+  line-height: 1.4;
+  font-family: var(--f-display);
+}
+
+.lightbox-caption-empty {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.lightbox-caption-edit-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--magenta);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.lightbox-caption-edit {
+  margin-top: 4px;
+}
+
+.lightbox-actions {
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.lightbox-delete-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lightbox-delete-btn:hover {
+  color: var(--magenta);
+  border-color: var(--magenta);
+}
+
+.lightbox-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lightbox-confirm-text {
+  font-size: 13px;
+  color: var(--body);
+  flex: 1;
+  min-width: 0;
+}
+
+/* Make photo tiles tappable as buttons (keyboard accessible) */
+.photo-tile-button {
+  padding: 0;
+  border: none;
+  background: var(--line-soft);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 1 / 1;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.photo-tile-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(23, 23, 46, 0.08);
+}
+
