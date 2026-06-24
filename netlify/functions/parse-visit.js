@@ -4,7 +4,7 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are a parsing assistant for an aesthetic medicine record-keeping app called Rinnova. Your job is to read messy clinical notes or receipts that a patient has provided about an aesthetic treatment visit, and return a structured JSON object that matches Rinnova's data schema.
+const SYSTEM_PROMPT = `You are a parsing assistant for an aesthetic medicine record-keeping app called Rinnova. Your job is to read messy clinical notes or receipts that a patient has provided about an aesthetic treatment visit (either as text or as a photo of a printed document), and return a structured JSON object that matches Rinnova's data schema.
 
 OUTPUT FORMAT:
 Always respond with valid JSON in this exact shape (no markdown, no explanation, just the JSON object):
@@ -39,8 +39,9 @@ Always respond with valid JSON in this exact shape (no markdown, no explanation,
 CRITICAL CONVENTIONS:
 - color_key must be one of: xeomin (purple), radiesse (magenta), radiesse-light (coral, for diluted radiesse), rha (orange). Choose based on product type.
 - "mirror" means the treatment was applied to both sides of the face symmetrically. Set to true for things like glabella, cheeks, jawline, temples. Set to false for centered treatments like lips, chin, philtrum.
-- If a piece of information is genuinely missing or unclear, use null. Do NOT make up data.
+- If a piece of information is genuinely missing or unclear from the input, use null. Do NOT make up data.
 - treatment_areas must reference treatments by their name field exactly.
+- When parsing a photo, read the document carefully. Common products: Xeomin, Botox, Dysport, Radiesse, RHA (1, 2, 3, 4), Restylane, Juvederm, Sculptra.
 
 Return ONLY the JSON object. No prose. No markdown fences. Just JSON.`;
 
@@ -62,11 +63,34 @@ export const handler = async (event) => {
     };
   }
 
-  const { text } = body;
-  if (!text || typeof text !== "string" || text.trim().length === 0) {
+  const { text, image, image_media_type } = body;
+
+  // Build the user message content based on input type
+  let userContent;
+
+  if (image && image_media_type) {
+    // Photo input — multimodal request to Claude
+    userContent = [
+      {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: image_media_type,
+          data: image,
+        },
+      },
+      {
+        type: "text",
+        text: "Parse this treatment receipt/note photo into the Rinnova JSON schema.",
+      },
+    ];
+  } else if (text && typeof text === "string" && text.trim().length > 0) {
+    // Text input
+    userContent = text.trim();
+  } else {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing or empty 'text' field" }),
+      body: JSON.stringify({ error: "Provide either 'text' or 'image' + 'image_media_type'" }),
     };
   }
 
@@ -75,7 +99,7 @@ export const handler = async (event) => {
       model: "claude-sonnet-4-5",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: text }],
+      messages: [{ role: "user", content: userContent }],
     });
 
     const rawText = response.content[0]?.text || "";

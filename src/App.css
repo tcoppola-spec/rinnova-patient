@@ -1703,3 +1703,96 @@
 .parsed-area-clinical {
   font-style: italic;
 }
+
+/* ============ LOG VISIT CHOICE BUTTONS (Chunk 6 Step 3) ============ */
+
+.logvisit-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.logvisit-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.logvisit-choice:hover {
+  border-color: var(--magenta);
+  background: var(--magenta-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(23, 23, 46, 0.04);
+}
+
+.logvisit-choice-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logvisit-choice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.logvisit-choice-title {
+  font-family: var(--f-display);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+
+.logvisit-choice-sub {
+  font-size: 12.5px;
+  color: var(--body);
+  line-height: 1.35;
+}
+
+/* Photo preview in the log-visit flow */
+.logvisit-photo-preview {
+  width: 100%;
+  background: var(--line-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 50vh;
+}
+
+.logvisit-photo-preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 50vh;
+  object-fit: contain;
+}
+
+/* Refined icon styling for log-visit choices (Chunk 6 Step 3 polish) */
+.logvisit-choice-icon {
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.logvisit-choice:hover .logvisit-choice-icon {
+  color: var(--magenta);
+}
