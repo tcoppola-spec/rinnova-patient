@@ -1,4 +1,3 @@
-cat > src/App.css << 'EOF'
 /* ============ APP SHELL & UTILITY ============ */
 
 .loading-state {
@@ -779,7 +778,6 @@ cat > src/App.css << 'EOF'
   font-size: 12px;
   color: var(--body);
 }
-EOF
 /* ============ VISIT CARD COST EDITOR (Chunk 4) ============ */
 
 /* The visit card is now a div container with two zones */
