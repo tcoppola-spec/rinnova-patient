@@ -1,0 +1,476 @@
+# Rinnova — Claude Context File
+
+> Read this entire document before making any changes to the Rinnova codebase.
+> It encodes the product vision, architecture decisions, design system, and locked patterns that aren't obvious from the code alone.
+
+---
+
+## 1. What Rinnova is
+
+**Rinnova** is a patient-facing aesthetic medicine record-keeping app. It exists so patients can own and understand their own treatment history — what products they've had, where on the body, when, by whom, and at what cost.
+
+It's built by **Tondo LLC** (founder: Tracy Cappola). Rinnova is Tondo's flagship product.
+
+The thesis: aesthetic medicine patients accumulate detailed treatment history (Botox lots, filler doses, hyaluronidase reversals, peel concentrations, retinoid strengths), but that history lives in scattered, provider-controlled records. Patients deserve a continuous, beautiful, AI-organized record they actually want to look at.
+
+---
+
+## 2. Who's who
+
+- **Tracy Cappola** — founder of Tondo LLC. Lives in Connecticut. Designer by background. Beginner coder (~10-20 hrs/week on this project). Also serves as **Patient 0** — the first real Rinnova user.
+- **Dr. Roberta Del Campo, MD** — Tracy's actual aesthetic provider at a Miami medspa. Five-plus year patient relationship. Pilot provider for Phase 1.
+- **You (Claude / Claude Code)** — co-builder. Treat Tracy as a thoughtful product person learning to code, not as either a senior engineer or a complete novice. She has strong design instincts and product judgment — defer to her on aesthetic/UX calls. Explain technical concepts at depth she can grow into, not down at her.
+
+---
+
+## 3. Patient 0 reference data (Tracy's record)
+
+These IDs are in the production Supabase database. Many flows depend on them.
+
+```
+Tracy's auth UUID:     dcf6359b-65a2-47f9-9c73-aee21eb7d2b0
+Tracy's email:         tcoppola@tozadigital.com
+Tracy's patient_id:    90d7b547-8dc5-4ab7-b297-6a6d1f15e5eb
+Tracy's first visit:   cd0337f4-69ba-4a90-aba9-e85afb1ca2b4  (April 24, 2026)
+Roberta provider_id:   fdda2aa6-e834-4514-ab2d-543b5229ac87
+GitHub username:       tcoppola-spec
+Local path:            ~/Documents/TONDO_LLC/Apps/_Rinnova/Patient_0
+Production URL:        https://tondo-rinnova.netlify.app
+GitHub repo:           github.com/tcoppola-spec/rinnova-patient
+```
+
+Tracy's April 24 visit contains:
+- 4 treatments (Xeomin, Radiesse, Diluted Radiesse, RHA2)
+- 17 treatment areas
+- Total cost $2,500
+- Provider: Dr. Roberta Del Campo, MD
+- Body regions: "Face, neck, and lips"
+
+This is the canonical example. When testing, this is the visit to compare against.
+
+---
+
+## 4. Stack
+
+- **Frontend:** React 18 + Vite
+- **Database / Auth / Storage:** Supabase (Postgres + Row Level Security + Storage buckets + magic link auth)
+- **Hosting:** Netlify (free tier) with auto-deploy from main branch
+- **Serverless backend:** Netlify Functions (Node.js, ES modules)
+- **AI:** Anthropic Claude Sonnet 4.5 via `@anthropic-ai/sdk` (multimodal — text + vision)
+- **Routing:** React Router (client-side; Netlify SPA redirects via `public/_redirects`)
+- **Styling:** Plain CSS in a single `App.css` (~1700 lines, organized by section comments)
+
+No Tailwind. No CSS-in-JS. No component library. Vanilla React + plain CSS by deliberate choice — Tracy needs to be able to read every line.
+
+---
+
+## 5. Directory layout
+
+```
+Patient_0/
+├── public/
+│   └── _redirects                  # Netlify SPA routing config: /* → /index.html 200
+├── netlify/
+│   └── functions/
+│       └── parse-visit.js          # Server-side Claude API call (text + image input)
+├── src/
+│   ├── main.jsx                    # React entry
+│   ├── App.jsx                     # Root component, routes, auth state
+│   ├── App.css                     # All styles (sectioned with /* === HEADER === */ comments)
+│   ├── index.css                   # Reset + design tokens (CSS vars)
+│   ├── supabaseClient.js           # Supabase client init
+│   ├── usePatientData.js           # Custom hook: fetches all patient data, exposes refetch
+│   ├── Login.jsx                   # Magic link login form
+│   ├── AuthCallback.jsx            # Handles magic link redirect
+│   ├── Greeting.jsx                # "Hi, Tracy" header
+│   ├── HeroCard.jsx                # Magenta gradient "Make an appointment" card
+│   ├── LogVisitPrompt.jsx          # AI-parsing visit log flow (text OR photo input)
+│   ├── VisitsTimeline.jsx          # Section + list of VisitCards
+│   ├── VisitCard.jsx               # Compact visit card with inline cost editing
+│   ├── VisitDetailModal.jsx        # Bottom-sheet modal with face diagram + treatments
+│   ├── FaceDiagram.jsx             # Hand-drawn SVG face with treatment dots
+│   ├── PhotosSection.jsx           # Photo grid + upload form + lightbox
+│   ├── PhotoLightbox.jsx           # Bottom-sheet photo viewer with edit + delete
+│   ├── ProductsSection.jsx         # Products list + add form + delete
+│   ├── SubscriptionsSection.jsx    # Currently empty state only
+│   └── PageFooter.jsx              # Tondo brand footer
+├── netlify.toml                    # Build config: command, publish, functions dir
+├── package.json
+├── .env                            # Local Supabase + Anthropic keys (gitignored)
+├── .env.local                      # Netlify Dev auto-generated (gitignored)
+└── .gitignore                      # Includes .env*, .netlify, node_modules
+```
+
+---
+
+## 6. Environment variables
+
+**Three required env vars, configured in two places:**
+
+| Variable | Where it's used | Purpose |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Frontend (browser) | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Frontend (browser) | Supabase publishable key (safe to expose) |
+| `ANTHROPIC_API_KEY` | Server (Netlify Function) | NEVER expose to frontend. Real secret. |
+
+**Configured in:**
+1. **Local development:** `.env` file (read by Vite) and/or `.env.local` (Netlify Dev creates this automatically and prefers it over `.env`)
+2. **Production:** Netlify project → Site Configuration → Environment Variables. All three must be present in **All Deploy Contexts** OR at minimum Production.
+
+**Critical:** the `ANTHROPIC_API_KEY` must be marked as **Secret** in Netlify (masks value in logs and UI). The Supabase publishable key does NOT need this — it's designed to be public.
+
+If login ever shows "Invalid API key" or 401 errors against `supabase.co`, the Supabase key has likely drifted between local and Netlify, or it got rotated. Check by visiting Supabase → Settings → API and comparing.
+
+---
+
+## 7. Database schema
+
+All tables have Row Level Security (RLS) enabled. The helper function `get_my_patient_id()` returns the patient_id for the currently authenticated user (resolved via `auth_user_id`).
+
+### `patients`
+- `id` UUID PK
+- `auth_user_id` UUID (links to Supabase auth.users)
+- `first_name`, `last_name`, `email`, `dob`, `provider_name`, `provider_phone`
+- `primary_provider_id` UUID → providers
+- Created in Chunk 1.
+
+### `providers`
+- `id` UUID PK
+- `name`, `credentials`, `practice_name`, `address`, `phone`, `email`
+
+### `visits`
+- `id` UUID PK
+- `patient_id` UUID → patients
+- `provider_id` UUID → providers
+- `visit_date` DATE
+- `cost` NUMERIC (nullable, inline-editable from VisitCard)
+- `body_regions` TEXT (added in Chunk 3 — short human summary like "Face, neck, and lips")
+
+### `treatments`
+- `id` UUID PK
+- `visit_id` UUID → visits
+- `name` TEXT (e.g., "Xeomin", "Radiesse", "Diluted Radiesse", "RHA2")
+- `summary` TEXT (one-line patient-friendly description)
+- `total_dose` TEXT (e.g., "2.7cc", "1 syringe")
+- `lot_number` TEXT
+- `color_key` TEXT — **one of: `xeomin` (purple), `radiesse` (magenta), `radiesse-light` (coral, for diluted Radiesse), `rha` (orange)**
+- `display_order` INTEGER
+
+### `treatment_areas`
+- `id` UUID PK
+- `treatment_id` UUID → treatments
+- `friendly_name` TEXT (e.g., "Glabella", "Crows feet")
+- `clinical_name` TEXT (e.g., "Frontalis", "Orbicularis oculi")
+- `dose` TEXT (amount at this specific area)
+- `mirror` BOOLEAN (true = bilateral, renders dot on both sides)
+- `x_coord`, `y_coord` NUMERIC (position on the face diagram SVG, 0-480 viewBox)
+- `display_order` INTEGER
+
+### `photos`
+- `id` UUID PK
+- `patient_id` UUID → patients
+- `storage_path` TEXT (path inside `patient-photos` Storage bucket)
+- `caption` TEXT
+- `taken_date` DATE
+- `source` TEXT (`'patient_upload'` for self-uploaded photos)
+
+### `products`
+- `id` UUID PK
+- `patient_id` UUID → patients
+- `name` TEXT
+- `notes` TEXT
+- `added_at` TIMESTAMPTZ
+
+### `subscriptions` (V1 scaffold only — no UI flow yet)
+- `id` UUID PK
+- `patient_id` UUID → patients
+- `name`, `cadence`, `status`
+
+### RLS pattern
+Every table has these policies (some are created lazily — when a new use case appears):
+- SELECT — `patient_id = get_my_patient_id()` (or chain through joins)
+- INSERT — `WITH CHECK (patient_id = get_my_patient_id())`
+- UPDATE — same
+- DELETE — same
+
+**Important historical pattern:** DELETE policies are easy to forget. They were added late for both `products` and `photos` after silent-failure bugs. If you build a delete feature for any new table, verify the DELETE policy exists first.
+
+### Storage RLS for `patient-photos` bucket
+- Private bucket (no public read)
+- Path structure: `<patient_id>/<uuid>.<ext>` — patient_id is the first folder
+- Policies on `storage.objects` table:
+  - INSERT, SELECT, DELETE all check: `bucket_id = 'patient-photos' AND (storage.foldername(name))[1] = get_my_patient_id()::text`
+- Photos render via **signed URLs** with 1-hour expiration, fetched per-tile on mount
+
+---
+
+## 8. Design system
+
+### Color tokens (defined in `src/index.css` :root)
+
+```css
+--ink:           #17172E   /* primary text */
+--body:          #3A3A55   /* secondary text */
+--muted:         #8A8AA3   /* tertiary text, captions */
+--line:          #E5E2DD   /* borders */
+--line-soft:     #F5F1EB   /* subtle borders, backgrounds */
+--card:          #FFFEFC   /* card backgrounds, slightly warm white */
+--page:          #FAF7F2   /* page background, soft cream */
+
+--magenta:       #D63384   /* PRIMARY ACTION COLOR */
+--magenta-soft:  #FCE7F0   /* magenta backgrounds */
+--magenta-soft-2:#FAD3E3   /* magenta hover backgrounds */
+
+--purple:        #7B2CBF   /* Xeomin treatment color */
+--coral:         #F06E89   /* Diluted Radiesse treatment color */
+--orange:        #FF8C42   /* RHA treatment color */
+/* Radiesse uses --magenta */
+
+--gradient-brand: linear-gradient(135deg, #7B2CBF 0%, #D63384 50%, #FF8C42 100%)
+```
+
+### Typography
+
+```css
+--f-display: 'Fraunces', serif    /* H1/H2, treatment names, dates */
+--f-body:    'Inter', sans-serif  /* everything else */
+
+--phone-width: 480px  /* the design column width on desktop */
+```
+
+### Established UI patterns
+
+1. **Phone-first layout** — designed for ~480px column. On desktop, the column centers with a cream-colored background around it. Don't fight this.
+2. **Bottom-sheet modal** — for deep views (visit detail, photo lightbox). Slides up from bottom on phone, centers + max-widths on desktop. ESC, X button, backdrop tap all close it. Body scroll lock while open.
+3. **Inline expansion** — for create/edit forms (add product, edit cost, log visit). The button transforms into the form in-place. Save returns to button.
+4. **Wait-and-show saves** — NOT optimistic UI. Form → Supabase write → refetch → UI updates. Brief "Saving…" label on button. We tried optimistic, pushed back on it for V1 complexity reasons.
+5. **Subtle text-link affordances** — small underlined text with a pencil icon for "edit" actions (cost editor). NOT big buttons. The patient page is quiet by default.
+6. **Magenta for ALL actions** — Save, primary CTAs, AND destructive confirms. We tried coral for destructive; it felt dull. Magenta with clear context (e.g., "Yes, delete" after tapping a trash icon) is the pattern.
+7. **No emoji icons in production** — replace any 📷📝🔥 with stroke-based SVGs that inherit `currentColor`. The emoji-as-placeholder is a code smell.
+8. **Strong design discipline** — Tracy will pushback on anything that feels off-brand. Listen carefully. Examples she pushed back on and was right: red destructive button (broke palette), beige cost strip (too prominent), emoji icons (felt placeholder).
+
+### Component patterns to mimic
+
+- **VisitCard.jsx** — two-zone pattern: main tappable area opens modal, secondary cost link is its own button that opens an inline editor. Tap zones never bleed into each other.
+- **PhotoLightbox.jsx** — full bottom-sheet pattern with inline edit + delete confirmation. Reference for any future "detail view with edit" UI.
+- **ProductsSection.jsx** — three operations cleanly separated: read (list), create (`AddProductForm` sub-component), delete (`ProductRow` sub-component with inline confirm).
+
+---
+
+## 9. AI parsing system (Chunk 6)
+
+### `netlify/functions/parse-visit.js`
+
+A single function accepts EITHER text OR a base64-encoded image. The system prompt is a detailed instruction defining the Rinnova JSON schema.
+
+Input shapes:
+```js
+// Text input
+{ text: "April 24 2026 visit with Dr. Roberta..." }
+
+// Image input
+{ image: "base64string...", image_media_type: "image/jpeg" }
+```
+
+Output shape (always):
+```js
+{
+  parsed: {
+    visit: { visit_date, provider_name, body_regions, cost },
+    treatments: [{ name, summary, total_dose, lot_number, color_key }],
+    treatment_areas: [{ treatment_name, friendly_name, clinical_name, dose, mirror }]
+  }
+}
+```
+
+**Important:** the function does NOT yet save anything to the database. The frontend (`LogVisitPrompt.jsx`) displays the parsed result read-only. Save logic is Chunk 6 Step 4 — still pending as of this writing.
+
+### What Claude is told (system prompt)
+- color_key must be one of: `xeomin`, `radiesse`, `radiesse-light`, `rha`
+- mirror = true for bilateral areas (glabella, cheeks, jawline, temples), false for centered (lips, chin)
+- Return ONLY JSON. No prose, no markdown fences.
+- If unclear, use `null`. Don't hallucinate.
+
+### What's NOT in the system prompt yet
+- `treatment_areas` do NOT come back with `x_coord` / `y_coord`. The AI doesn't know Rinnova's face SVG geometry. Save logic will need a **lookup table** mapping `friendly_name` → coordinates. The 17 areas from Tracy's April 24 visit are the seed data.
+
+### Multimodal note
+Claude Sonnet 4.5 handles images up to ~5MB. The frontend enforces a 5MB cap and rejects larger files. We don't compress; we reject.
+
+---
+
+## 10. Build sequence (chunks) — historical context
+
+The V1 build was organized into 8 chunks. Status:
+
+| Chunk | Description | Status |
+|---|---|---|
+| 0 | Infrastructure: Vite + Supabase client + Anthropic SDK install | ✅ Done |
+| 1 | Schema + RLS + Tracy's April 24 real data | ✅ Done |
+| 2 | Magic link auth + React Router + SPA redirects | ✅ Done |
+| 3 | Patient page UI: face diagram, modal, visit card, all sections | ✅ Done |
+| 4 | Forms: inline cost editing + add/delete products | ✅ Done |
+| 5 | Photos: upload + signed URL grid + lightbox + edit/delete | ✅ Done |
+| 6 | AI parsing | 🟨 Steps 1-3 done, Step 4 pending |
+| 7 | Polish: PWA, Add to Home Screen, accessibility | ⬜ Not started |
+| 8 | Show Roberta: demo prep + recording + the conversation | ⬜ Not started |
+
+### Chunk 6 Step 4 — what's pending
+
+Three sub-parts of the remaining work:
+
+**Part A — Edit-before-save UI**
+Currently the parsed result is read-only. Need to make every field inline-editable so the patient can correct AI mistakes before committing.
+
+**Part B — Save logic**
+Write the parsed data to Supabase across three tables in order: `visits` → `treatments` (one per treatment, with the returned visit_id) → `treatment_areas` (one per area, with the right treatment_id). Handle partial failures with cleanup.
+
+**Part C — Face dot coordinate mapping**
+Build a lookup table mapping `friendly_name` → `{x, y}`. The 17 areas from Tracy's April 24 visit are the seed. Future visits will surface gaps to fill iteratively.
+
+When picking up Step 4, the recommended scope is **Option A**: save logic + minimal coordinate mapping (just the 17 areas we have), without the edit UI. Reasoning: closes the V1 loop fastest. Edit UI is polish that can come later.
+
+---
+
+## 11. Future features parking lot
+
+Capture in `Rinnova_Future_Features_Parking_Lot.docx` (in Tracy's `_Rinnova` folder). Current entries:
+
+1. **Loyalty program** — Phase 2+
+2. **Product education pages** — V1 alternative: surface existing `summary` field inline (done)
+3. **Native mobile app** — V1 alternative: PWA (Chunk 7)
+4. **Desktop-optimized layout** — V1 alternative: Level 2 polish (done)
+5. **Patient onboarding flow** — Phase 1 transition feature
+
+When something new comes up that's NOT in V1 scope, add it to the parking lot rather than building it. The standard template includes: the question, decision (in/out and why), open product questions, rough schema/system sketch, earliest plausible build window, V1 alternative.
+
+---
+
+## 12. Conventions and patterns to follow
+
+### Code style
+- Plain JavaScript, not TypeScript (V1 choice)
+- Functional React components, hooks
+- File-per-component
+- Comments at the top of each component explaining what it does and its props
+- `async/await`, not `.then()`
+- Destructure props in function signature
+
+### Naming
+- Components: PascalCase (e.g., `VisitCard.jsx`)
+- Hooks: camelCase starting with `use` (e.g., `usePatientData`)
+- CSS classes: kebab-case (e.g., `visit-card-cost-row`)
+- DB columns: snake_case (e.g., `body_regions`, `storage_path`)
+
+### Supabase queries
+- Use `.single()` when expecting one row. It will throw if zero or multiple.
+- Always destructure `{ data, error }` from Supabase responses and handle error explicitly.
+- For nested data, use the foreign-key join syntax: `.select('*, provider:providers(*)')`
+- For RLS-protected mutations: ALWAYS look up the patient_id via `.from('patients').select('id').single()` first, then use that for the insert payload's `patient_id` field. Don't trust client-side patient_id.
+
+### File mutation safety
+**Critical historical pattern:** Long file rewrites via heredoc (`cat > file << 'EOF'`) have repeatedly truncated or duplicated content in past sessions. When working in Claude Code, prefer direct file editing tools. When generating new content, verify file length and key string counts after writing:
+
+```bash
+wc -l <filepath>
+grep -c <key-pattern> <filepath>
+```
+
+This caught multiple paste-truncation bugs during V1 build.
+
+### Production safety
+- Run `npm run build` locally before pushing any significant CSS changes. Vite dev mode tolerates invalid CSS; production minification doesn't. We hit this in Chunk 6 — stray heredoc text in App.css broke production builds while dev worked fine.
+- After deploying, verify the live site loads. Don't assume "push succeeded" = "deploy succeeded."
+- ALWAYS check `git status` before committing — verify `.env`, `.env.local` are NOT staged. They're in `.gitignore` but mistakes happen.
+
+### Security
+- **Never reproduce API keys in conversations.** Anthropic and Supabase secret keys are real secrets. The Supabase **publishable** key is safe to expose (works only alongside RLS). The Supabase **secret** key (`sb_secret_...`) and the **Anthropic key** (`sk-ant-...`) are not.
+- If a secret key is accidentally pasted anywhere it shouldn't be, revoke it immediately and create a new one.
+- `.env*` files are in `.gitignore`. Never remove them from `.gitignore`.
+
+### Refetch chain
+The `usePatientData` hook exposes a `refetch` function. When App.jsx instantiates the hook, it must pass `refetch` down to every component that triggers mutations (PhotosSection, ProductsSection, VisitsTimeline → VisitCard, LogVisitPrompt eventually). Forgetting to pass `onRefetch` causes silent UI-not-updating bugs. This bit us once in Chunk 5.
+
+---
+
+## 13. Locked product decisions
+
+A list of decisions that should NOT be re-litigated without a strong reason:
+
+- **V1 is single-patient.** Just Tracy. No multi-tenant work, no patient onboarding flow, no admin UI. Phase 2 is when this changes.
+- **Phone-first design.** Desktop is centered phone-column. Level 3 responsive is parked.
+- **Private storage with signed URLs.** Aesthetic photos are sensitive. Never public bucket, even for V1 convenience.
+- **Magenta is the only action color.** Including destructive. Don't introduce red.
+- **No emoji in production UI.** SVGs only.
+- **Wait-and-show saves**, not optimistic UI.
+- **No HIPAA stack for V1.** Tracy is using Rinnova as Patient 0; HIPAA-compliant infra (BAAs, audit logging, encryption-at-rest configs) is required only when a second patient enrolls under Roberta in Phase 1.
+- **No Tondo admin tool yet.** Patients log their own visits via the AI parsing flow. Admin tooling can come later if needed.
+- **Anthropic Claude Sonnet 4.5 as the AI.** Model string: `claude-sonnet-4-5`. Don't downgrade without a real reason.
+
+---
+
+## 14. Anti-patterns and gotchas
+
+### Things that have bitten us during V1 build
+
+1. **Paste truncation in long heredocs.** Files written via `cat > file << 'EOF'` can truncate mid-paste, especially when the editor/terminal interaction is interrupted. Always verify with `wc -l` and key-string `grep -c`.
+
+2. **Stray shell directives in CSS.** A paste accident wrote `cat > src/App.css << 'EOF'` AS content INTO App.css. Vite dev tolerated it; production minify did not. Verify CSS files don't contain `cat`, `EOF`, etc.
+
+3. **Silent RLS failures.** When a `DELETE` or `INSERT` returns no error but no effect, the most common cause is a missing RLS policy. Check `pg_policies` in Supabase first.
+
+4. **Refetch not wired through props.** If a save succeeds in the DB but the UI doesn't update, check that `onRefetch` is being passed all the way down the component tree.
+
+5. **`.env` key drift.** The Supabase publishable key can be rotated in the dashboard. If login fails with 401 against `supabase.co`, the local `.env` and the Netlify env vars may have drifted from the current key. Compare.
+
+6. **Wrong dev server port.** `npm run dev` runs Vite-only at `localhost:5173` (no Netlify Functions). `netlify dev` runs both at `localhost:8888` (Vite + Functions). When testing AI parsing, use `netlify dev` and `localhost:8888`.
+
+7. **PATH issues with Netlify CLI in fresh terminals.** Installed globally via npm into `~/.npm-global/bin`. New terminal tabs opened before `.zshrc` ran won't find `netlify`. Run `source ~/.zshrc` if `netlify: command not found`.
+
+8. **Magic link auth rate limit.** Supabase limits to ~4 magic-link requests per email per hour by default. If repeatedly testing login, bump this in Authentication → Rate Limits.
+
+---
+
+## 15. How to start a session
+
+When picking up Rinnova work from a fresh Claude Code session:
+
+1. Read this entire file first.
+2. Check `git status` and `git log --oneline -10` to see current state.
+3. Ask Tracy what she wants to work on (don't assume Chunk 6 Step 4 next).
+4. Confirm dev environment:
+   - `cd ~/Documents/TONDO_LLC/Apps/_Rinnova/Patient_0`
+   - `source ~/.zshrc` (in case PATH needs reloading)
+   - `netlify dev` (NOT `npm run dev` — we need Functions)
+   - Open `http://localhost:8888/`
+   - Verify login works (sometimes `.env` drift requires fixing first)
+
+---
+
+## 16. Tracy's working style
+
+- She'll often say "lets keep going" — interpret as "continue at the small focused session cadence we've been using."
+- She has strong design instincts. When she pushes back on an aesthetic choice ("the coral feels dull," "the beige strip is too prominent"), trust her and iterate. She's right more often than not.
+- She'll sometimes paste an entire long prompt + Terminal output. Read it as context, not as a literal instruction.
+- She wants honest framings, not flattery. If a path is wrong, say so. If a scope is too big for one session, say so.
+- She prefers small, focused, shippable sessions over marathons.
+- She'll ask "is X possible?" — often the right answer is "yes, here's the real tradeoff" rather than just "yes."
+- She values commit hygiene. Don't accumulate uncommitted work across sessions.
+- She'll usually want to commit, push, and verify production at the end of each session.
+
+---
+
+## 17. What to do at the end of every session
+
+1. Run `git status` and verify only intended files are modified.
+2. Confirm `.env` and `.env.local` are NOT in the staged changes.
+3. Run `npm run build` if there are CSS changes — production minification is stricter than dev.
+4. Commit with a descriptive message: `"Chunk <N> Step <M>: <what>"`.
+5. Push to GitHub.
+6. Wait for the Netlify deploy and verify it published (not failed).
+7. Visit `https://tondo-rinnova.netlify.app` and confirm the site still loads.
+8. Update this file (`CLAUDE.md`) if anything material changed in patterns, decisions, or schema.
+
+---
+
+End of file. When in doubt, ask Tracy.
