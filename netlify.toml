@@ -2,3 +2,10 @@
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
+
+# Serve the web manifest with the correct MIME type (Netlify defaults it to
+# application/octet-stream, which Chrome/Android ignore for installability).
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
