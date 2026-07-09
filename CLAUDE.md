@@ -69,10 +69,20 @@ No Tailwind. No CSS-in-JS. No component library. Vanilla React + plain CSS by de
 ```
 Patient_0/
 ├── public/
-│   └── _redirects                  # Netlify SPA routing config: /* → /index.html 200
+│   ├── _redirects                  # Netlify SPA routing config: /* → /index.html 200
+│   ├── favicon.svg                 # Browser tab mark (Rinnova logo)
+│   ├── manifest.webmanifest        # PWA manifest (Chunk 7): standalone, brand colors, icons
+│   ├── icon-192.png                # PWA icon (Chunk 7) — Fraunces "R" on brand gradient
+│   ├── icon-512.png                # PWA icon (Chunk 7)
+│   └── apple-touch-icon.png        # iOS Add-to-Home icon, 180px (Chunk 7)
 ├── netlify/
 │   └── functions/
 │       └── parse-visit.js          # Server-side Claude API call (text + image input)
+├── db/
+│   └── save_parsed_visit.sql       # Atomic RPC that saves a parsed visit (Chunk 6 Step 4)
+├── scripts/
+│   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
+│   └── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
 ├── src/
 │   ├── main.jsx                    # React entry
 │   ├── App.jsx                     # Root component, routes, auth state
@@ -80,11 +90,13 @@ Patient_0/
 │   ├── index.css                   # Reset + design tokens (CSS vars)
 │   ├── supabaseClient.js           # Supabase client init
 │   ├── usePatientData.js           # Custom hook: fetches all patient data, exposes refetch
+│   ├── saveVisit.js                # Shapes parsed data + calls save_parsed_visit RPC (Chunk 6)
+│   ├── faceCoordinates.js          # friendly_name → {x,y} lookup for face dots (Chunk 6)
 │   ├── Login.jsx                   # Magic link login form
 │   ├── AuthCallback.jsx            # Handles magic link redirect
 │   ├── Greeting.jsx                # "Hi, Tracy" header
 │   ├── HeroCard.jsx                # Magenta gradient "Make an appointment" card
-│   ├── LogVisitPrompt.jsx          # AI-parsing visit log flow (text OR photo input)
+│   ├── LogVisitPrompt.jsx          # AI-parsing visit log flow (text/photo → parse → save)
 │   ├── VisitsTimeline.jsx          # Section + list of VisitCards
 │   ├── VisitCard.jsx               # Compact visit card with inline cost editing
 │   ├── VisitDetailModal.jsx        # Bottom-sheet modal with face diagram + treatments
@@ -94,8 +106,9 @@ Patient_0/
 │   ├── ProductsSection.jsx         # Products list + add form + delete
 │   ├── SubscriptionsSection.jsx    # Currently empty state only
 │   └── PageFooter.jsx              # Tondo brand footer
-├── netlify.toml                    # Build config: command, publish, functions dir
-├── package.json
+├── index.html                      # HTML shell — PWA manifest link + iOS Add-to-Home meta tags
+├── netlify.toml                    # Build config + header rule (manifest MIME type)
+├── package.json                    # sharp is a devDependency (icon generation only)
 ├── .env                            # Local Supabase + Anthropic keys (gitignored)
 ├── .env.local                      # Netlify Dev auto-generated (gitignored)
 └── .gitignore                      # Includes .env*, .netlify, node_modules
@@ -323,7 +336,7 @@ The V1 build was organized into 8 chunks. Status:
 | 4 | Forms: inline cost editing + add/delete products | ✅ Done |
 | 5 | Photos: upload + signed URL grid + lightbox + edit/delete | ✅ Done |
 | 6 | AI parsing | ✅ Done (Step 4 shipped as Option A; edit-before-save UI deferred) |
-| 7 | Polish: PWA, Add to Home Screen, accessibility | ⬜ Not started |
+| 7 | Polish: PWA, Add to Home Screen, accessibility | 🟨 Slice 1 done (installable PWA + iOS A2HS); offline SW + a11y pending |
 | 8 | Show Roberta: demo prep + recording + the conversation | ⬜ Not started |
 
 ### Chunk 6 Step 4 — shipped (Option A, July 6 2026)
@@ -335,6 +348,19 @@ The V1 loop is closed: a patient can parse a note/photo and save it as a real vi
 **Part C — Face dot coordinate mapping (done).** `src/faceCoordinates.js` maps `friendly_name → {x, y}`, seeded from Tracy's 17 April-24 areas plus common AI-phrasing aliases. Unmatched names fall back to `DEFAULT_COORDINATE` (face-center) and log a warning to flag the gap.
 
 **Part A — Edit-before-save UI (deferred, parked polish).** The parsed result is still read-only before save. Making each field inline-editable so the patient can correct AI mistakes pre-commit is the natural next enhancement — not required for the V1 loop. Two known gaps to fold in when Part A is built: `lot_number` is parsed/previewed but not persisted (no column), and a missing `visit_date` currently silently defaults to today.
+
+### Chunk 7 — slice 1 shipped (installable PWA + Add to Home Screen, July 9 2026)
+
+Rinnova is now installable — on iOS it adds to the home screen and opens full-screen (no browser chrome), with a branded icon.
+
+- **App icon:** a white capital **R** in **Fraunces** (opsz 144, wght 600 — the brand display face) on `--gradient-brand`. The glyph is baked into `scripts/icon-source.svg` as a **vector outline** (extracted from the Fraunces variable font with fonttools), so there's no font dependency at build time. `scripts/generate-icons.mjs` renders the PNGs with `sharp` (dev dependency only); the resulting `public/icon-192.png`, `public/icon-512.png`, and `public/apple-touch-icon.png` are committed. To change the icon: edit the source SVG (or re-extract the glyph), then `node scripts/generate-icons.mjs`. The icon is deliberately sized to ~50% so Android's circular maskable crop stays clean.
+- **Manifest:** `public/manifest.webmanifest` — `display: standalone`, brand `theme_color`/`background_color` (`#FAF7F2`), 192 + 512 icons (`purpose: "any maskable"`). `netlify.toml` has a header rule serving it as `application/manifest+json` (Netlify defaults to octet-stream, which Chrome ignores).
+- **Install tags:** `index.html` has the manifest link, `apple-touch-icon`, and the iOS meta tags (`apple-mobile-web-app-capable`, `-status-bar-style` = default, `-title` = Rinnova).
+
+**Still pending in Chunk 7 (future slices):**
+- **Offline / service worker** — iOS A2HS needs no SW, but Android/Chrome's *install prompt* and any offline shell caching do. Deferred (low V1 value — data needs network anyway). When added, the manifest MIME fix above is already in place.
+- **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
+- **Apple splash screens** — optional; iOS shows a plain `background_color` splash without device-specific `apple-touch-startup-image` sets.
 
 ---
 
