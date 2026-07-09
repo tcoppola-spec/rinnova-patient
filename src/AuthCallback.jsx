@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 
+/**
+ * AuthCallback — LEGACY (magic-link) handler.
+ *
+ * We switched sign-in from magic links to 6-digit OTP codes (see Login.jsx)
+ * because magic links break in the installed iOS PWA — they open in Safari, a
+ * separate storage context, so the PWA never gets the session. The OTP flow
+ * needs no callback route.
+ *
+ * This route is kept only as a safety net for any magic link already sitting
+ * in an inbox (they expire ~1h). Safe to delete once no old links matter.
+ */
 function AuthCallback() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('processing')

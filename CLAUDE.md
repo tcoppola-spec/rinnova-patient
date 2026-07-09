@@ -53,7 +53,7 @@ This is the canonical example. When testing, this is the visit to compare agains
 ## 4. Stack
 
 - **Frontend:** React 18 + Vite
-- **Database / Auth / Storage:** Supabase (Postgres + Row Level Security + Storage buckets + magic link auth)
+- **Database / Auth / Storage:** Supabase (Postgres + Row Level Security + Storage buckets + email OTP code auth)
 - **Hosting:** Netlify (free tier) with auto-deploy from main branch
 - **Serverless backend:** Netlify Functions (Node.js, ES modules)
 - **AI:** Anthropic Claude Sonnet 4.5 via `@anthropic-ai/sdk` (multimodal — text + vision)
@@ -61,6 +61,20 @@ This is the canonical example. When testing, this is the visit to compare agains
 - **Styling:** Plain CSS in a single `App.css` (~1700 lines, organized by section comments)
 
 No Tailwind. No CSS-in-JS. No component library. Vanilla React + plain CSS by deliberate choice — Tracy needs to be able to read every line.
+
+### Authentication — email OTP (6-digit code)
+
+Sign-in is passwordless via a **6-digit email OTP code**, not a magic link. Flow (see `Login.jsx`): enter email → `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` → enter the emailed code → `supabase.auth.verifyOtp({ email, token, type: 'email' })` → on success `Login` calls `navigate('/')` itself (App isn't mounted on `/login`, so its auth listener can't do the redirect).
+
+**Why OTP, not magic link:** a magic link opens in Safari, a *separate storage context* from an installed iOS PWA, so the PWA never receives the session — the user is bounced back to sign-in on every launch. A typed code works identically in Safari, the installed PWA, and on Android.
+
+**Dashboard dependency (easy to miss):** the emailed code is rendered by the Supabase **"Magic Link" email template**, which MUST include `{{ .Token }}`. Default templates render only `{{ .ConfirmationURL }}` (the link), so without editing the template the code never appears. If codes ever stop arriving, check that template first. Code is 6 digits, expires in 1 hour by default.
+
+**⚠️ V1 blocker — email delivery:** Supabase's built-in email sender is capped at ~2 emails/hour and is explicitly not for production. Until custom SMTP (Resend) is configured, OTP sign-in is effectively single-tester-only — real patients will be rate-limited out of signing in. See "Known V1 blockers" (§13).
+
+**`AuthCallback.jsx` is legacy.** The `/auth/callback` route is retained only as a safety net for any magic link already sitting in an inbox (they expire ~1h). It is unused by the OTP flow and can be deleted once no old links matter.
+
+**Parked auth work (see §11):** magic-link-as-primary (needs iOS Universal Links) and Face ID / WebAuthn unlock for PWA re-entry.
 
 ---
 
@@ -92,8 +106,8 @@ Patient_0/
 │   ├── usePatientData.js           # Custom hook: fetches all patient data, exposes refetch
 │   ├── saveVisit.js                # Shapes parsed data + calls save_parsed_visit RPC (Chunk 6)
 │   ├── faceCoordinates.js          # friendly_name → {x,y} lookup for face dots (Chunk 6)
-│   ├── Login.jsx                   # Magic link login form
-│   ├── AuthCallback.jsx            # Handles magic link redirect
+│   ├── Login.jsx                   # Sign-in: two-step email → 6-digit OTP code (verifyOtp)
+│   ├── AuthCallback.jsx            # LEGACY magic-link redirect handler (kept for in-flight links)
 │   ├── Greeting.jsx                # "Hi, Tracy" header
 │   ├── HeroCard.jsx                # Magenta gradient "Make an appointment" card
 │   ├── LogVisitPrompt.jsx          # AI-parsing visit log flow (text/photo → parse → save)
@@ -331,7 +345,7 @@ The V1 build was organized into 8 chunks. Status:
 |---|---|---|
 | 0 | Infrastructure: Vite + Supabase client + Anthropic SDK install | ✅ Done |
 | 1 | Schema + RLS + Tracy's April 24 real data | ✅ Done |
-| 2 | Magic link auth + React Router + SPA redirects | ✅ Done |
+| 2 | Magic link auth + React Router + SPA redirects | ✅ Done (auth later switched to email OTP — see §4 Authentication) |
 | 3 | Patient page UI: face diagram, modal, visit card, all sections | ✅ Done |
 | 4 | Forms: inline cost editing + add/delete products | ✅ Done |
 | 5 | Photos: upload + signed URL grid + lightbox + edit/delete | ✅ Done |
@@ -373,6 +387,20 @@ Capture in `Rinnova_Future_Features_Parking_Lot.docx` (in Tracy's `_Rinnova` fol
 3. **Native mobile app** — V1 alternative: PWA (Chunk 7)
 4. **Desktop-optimized layout** — V1 alternative: Level 2 polish (done)
 5. **Patient onboarding flow** — Phase 1 transition feature
+
+6. **Magic link as a primary sign-in option (alongside OTP)** — *Phase 2+, likely needs a native wrapper.*
+   - **Question:** Should tapping a magic link be a first-class sign-in, including inside the installed iOS PWA?
+   - **Why parked / the real tradeoff:** magic links open in Safari, a separate storage context from the standalone PWA, so the session never reaches the app (this is the exact bug that drove the OTP switch). Making a link open the PWA requires **iOS Universal Links**: an `apple-app-site-association` file served from the domain + an Associated Domains entitlement — which in practice needs a real native app wrapper, not just a PWA. Non-trivial platform work.
+   - **Open product questions:** Is a link meaningfully better UX than the code for our patients, or just familiar? Do we ever ship a native App Store wrapper (which would make Universal Links natural)? Offer both link + code, or commit to one? Does a link in email reintroduce a phishing/misdirection surface the code avoids?
+   - **Earliest build window:** Phase 2, realistically only if/when a native wrapper exists.
+   - **V1 alternative (shipped):** 6-digit email OTP code.
+
+7. **Face ID / biometric unlock (WebAuthn passkeys) for PWA re-entry** — *Phase 2 polish.*
+   - **Question:** After first sign-in, can returning users unlock with Face ID / Touch ID instead of another email code?
+   - **Why it matters:** Supabase sessions persist, but they expire or get cleared; re-entry then means another email round-trip. Biometric unlock via **WebAuthn passkeys** (`navigator.credentials`) would make daily re-entry instant and feel native — a real retention/feel win for Patient 0.
+   - **Open product questions:** Passkey as an *unlock gate* over a stored Supabase session, vs. a full passwordless *primary* credential (register at first sign-in, sign in with it thereafter)? Does WebAuthn work reliably in iOS standalone-PWA mode? Fallback when biometrics are unavailable or on a new device (always keep email OTP as recovery). Storage/verify: Supabase has no native passkey primitive yet, so this needs either a custom challenge/verify (Netlify Function + a credentials table storing public keys) or a third-party (Hanko / Passage / Clerk) — which one, and what does it cost in complexity?
+   - **Earliest build window:** Phase 2, after multi-patient auth hardening.
+   - **V1 alternative:** persisted Supabase session + email OTP on expiry.
 
 When something new comes up that's NOT in V1 scope, add it to the parking lot rather than building it. The standard template includes: the question, decision (in/out and why), open product questions, rough schema/system sketch, earliest plausible build window, V1 alternative.
 
@@ -439,6 +467,10 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 - **No Tondo admin tool yet.** Patients log their own visits via the AI parsing flow. Admin tooling can come later if needed.
 - **Anthropic Claude Sonnet 4.5 as the AI.** Model string: `claude-sonnet-4-5`. Don't downgrade without a real reason.
 
+### Known V1 blockers (must clear before pilot patients)
+
+- **Custom SMTP (Resend) not yet configured — BLOCKS Phase 1 pilot.** Supabase's built-in email sender is capped at ~2 emails/hour project-wide. That's survivable for solo dev/testing, but it hard-blocks real onboarding: a pilot patient trying to sign in will simply not receive a code. Set up **Resend** as the SMTP provider in Supabase → Project Settings → Authentication → SMTP Settings (host `smtp.resend.com`, port 465/587, an API-key credential, and a verified sender domain). This is a prerequisite for the OTP sign-in flow to work for anyone but the tester. Discovered while building OTP auth — the ~2/hour cap halted live testing.
+
 ---
 
 ## 14. Anti-patterns and gotchas
@@ -459,7 +491,7 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 
 7. **PATH issues with Netlify CLI in fresh terminals.** Installed globally via npm into `~/.npm-global/bin`. New terminal tabs opened before `.zshrc` ran won't find `netlify`. Run `source ~/.zshrc` if `netlify: command not found`.
 
-8. **Magic link auth rate limit.** Supabase limits to ~4 magic-link requests per email per hour by default. If repeatedly testing login, bump this in Authentication → Rate Limits.
+8. **Email OTP: two separate limits, plus a template dependency.** (a) The **built-in email sender** is capped at ~2 emails/hour project-wide — this is the one that blocks real testing and onboarding, and the only fix is custom SMTP (Resend; see §13 Known V1 blockers). (b) Separately, Supabase rate-limits ~4 OTP requests per email address per hour; bump it in Authentication → Rate Limits. (c) The 6-digit code only appears in the email if the "Magic Link" template includes `{{ .Token }}` (see §4 Authentication) — a missing token is a silent "code never arrives" failure.
 
 ---
 
