@@ -94,7 +94,7 @@ function App() {
           providerPhone={patient.primary_provider?.phone || patient.provider_phone}
         />
 
-        <LogVisitPrompt />
+        <LogVisitPrompt onRefetch={refetch} />
 
         <VisitsTimeline
           visits={visits}

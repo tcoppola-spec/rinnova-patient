@@ -140,31 +140,42 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 
 ### `visits`
 - `id` UUID PK
-- `patient_id` UUID → patients
-- `provider_id` UUID → providers
-- `visit_date` DATE
+- `patient_id` UUID → patients (ON DELETE CASCADE)
+- `provider_id` UUID → providers (nullable, ON DELETE SET NULL) — frequently left null; the UI reads `provider_name`, not this join
+- `provider_name` TEXT (nullable) — human-readable provider string shown in VisitCard / VisitDetailModal
+- `visit_date` DATE **NOT NULL**
+- `status` TEXT **NOT NULL** — CHECK `status IN ('pending_review', 'confirmed')`, default `pending_review`. Patient-logged AI visits save as `pending_review`; `confirmed` is a Tondo-verified visit.
 - `cost` NUMERIC (nullable, inline-editable from VisitCard)
 - `body_regions` TEXT (added in Chunk 3 — short human summary like "Face, neck, and lips")
+- `follow_up_text` TEXT (nullable)
+- `raw_note_photo_url` TEXT (nullable) — reserved for storing the source note/receipt image
+- `ai_parsed_at` TIMESTAMPTZ (nullable) — stamped when a visit is saved via the AI parse flow
+- `tondo_confirmed_at` TIMESTAMPTZ (nullable) — stamped when Tondo confirms the visit
+- `created_at`, `updated_at` TIMESTAMPTZ
 
 ### `treatments`
 - `id` UUID PK
-- `visit_id` UUID → visits
-- `name` TEXT (e.g., "Xeomin", "Radiesse", "Diluted Radiesse", "RHA2")
+- `visit_id` UUID → visits (ON DELETE CASCADE)
+- `name` TEXT **NOT NULL** (e.g., "Xeomin", "Radiesse", "Diluted Radiesse", "RHA2")
+- `color_key` TEXT **NOT NULL** — one of `xeomin` (purple), `radiesse` (magenta), `radiesse-light` (coral, for diluted Radiesse), `rha` (orange). No DB CHECK enforces this — keep values in sync with the COLORS map in `FaceDiagram.jsx`.
 - `summary` TEXT (one-line patient-friendly description)
 - `total_dose` TEXT (e.g., "2.7cc", "1 syringe")
-- `lot_number` TEXT
-- `color_key` TEXT — **one of: `xeomin` (purple), `radiesse` (magenta), `radiesse-light` (coral, for diluted Radiesse), `rha` (orange)**
+- `cost` NUMERIC (nullable) — per-treatment cost; not currently surfaced in the UI
 - `display_order` INTEGER
+- `created_at` TIMESTAMPTZ
+- **No `lot_number` column.** The AI parser returns `lot_number` and the parse preview displays it, but it is dropped on save. Add a column if you ever need to persist it.
 
 ### `treatment_areas`
 - `id` UUID PK
-- `treatment_id` UUID → treatments
-- `friendly_name` TEXT (e.g., "Glabella", "Crows feet")
-- `clinical_name` TEXT (e.g., "Frontalis", "Orbicularis oculi")
+- `treatment_id` UUID → treatments (ON DELETE CASCADE)
+- `friendly_name` TEXT **NOT NULL** (e.g., "Between the brows", "Cheekbones")
+- `clinical_name` TEXT (e.g., "Glabella", "Zygoma")
 - `dose` TEXT (amount at this specific area)
-- `mirror` BOOLEAN (true = bilateral, renders dot on both sides)
-- `x_coord`, `y_coord` NUMERIC (position on the face diagram SVG, 0-480 viewBox)
+- `mirror` BOOLEAN (true = bilateral, renders a second dot mirrored across x=100)
+- `x`, `y` INTEGER **NOT NULL** — position on the FaceDiagram SVG, **viewBox 0–200 (x) × 0–260 (y)**. (NOT `x_coord`/`y_coord`, NOT a 0–480 box — the earlier doc was wrong.) For a bilateral area, store the LEFT-side point (x < 100); FaceDiagram reflects it to (200 − x).
 - `display_order` INTEGER
+- `created_at` TIMESTAMPTZ
+- **Coordinates on save:** the AI does NOT return x/y. `src/faceCoordinates.js` maps `friendly_name → {x, y}` (seeded from Tracy's 17 April-24 areas, plus common aliases). An unmatched name falls back to face-center (`DEFAULT_COORDINATE`) and logs a warning so the gap can be filled.
 
 ### `photos`
 - `id` UUID PK
@@ -193,7 +204,7 @@ Every table has these policies (some are created lazily — when a new use case 
 - UPDATE — same
 - DELETE — same
 
-**Important historical pattern:** DELETE policies are easy to forget. They were added late for both `products` and `photos` after silent-failure bugs. If you build a delete feature for any new table, verify the DELETE policy exists first.
+**Important historical pattern:** DELETE policies are easy to forget. They were added late for both `products` and `photos` after silent-failure bugs. As of Chunk 6 Step 4, `visits`, `treatments`, and `treatment_areas` have INSERT/SELECT/UPDATE policies but **NO DELETE policy** — a client-side delete on these silently no-ops. This is why the visit save uses an atomic Postgres function (`save_parsed_visit`, see `db/save_parsed_visit.sql`) instead of client-side insert-then-cleanup: the whole write commits or rolls back as one transaction, so there are never orphan rows to clean up. All three FKs are `ON DELETE CASCADE`, so if you later add a DELETE policy on `visits`, deleting a visit removes its treatments and areas automatically. If you build a delete feature for any new table, verify the DELETE policy exists first.
 
 ### Storage RLS for `patient-photos` bucket
 - Private bucket (no public read)
@@ -283,7 +294,7 @@ Output shape (always):
 }
 ```
 
-**Important:** the function does NOT yet save anything to the database. The frontend (`LogVisitPrompt.jsx`) displays the parsed result read-only. Save logic is Chunk 6 Step 4 — still pending as of this writing.
+**Save (Chunk 6 Step 4):** the parse function itself still only parses — it does not write to the DB. Saving is a separate step in the frontend: `LogVisitPrompt.jsx` shows the parsed result with a "Save to my record" button → `src/saveVisit.js` shapes the payload (groups areas under treatments, resolves face coordinates) → calls the `save_parsed_visit` Postgres RPC, which does the atomic three-table write. `lot_number` is parsed and previewed but not persisted (no column).
 
 ### What Claude is told (system prompt)
 - color_key must be one of: `xeomin`, `radiesse`, `radiesse-light`, `rha`
@@ -292,7 +303,7 @@ Output shape (always):
 - If unclear, use `null`. Don't hallucinate.
 
 ### What's NOT in the system prompt yet
-- `treatment_areas` do NOT come back with `x_coord` / `y_coord`. The AI doesn't know Rinnova's face SVG geometry. Save logic will need a **lookup table** mapping `friendly_name` → coordinates. The 17 areas from Tracy's April 24 visit are the seed data.
+- `treatment_areas` do NOT come back with `x` / `y` coordinates. The AI doesn't know Rinnova's face SVG geometry, so these are resolved at save time by the **lookup table** in `src/faceCoordinates.js` (`friendly_name → {x, y}`), seeded from Tracy's 17 April-24 areas. New friendly_names that aren't in the table fall back to face-center and log a warning — that's the signal to add them.
 
 ### Multimodal note
 Claude Sonnet 4.5 handles images up to ~5MB. The frontend enforces a 5MB cap and rejects larger files. We don't compress; we reject.
@@ -311,24 +322,19 @@ The V1 build was organized into 8 chunks. Status:
 | 3 | Patient page UI: face diagram, modal, visit card, all sections | ✅ Done |
 | 4 | Forms: inline cost editing + add/delete products | ✅ Done |
 | 5 | Photos: upload + signed URL grid + lightbox + edit/delete | ✅ Done |
-| 6 | AI parsing | 🟨 Steps 1-3 done, Step 4 pending |
+| 6 | AI parsing | ✅ Done (Step 4 shipped as Option A; edit-before-save UI deferred) |
 | 7 | Polish: PWA, Add to Home Screen, accessibility | ⬜ Not started |
 | 8 | Show Roberta: demo prep + recording + the conversation | ⬜ Not started |
 
-### Chunk 6 Step 4 — what's pending
+### Chunk 6 Step 4 — shipped (Option A, July 6 2026)
 
-Three sub-parts of the remaining work:
+The V1 loop is closed: a patient can parse a note/photo and save it as a real visit, verified end-to-end.
 
-**Part A — Edit-before-save UI**
-Currently the parsed result is read-only. Need to make every field inline-editable so the patient can correct AI mistakes before committing.
+**Part B — Save logic (done).** The write is a single atomic Postgres function, `save_parsed_visit(payload jsonb)` (source in `db/save_parsed_visit.sql`), not client-side sequential inserts. It inserts `visits` → `treatments` → `treatment_areas` in one transaction, resolves `patient_id`/`status` server-side via `get_my_patient_id()`, and rolls back entirely on any failure — so partial writes / orphan rows are impossible (this replaced the original "insert-then-cleanup" plan, which wasn't viable: these tables have no DELETE policy). The frontend side is `src/saveVisit.js` (payload shaping) called from `LogVisitPrompt.jsx` ("Save to my record" button + saved-confirmation view), with `onRefetch` threaded from `App.jsx` so the timeline updates.
 
-**Part B — Save logic**
-Write the parsed data to Supabase across three tables in order: `visits` → `treatments` (one per treatment, with the returned visit_id) → `treatment_areas` (one per area, with the right treatment_id). Handle partial failures with cleanup.
+**Part C — Face dot coordinate mapping (done).** `src/faceCoordinates.js` maps `friendly_name → {x, y}`, seeded from Tracy's 17 April-24 areas plus common AI-phrasing aliases. Unmatched names fall back to `DEFAULT_COORDINATE` (face-center) and log a warning to flag the gap.
 
-**Part C — Face dot coordinate mapping**
-Build a lookup table mapping `friendly_name` → `{x, y}`. The 17 areas from Tracy's April 24 visit are the seed. Future visits will surface gaps to fill iteratively.
-
-When picking up Step 4, the recommended scope is **Option A**: save logic + minimal coordinate mapping (just the 17 areas we have), without the edit UI. Reasoning: closes the V1 loop fastest. Edit UI is polish that can come later.
+**Part A — Edit-before-save UI (deferred, parked polish).** The parsed result is still read-only before save. Making each field inline-editable so the patient can correct AI mistakes pre-commit is the natural next enhancement — not required for the V1 loop. Two known gaps to fold in when Part A is built: `lot_number` is parsed/previewed but not persisted (no column), and a missing `visit_date` currently silently defaults to today.
 
 ---
 

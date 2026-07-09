@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { saveParsedVisit } from './saveVisit'
 
 /**
  * LogVisitPrompt
@@ -6,8 +7,12 @@ import { useState, useRef, useEffect } from 'react'
  * Two states:
  *   - idle: the "+ Log a visit" button
  *   - expanded: a multi-step flow (choose → input → parsing → result)
+ *
+ * Props:
+ *   onRefetch — refetch fn from usePatientData; called after a successful save
+ *               so the timeline picks up the new visit.
  */
-function LogVisitPrompt() {
+function LogVisitPrompt({ onRefetch }) {
   const [expanded, setExpanded] = useState(false)
 
   if (!expanded) {
@@ -28,7 +33,7 @@ function LogVisitPrompt() {
     )
   }
 
-  return <LogVisitFlow onClose={() => setExpanded(false)} />
+  return <LogVisitFlow onClose={() => setExpanded(false)} onRefetch={onRefetch} />
 }
 
 /**
@@ -39,9 +44,9 @@ function LogVisitPrompt() {
  *   - 'text-input' — textarea + Parse button
  *   - 'photo-input' — file picker + preview + Parse button
  *   - 'parsing' — loading state
- *   - 'result' — display parsed JSON read-only
+ *   - 'result' — review the parsed visit, then save it
  */
-function LogVisitFlow({ onClose }) {
+function LogVisitFlow({ onClose, onRefetch }) {
   const [step, setStep] = useState('choose')
   const [text, setText] = useState('')
   const [photoFile, setPhotoFile] = useState(null)
@@ -49,6 +54,10 @@ function LogVisitFlow({ onClose }) {
   const [photoBase64, setPhotoBase64] = useState(null)
   const [parsed, setParsed] = useState(null)
   const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+  const [saved, setSaved] = useState(false)
+  const [savedNote, setSavedNote] = useState('')
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -188,10 +197,40 @@ function LogVisitFlow({ onClose }) {
     setPhotoBase64(null)
     setParsed(null)
     setError(null)
+    setSaveError(null)
+    setSaved(false)
+    setSavedNote('')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
     setStep('choose')
+  }
+
+  async function handleSave() {
+    setSaveError(null)
+    setSaving(true)
+    try {
+      const { usedToday } = await saveParsedVisit(parsed)
+      setSavedNote(
+        usedToday
+          ? "We used today's date since the note didn't include one."
+          : ''
+      )
+      setSaved(true)
+      // Best-effort refresh so the timeline shows the new visit. The save has
+      // already committed at this point, so a refetch hiccup shouldn't error.
+      if (onRefetch) {
+        try {
+          await onRefetch()
+        } catch (e) {
+          console.warn('[LogVisit] refetch after save failed:', e)
+        }
+      }
+    } catch (e) {
+      setSaveError(e.message || 'Could not save your visit. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Choose step — two big buttons
@@ -312,23 +351,58 @@ function LogVisitFlow({ onClose }) {
     )
   }
 
-  // Result step
+  // Saved confirmation
+  if (step === 'result' && saved) {
+    return (
+      <div className="logvisit-flow">
+        <div className="logvisit-saved">
+          <div className="logvisit-saved-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12.5l4 4 10-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="logvisit-saved-title">Saved to your record</div>
+          <div className="logvisit-saved-sub">
+            Your visit is now in your timeline.{savedNote ? ' ' + savedNote : ''}
+          </div>
+        </div>
+        <div className="form-actions" style={{ marginTop: 20 }}>
+          <button type="button" onClick={onClose} className="form-save-btn">
+            Done
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Result step — review, then save
   if (step === 'result' && parsed) {
     return (
       <div className="logvisit-flow">
         <div className="logvisit-flow-head">
           <h3 className="logvisit-flow-title">Here's what we got</h3>
           <p className="logvisit-flow-sub">
-            Save isn't wired up yet — this is a preview of the AI's interpretation.
+            Look it over, then save it to your record.
           </p>
         </div>
         <ParsedVisitPreview parsed={parsed} />
+        {saveError && <div className="form-error">{saveError}</div>}
         <div className="form-actions" style={{ marginTop: 20 }}>
-          <button type="button" onClick={handleStartOver} className="form-cancel-btn">
+          <button
+            type="button"
+            onClick={handleStartOver}
+            className="form-cancel-btn"
+            disabled={saving}
+          >
             Start over
           </button>
-          <button type="button" onClick={onClose} className="form-save-btn">
-            Done
+          <button
+            type="button"
+            onClick={handleSave}
+            className="form-save-btn"
+            disabled={saving}
+          >
+            {saving ? 'Saving…' : 'Save to my record'}
           </button>
         </div>
       </div>
