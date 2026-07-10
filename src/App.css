@@ -740,11 +740,10 @@
   height: auto;
 }
 
-.face-diagram-svg .face-feature {
-  fill: none;
-  stroke: #B89B7E;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/* The face illustration is line art: every stroke is a filled shape. */
+.face-diagram-svg .face-art {
+  fill: var(--face-line);
+  stroke: none;
 }
 
 .face-diagram-svg .area-dot circle {
