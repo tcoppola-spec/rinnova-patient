@@ -68,7 +68,9 @@ Sign-in is passwordless via a **6-digit email OTP code**, not a magic link. Flow
 
 **Why OTP, not magic link:** a magic link opens in Safari, a *separate storage context* from an installed iOS PWA, so the PWA never receives the session — the user is bounced back to sign-in on every launch. A typed code works identically in Safari, the installed PWA, and on Android.
 
-**Dashboard dependency (easy to miss):** the emailed code is rendered by the Supabase **"Magic Link" email template**, which MUST include `{{ .Token }}`. Default templates render only `{{ .ConfirmationURL }}` (the link), so without editing the template the code never appears. If codes ever stop arriving, check that template first. Code is 6 digits, expires in 1 hour by default.
+**Dashboard dependency (easy to miss):** the emailed code is rendered by the Supabase **"Magic Link" email template**, which MUST include `{{ .Token }}`. Default templates render only `{{ .ConfirmationURL }}` (the link), so without editing the template the code never appears. If codes ever stop arriving, check that template first. The code expires in 1 hour by default.
+
+**Code length is a dashboard setting, not fixed at 6.** Supabase's **Authentication → Providers → Email → Email OTP Length** is configurable (6–10 digits; default 6, but the pilot project is set to 8). `Login.jsx` therefore validates `^\d{6,10}$` — do NOT hard-code 6, or a dashboard change silently truncates the input and rejects every code (this exact bug locked out sign-in once).
 
 **⚠️ V1 blocker — email delivery:** Supabase's built-in email sender is capped at ~2 emails/hour and is explicitly not for production. Until custom SMTP (Resend) is configured, OTP sign-in is effectively single-tester-only — real patients will be rate-limited out of signing in. See "Known V1 blockers" (§13).
 

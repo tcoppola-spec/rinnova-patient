@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 
 /**
- * Login — passwordless sign-in via 6-digit email OTP code.
+ * Login — passwordless sign-in via email OTP code.
  *
  * Two steps:
  *   'email' → enter email, we send a code (supabase.auth.signInWithOtp)
- *   'code'  → enter the 6-digit code, we verify it (supabase.auth.verifyOtp)
+ *   'code'  → enter the code, we verify it (supabase.auth.verifyOtp)
+ *
+ * The code length is a Supabase dashboard setting (Email OTP Length, 6–10
+ * digits), so we validate the whole range rather than assume 6.
  *
  * We use a code (not a magic link) on purpose: a magic link opens in Safari,
  * which is a separate storage context from an installed iOS PWA, so the PWA
@@ -73,8 +76,10 @@ function Login() {
     e.preventDefault()
     setError('')
     const token = code.trim()
-    if (!/^\d{6}$/.test(token)) {
-      setError('Enter the 6-digit code from your email.')
+    // Supabase's Email OTP Length is configurable (6–10 digits). Accept the
+    // whole range so a dashboard change can't silently lock anyone out.
+    if (!/^\d{6,10}$/.test(token)) {
+      setError('Enter the code from your email.')
       return
     }
     setStatus('verifying')
@@ -109,7 +114,7 @@ function Login() {
         {step === 'email' ? (
           <form onSubmit={handleEmailSubmit}>
             <p style={styles.sub}>
-              Sign in to see your record. We’ll email you a 6-digit code.
+              Sign in to see your record. We’ll email you a code.
             </p>
 
             <label htmlFor="email" style={styles.label}>Email</label>
@@ -135,7 +140,7 @@ function Login() {
         ) : (
           <form onSubmit={handleCodeSubmit}>
             <p style={styles.sub}>
-              Enter the 6-digit code we sent to{' '}
+              Enter the code we sent to{' '}
               <strong style={{ color: 'var(--ink)' }}>{email}</strong>.
             </p>
 
@@ -146,11 +151,10 @@ function Login() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              pattern="\d{6}"
-              maxLength={6}
+              pattern="\d{6,10}"
+              maxLength={10}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
               required
               style={styles.codeInput}
             />
