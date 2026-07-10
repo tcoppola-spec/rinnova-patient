@@ -95,10 +95,12 @@ Patient_0/
 │   └── functions/
 │       └── parse-visit.js          # Server-side Claude API call (text + image input)
 ├── db/
-│   └── save_parsed_visit.sql       # Atomic RPC that saves a parsed visit (Chunk 6 Step 4)
+│   ├── save_parsed_visit.sql       # Atomic RPC that saves a parsed visit (Chunk 6 Step 4)
+│   └── migrate_face_coordinates.sql # One-off: old 200x260 dots → new face's space
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
-│   └── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
+│   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
+│   └── new-face.svg                # Source artwork for FaceDiagram (Illustrator export)
 ├── src/
 │   ├── main.jsx                    # React entry
 │   ├── App.jsx                     # Root component, routes, auth state
@@ -108,6 +110,7 @@ Patient_0/
 │   ├── usePatientData.js           # Custom hook: fetches all patient data, exposes refetch
 │   ├── saveVisit.js                # Shapes parsed data + calls save_parsed_visit RPC (Chunk 6)
 │   ├── faceCoordinates.js          # friendly_name → {x,y} lookup for face dots (Chunk 6)
+│   ├── faceGeometry.js             # Face SVG coordinate space: viewBox, mirror axis, dot radius
 │   ├── Login.jsx                   # Sign-in: two-step email → 6-digit OTP code (verifyOtp)
 │   ├── AuthCallback.jsx            # LEGACY magic-link redirect handler (kept for in-flight links)
 │   ├── Greeting.jsx                # "Hi, Tracy" header
@@ -116,7 +119,7 @@ Patient_0/
 │   ├── VisitsTimeline.jsx          # Section + list of VisitCards
 │   ├── VisitCard.jsx               # Compact visit card with inline cost editing
 │   ├── VisitDetailModal.jsx        # Bottom-sheet modal with face diagram + treatments
-│   ├── FaceDiagram.jsx             # Hand-drawn SVG face with treatment dots
+│   ├── FaceDiagram.jsx             # Line-art SVG face with treatment dots (right half, mirrored)
 │   ├── PhotosSection.jsx           # Photo grid + upload form + lightbox
 │   ├── PhotoLightbox.jsx           # Bottom-sheet photo viewer with edit + delete
 │   ├── ProductsSection.jsx         # Products list + add form + delete
@@ -200,11 +203,15 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `friendly_name` TEXT **NOT NULL** (e.g., "Between the brows", "Cheekbones")
 - `clinical_name` TEXT (e.g., "Glabella", "Zygoma")
 - `dose` TEXT (amount at this specific area)
-- `mirror` BOOLEAN (true = bilateral, renders a second dot mirrored across x=100)
-- `x`, `y` INTEGER **NOT NULL** — position on the FaceDiagram SVG, **viewBox 0–200 (x) × 0–260 (y)**. (NOT `x_coord`/`y_coord`, NOT a 0–480 box — the earlier doc was wrong.) For a bilateral area, store the LEFT-side point (x < 100); FaceDiagram reflects it to (200 − x).
+- `mirror` BOOLEAN (true = bilateral, renders a second dot mirrored across the axis of symmetry)
+- `x`, `y` INTEGER **NOT NULL** — position on the FaceDiagram SVG, **viewBox 0–231.2 (x) × 0–324.1 (y)**. (NOT `x_coord`/`y_coord`.) The axis of symmetry is **x = 114.9**, which is NOT the viewBox centre (115.6) — the illustration is drawn 0.7 units off-centre. For a bilateral area, store the LEFT-side point (x < 114.9); FaceDiagram reflects it to (229.8 − x). All of this lives in one place: **`src/faceGeometry.js`**. Before the face-illustration swap this was a 200 × 260 box with axis x=100; existing rows were migrated by `db/migrate_face_coordinates.sql`.
 - `display_order` INTEGER
 - `created_at` TIMESTAMPTZ
 - **Coordinates on save:** the AI does NOT return x/y. `src/faceCoordinates.js` maps `friendly_name → {x, y}` (seeded from Tracy's 17 April-24 areas, plus common aliases). An unmatched name falls back to face-center (`DEFAULT_COORDINATE`) and logs a warning so the gap can be filled.
+
+**The face illustration (`scripts/new-face.svg`).** It's line art — every "stroke" is a filled shape (Illustrator expanded them), so there is no `stroke-width` to tune, and there is **no skin fill**: dots sit on the warm gradient of `.face-diagram-wrap`. The source artwork's LEFT half has an uneven outline (the crown swells from ~5.5 to ~9.0 units thick); the right half is uniform. So `FaceDiagram` clips to `x >= 114.4` and draws that half **twice** — once as-is, once mirrored — which yields a symmetric face without touching the artwork. If the `.ai` file is ever fixed and re-exported symmetrically, delete the clip/mirror and render the paths once.
+
+**If the artwork is ever replaced again:** the dot coordinates are denormalized into the DB, so a new illustration means a data migration. Fit an affine to landmarks that don't depend on line weight (iris centres, mouth centre — a filled disc's centre is its centre regardless of stroke). Do **not** re-resolve rows from `faceCoordinates.js` by name: the DB deliberately offsets the Radiesse and Diluted Radiesse dots (e.g. Cheekbones at (44,172) vs (53,175)) so both stay visible, and a name-based re-resolve would collapse them onto one point. See `db/migrate_face_coordinates.sql` for the worked example.
 
 ### `photos`
 - `id` UUID PK

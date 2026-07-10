@@ -1,13 +1,22 @@
+import { useId } from 'react'
+import { VIEWBOX, MIRROR_AXIS, CLIP_X, DOT_RADIUS, mirrorX } from './faceGeometry'
+
 /**
  * FaceDiagram
  *
- * Renders a stylized face (head, brows, eyes, lips, etc.) as an SVG,
- * with treatment dots positioned on top based on the visit's treatment_areas.
+ * Renders the Rinnova face illustration as an SVG, with treatment dots
+ * positioned on top based on the visit's treatment_areas.
  *
  * For each treatment_area:
  *   - A single dot is rendered at (x, y) using the parent treatment's color
- *   - If mirror=true, a SECOND dot is also rendered, mirrored across the center
- *     axis at x=100 (so x=76 → also at x=124)
+ *   - If mirror=true, a SECOND dot is also rendered, reflected across the
+ *     artwork's axis of symmetry (x = 114.9, NOT the viewBox centre)
+ *
+ * The artwork is line art with no skin fill — dots sit on the warm gradient of
+ * .face-diagram-wrap. Only the RIGHT half of the illustration is drawn: once
+ * as-is, and once mirrored to form the left half. The source SVG's left side
+ * has an uneven outline (see faceGeometry.js), so mirroring the uniform right
+ * half gives a symmetric face for free.
  *
  * Colors map from treatment.color_key to design system colors:
  *   xeomin = purple    (#7B2CBF)
@@ -27,7 +36,39 @@ const COLORS = {
   rha: '#FF8C42',
 }
 
+/**
+ * The face illustration, straight from scripts/new-face.svg.
+ * Rendered twice by FaceDiagram (right half, then mirrored). The paths that lie
+ * entirely on the left (the left brow and left eye) are clipped away and
+ * replaced by their mirrored counterparts.
+ */
+function FaceArt() {
+  return (
+    <>
+      {/* Head outline, ears and neck */}
+      <path className="face-art" d="M217.9,139.3c-2.2-2.7-5.3-4.3-9.3-4.7.3-6.9.5-14.2.5-22,0-34.9-10-62.1-29.8-80.7-16.1-15.2-38.8-24-64-24.7h-1s0,0,0,0c-18,.5-43.6,5.1-63.9,24-19.8,18.4-29.8,45.8-29.8,81.4s.2,15.1.6,21.9c-4,.4-7.2,2-9.3,4.8-4.5,5.7-4.4,15.7.1,30.6,4.4,14.2,11.8,24.5,18.9,27.1,5,17.2,10.8,27.4,14.3,32.6,1.6,2.4,9.4,13.6,21.2,24.5v19.4c0,13.8,0,23.7-14.5,32.3-2.2,1.3-4.5,2.6-6.9,3.8-1.4.7-1.8,2.6-.8,3.8h0c.7,1,2,1.3,3.1.7,2.5-1.3,4.9-2.6,7.1-3.9,17.1-10,17.1-23,17.1-36.7v-14.9c11.9,10,27,18.7,43.3,18.7s31.4-8.7,43.3-18.7v14.9c0,13.7,0,26.7,17.1,36.7,2.3,1.3,4.7,2.6,7.1,3.9,1,.5,2.3.3,3.1-.6h0c1-1.3.6-3.2-.8-3.9-2.4-1.2-4.7-2.5-6.9-3.8-14.5-8.5-14.5-18.5-14.5-32.3v-19.4c11.8-11,19.6-22.2,21.2-24.5,4.9-7.2,10.2-17.7,14.6-32.7,7-2.8,14.3-13,18.6-27,4.6-14.9,4.6-24.9.1-30.6ZM17,168.4c-5-16.1-3.3-23-1-25.9,1.2-1.6,3.1-2.5,5.6-2.8,1.3,20.5,4.1,37,7.4,50.1-4.2-3.8-9-11.4-12-21.4ZM180.3,226.7c-3.2,4.7-31.8,45.5-65.4,45.5s-62.2-40.8-65.4-45.5c-5.6-8.2-23.7-40.7-23.7-114.1S88.2,13,114.9,12.3c21,.6,89.1,9.4,89.1,100.3s-12.9,98.2-23.7,114.1ZM212.8,168.4c-3,9.7-7.6,17.2-11.7,21.1,3.3-13.3,5.9-29.7,7.2-49.8,2.5.3,4.3,1.2,5.6,2.8,2.3,2.9,4,9.7-1,25.9Z" />
+      {/* Nose base */}
+      <path className="face-art" d="M101.8,198.9l.7.3c2.3,1.1,7,3.3,13,3.3s8.2-.9,12.8-3.5c1.2-.7,1.7-2.3,1-3.5-.7-1.2-2.3-1.7-3.5-1-9.5,5.5-17.3,1.8-21.1,0l-.8-.4c-1.3-.6-2.8,0-3.4,1.3-.6,1.3,0,2.8,1.3,3.4Z" />
+      {/* Mouth */}
+      <path className="face-art" d="M139,219.9c-4,.4-7.7.2-11.3.1-1.1,0-2.2,0-3.3-.1-1.9,0-3.7.3-5.5.6-1.4.2-2.6.5-3.7.5-1.8,0-3.4-.2-5-.5-1.7-.3-3.5-.5-5.3-.4h-2.9c-5.4.3-8.1.5-11.3,0-1.4-.2-2.7.8-2.9,2.2-.2,1.4.8,2.7,2.2,2.9,3.6.5,6.7.4,12.2.1h2.9c1.3-.2,2.7,0,4.3.3,1.7.2,3.6.5,5.7.5h0c1.5,0,3.1-.3,4.6-.5,1.5-.3,3.1-.5,4.4-.5,1.1,0,2.1,0,3.2.1,3.7.1,7.6.3,11.9-.1,1.4-.1,2.5-1.4,2.3-2.8-.1-1.4-1.4-2.5-2.8-2.3Z" />
+      {/* Lower lip */}
+      <path className="face-art" d="M122.8,234.1c-6.9,2.4-15.9.2-16,.2-1.2-.3-2.4.5-2.7,1.7-.3,1.2.4,2.4,1.7,2.7.3,0,4.3,1,9.3,1s6.2-.3,9.2-1.4c1.2-.4,1.8-1.7,1.4-2.9-.4-1.2-1.7-1.8-2.9-1.4Z" />
+      {/* Left eye + iris (clipped away; the mirrored right eye replaces it) */}
+      <path className="face-art" d="M91.6,153.2c.5.6,1.3,1,2.1,1s1.2-.2,1.8-.6c1.1-1,1.3-2.7.3-3.8-6-7.1-13.2-10.6-21.9-10.7-8.8-.2-17.2,3.6-22.3,10.2-.9,1.2-.7,2.9.5,3.8,1.2.9,2.9.7,3.8-.5,3.1-4,7.1-6,10.5-7-.4,1.2-.5,2.8-.5,4-.2,5.1,2.2,9.7,7.8,10.2,6.1.6,9.2-3.3,9.8-8.5.1-1.3,0-3.2,0-4.6,3,1.5,5.8,3.7,8.3,6.7Z" />
+      {/* Left brow (clipped away; the mirrored right brow replaces it) */}
+      <path className="face-art" d="M52.2,131.2c4.5-1.5,10.7-2.4,14.2-2.7,11.2-1.1,23.3,3.3,27.9,4,4.1.6,3.9-5.9-1.6-7.8-9.6-3.3-17.3-4.4-27.3-2.8-8.8,1.4-16.1,6.4-16.5,7.3-.8,1.6,1.2,2.8,3.4,2.1Z" />
+      {/* Right brow */}
+      <path className="face-art" d="M181,129.1c-.4-.8-7.7-5.9-16.5-7.3-10-1.6-17.7-.5-27.3,2.8-5.5,1.9-5.7,8.4-1.6,7.8,4.6-.7,16.7-5,27.9-4,3.5.3,9.7,1.2,14.2,2.7,2.2.8,4.2-.4,3.4-2.1Z" />
+      {/* Right eye + iris */}
+      <path className="face-art" d="M156,138.9c-8.8.2-15.9,3.7-21.9,10.7-1,1.1-.8,2.8.3,3.8.5.4,1.1.6,1.8.6s1.5-.3,2.1-1c2.6-3,5.3-5.2,8.3-6.7-.1,1.4-.2,3.3,0,4.6.6,5.2,3.7,9.1,9.8,8.5,5.6-.5,8-5.1,7.8-10.2,0-1.2-.1-2.7-.5-4,3.5,1,7.4,3.1,10.5,7,.9,1.2,2.6,1.4,3.8.5,1.2-.9,1.4-2.6.5-3.8-5.1-6.5-13.5-10.4-22.3-10.2Z" />
+    </>
+  )
+}
+
 function FaceDiagram({ treatments = [] }) {
+  // useId can contain ':', which is not valid inside a url(#...) reference.
+  const clipId = `face-half-${useId().replace(/:/g, '')}`
+
   // Flatten all treatment_areas with their color attached, expanding mirrors
   const dots = []
   treatments.forEach((treatment) => {
@@ -41,11 +82,11 @@ function FaceDiagram({ treatments = [] }) {
         y: area.y,
         color,
       })
-      // Mirror dot (if mirror=true), reflected across center axis at x=100
+      // Mirror dot (if mirror=true), reflected across the axis of symmetry
       if (area.mirror) {
         dots.push({
           id: `${area.id}-mirror`,
-          x: 200 - area.x,
+          x: mirrorX(area.x),
           y: area.y,
           color,
         })
@@ -57,60 +98,38 @@ function FaceDiagram({ treatments = [] }) {
     <div className="face-diagram-wrap">
       <svg
         className="face-diagram-svg"
-        viewBox="0 0 200 260"
+        viewBox={`0 0 ${VIEWBOX.width} ${VIEWBOX.height}`}
         xmlns="http://www.w3.org/2000/svg"
         aria-label="Face diagram showing treatment areas"
         role="img"
       >
-        {/* Neck — drawn first so face overlaps cleanly */}
-        <path
-          d="M 76,184 L 70,240 Q 100,248 130,240 L 124,184 Z"
-          fill="#F8EFE3"
-          stroke="#D9CDBA"
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-        />
+        <defs>
+          <clipPath id={clipId}>
+            <rect
+              x={CLIP_X}
+              y="0"
+              width={VIEWBOX.width - CLIP_X}
+              height={VIEWBOX.height}
+            />
+          </clipPath>
+        </defs>
 
-        {/* Face fill — warm cream, rounder proportions */}
-        <path
-          d="M 100,48 C 68,48 44,72 44,108 C 44,140 54,168 70,184 C 82,194 92,198 100,198 C 108,198 118,194 130,184 C 146,168 156,140 156,108 C 156,72 132,48 100,48 Z"
-          fill="#F8EFE3"
-          stroke="#D9CDBA"
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-        />
+        {/* Right half of the illustration, as drawn */}
+        <g clipPath={`url(#${clipId})`}>
+          <FaceArt />
+        </g>
 
-        {/* Brows — lifted, arched, open */}
-        <path className="face-feature" d="M 60,94 Q 76,88 92,94" strokeWidth="1.3" />
-        <path className="face-feature" d="M 108,94 Q 124,88 140,94" strokeWidth="1.3" />
-
-        {/* Eyes — lower, rounder, more open */}
-        <path className="face-feature" d="M 62,110 Q 76,98 90,110 Q 76,121 62,110 Z" />
-        <path className="face-feature" d="M 110,110 Q 124,98 138,110 Q 124,121 110,110 Z" />
-
-        {/* Soft cheek blush */}
-        <ellipse cx="66" cy="130" rx="12" ry="7" fill="#F0C8B8" opacity="0.4" />
-        <ellipse cx="134" cy="130" rx="12" ry="7" fill="#F0C8B8" opacity="0.4" />
-
-        {/* Nose — subtle line + nostril hint */}
-        <path className="face-feature" d="M 100,104 Q 97,132 102,138" strokeWidth="0.9" opacity="0.6" />
-        <path className="face-feature" d="M 96,138 Q 100,142 104,138" strokeWidth="0.7" opacity="0.5" />
-
-        {/* Lips — gently filled */}
-        <path
-          d="M 84,164 Q 92,160 100,163 Q 108,160 116,164 Q 108,172 100,172 Q 92,172 84,164 Z"
-          fill="#D89B86"
-          opacity="0.55"
-        />
-        <path className="face-feature" d="M 84,164 Q 100,167 116,164" strokeWidth="0.7" opacity="0.6" />
-
-        {/* Subtle chin curve */}
-        <path className="face-feature" d="M 88,188 Q 100,193 112,188" strokeWidth="0.8" opacity="0.5" />
+        {/* The same right half, mirrored to become the left half */}
+        <g transform={`translate(${2 * MIRROR_AXIS},0) scale(-1,1)`}>
+          <g clipPath={`url(#${clipId})`}>
+            <FaceArt />
+          </g>
+        </g>
 
         {/* Treatment dots — rendered last so they sit on top of everything */}
         {dots.map((dot) => (
           <g key={dot.id} className="area-dot">
-            <circle cx={dot.x} cy={dot.y} r="4" fill={dot.color} />
+            <circle cx={dot.x} cy={dot.y} r={DOT_RADIUS} fill={dot.color} />
           </g>
         ))}
       </svg>

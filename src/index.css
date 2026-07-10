@@ -19,6 +19,9 @@
   --magenta-soft: #FBE8F0;
   --magenta-soft-2: #F9E0EA;
 
+  /* Face diagram line art */
+  --face-line: #D9CEBA;
+
   /* Brand gradient */
   --gradient-brand: linear-gradient(135deg, #7B2CBF 0%, #D63384 50%, #FF8C42 100%);
 
