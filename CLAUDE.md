@@ -480,6 +480,14 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 
 - **Custom SMTP (Resend) — ✅ CLEARED (July 10, 2026).** Was the hard blocker: Supabase's built-in email caps at ~2/hour project-wide, which would rate-limit real patients out of sign-in. Now sending via **Resend** (Supabase → Project Settings → Authentication → SMTP Settings; host `smtp.resend.com`, verified sender domain), so OTP delivery works at volume. Verified end-to-end. No known email-delivery blocker remains before the Phase 1 pilot.
 
+### Later / non-blockers (known issues to pick up, not shipping-critical)
+
+These are real and worth doing, but none blocks the Phase 1 pilot. Roughly in priority order:
+
+1. **Duplicate-dot save bug (highest priority — real correctness issue).** `src/faceCoordinates.js` maps each `friendly_name` to ONE coordinate. So a new AI-parsed visit that has both **Radiesse** and **Diluted Radiesse** at the same area (e.g. "Cheekbones") saves both dots at the identical point — one completely hides the other on the face diagram. Tracy's April 24 visit doesn't hit this only because its rows carry deliberately-offset coordinates from Chunk 1; the *save path* has no such offset. Fix needs deterministic fan-out: when two treatments share an area, nudge the second dot by a fixed delta (mirror the ~(+5,+2) offset already in the seed data). Until then, some multi-product visits will look like they're missing a dot.
+2. **Chunk 7 remainder.** (a) **Offline / service worker** — needed for Android/Chrome's install prompt and any offline shell caching; iOS A2HS already works without it. The manifest MIME fix is already in place. (b) **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
+3. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
+
 ---
 
 ## 14. Anti-patterns and gotchas
