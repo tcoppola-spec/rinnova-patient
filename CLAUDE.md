@@ -62,9 +62,9 @@ This is the canonical example. When testing, this is the visit to compare agains
 
 No Tailwind. No CSS-in-JS. No component library. Vanilla React + plain CSS by deliberate choice — Tracy needs to be able to read every line.
 
-### Authentication — email OTP (6-digit code)
+### Authentication — email OTP code
 
-Sign-in is passwordless via a **6-digit email OTP code**, not a magic link. Flow (see `Login.jsx`): enter email → `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` → enter the emailed code → `supabase.auth.verifyOtp({ email, token, type: 'email' })` → on success `Login` calls `navigate('/')` itself (App isn't mounted on `/login`, so its auth listener can't do the redirect).
+Sign-in is passwordless via an **email OTP code**, not a magic link. Flow (see `Login.jsx`): enter email → `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` → enter the emailed code → `supabase.auth.verifyOtp({ email, token, type: 'email' })` → on success `Login` calls `navigate('/')` itself (App isn't mounted on `/login`, so its auth listener can't do the redirect).
 
 **Why OTP, not magic link:** a magic link opens in Safari, a *separate storage context* from an installed iOS PWA, so the PWA never receives the session — the user is bounced back to sign-in on every launch. A typed code works identically in Safari, the installed PWA, and on Android.
 
@@ -72,7 +72,7 @@ Sign-in is passwordless via a **6-digit email OTP code**, not a magic link. Flow
 
 **Code length is a dashboard setting, not fixed at 6.** Supabase's **Authentication → Providers → Email → Email OTP Length** is configurable (6–10 digits; default 6, but the pilot project is set to 8). `Login.jsx` therefore validates `^\d{6,10}$` — do NOT hard-code 6, or a dashboard change silently truncates the input and rejects every code (this exact bug locked out sign-in once).
 
-**⚠️ V1 blocker — email delivery:** Supabase's built-in email sender is capped at ~2 emails/hour and is explicitly not for production. Until custom SMTP (Resend) is configured, OTP sign-in is effectively single-tester-only — real patients will be rate-limited out of signing in. See "Known V1 blockers" (§13).
+**Email delivery — custom SMTP (Resend), configured (July 10, 2026).** Sends now go through Resend (`smtp.resend.com`, verified sender domain), which clears Supabase's built-in ~2 emails/hour cap. Verified end-to-end: code arrives, on-brand template renders, not flagged as spam. Before Resend this was the hard V1 blocker (the built-in sender made sign-in single-tester-only). Configured in Supabase → Project Settings → Authentication → SMTP Settings.
 
 **`AuthCallback.jsx` is legacy.** The `/auth/callback` route is retained only as a safety net for any magic link already sitting in an inbox (they expire ~1h). It is unused by the OTP flow and can be deleted once no old links matter.
 
@@ -478,7 +478,7 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 
 ### Known V1 blockers (must clear before pilot patients)
 
-- **Custom SMTP (Resend) not yet configured — BLOCKS Phase 1 pilot.** Supabase's built-in email sender is capped at ~2 emails/hour project-wide. That's survivable for solo dev/testing, but it hard-blocks real onboarding: a pilot patient trying to sign in will simply not receive a code. Set up **Resend** as the SMTP provider in Supabase → Project Settings → Authentication → SMTP Settings (host `smtp.resend.com`, port 465/587, an API-key credential, and a verified sender domain). This is a prerequisite for the OTP sign-in flow to work for anyone but the tester. Discovered while building OTP auth — the ~2/hour cap halted live testing.
+- **Custom SMTP (Resend) — ✅ CLEARED (July 10, 2026).** Was the hard blocker: Supabase's built-in email caps at ~2/hour project-wide, which would rate-limit real patients out of sign-in. Now sending via **Resend** (Supabase → Project Settings → Authentication → SMTP Settings; host `smtp.resend.com`, verified sender domain), so OTP delivery works at volume. Verified end-to-end. No known email-delivery blocker remains before the Phase 1 pilot.
 
 ---
 
@@ -500,7 +500,7 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 
 7. **PATH issues with Netlify CLI in fresh terminals.** Installed globally via npm into `~/.npm-global/bin`. New terminal tabs opened before `.zshrc` ran won't find `netlify`. Run `source ~/.zshrc` if `netlify: command not found`.
 
-8. **Email OTP: two separate limits, plus a template dependency.** (a) The **built-in email sender** is capped at ~2 emails/hour project-wide — this is the one that blocks real testing and onboarding, and the only fix is custom SMTP (Resend; see §13 Known V1 blockers). (b) Separately, Supabase rate-limits ~4 OTP requests per email address per hour; bump it in Authentication → Rate Limits. (c) The 6-digit code only appears in the email if the "Magic Link" template includes `{{ .Token }}` (see §4 Authentication) — a missing token is a silent "code never arrives" failure.
+8. **Email OTP: two separate limits, plus a template dependency.** (a) The **built-in email sender** is capped at ~2 emails/hour project-wide — this was the blocker for real testing and onboarding; the fix, custom SMTP via Resend, is now configured (see §13 Known V1 blockers). If sends ever regress, this cap is the first thing to check. (b) Separately, Supabase rate-limits ~4 OTP requests per email address per hour; bump it in Authentication → Rate Limits. (c) The 6-digit code only appears in the email if the "Magic Link" template includes `{{ .Token }}` (see §4 Authentication) — a missing token is a silent "code never arrives" failure.
 
 ---
 
