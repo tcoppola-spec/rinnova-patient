@@ -574,9 +574,9 @@ A 3-screen swipeable carousel shown once, on first authenticated entry, before t
 - Everything gradient (the Fraunces "R", the line icons, the button) pulls `--gradient-brand`. The SVG icons use a shared inline `<linearGradient id="onboarding-grad">` whose stops are `var(--purple/--magenta/--orange)` — **no hardcoded hex anywhere.**
 - Screen 3 uses the **simplified** face icon, not `FaceDiagram`'s artwork: the real face has ears, irises and a neck that turn to mush at 52px.
 
-**The brief is stale on copy.** `docs/onboarding-brief.md` is the original design input, but the shipped copy diverged during the build — screen 3's headline and description were rewritten, and all em dashes were removed from the descriptions. **`src/Onboarding.jsx` is the source of truth for copy**, not the brief.
+**Copy:** `docs/onboarding-brief.md` has been kept in sync with the shipped copy, so the brief and `Onboarding.jsx` agree. If you change one, change the other.
 
-**Brief-vs-reality corrections** (the brief's token table was wrong; it told us to verify rather than trust): `--gradient` → **`--gradient-brand`**, `--border` → **`--line`**. The rest (`--cream`, `--ink`, `--body`, `--muted`, `--f-display`, `--f-body`) matched.
+**Heads-up on the brief's token table:** it lists `--gradient` and `--border`, which **do not exist**. The real tokens are **`--gradient-brand`** and **`--line`**. The rest (`--cream`, `--ink`, `--body`, `--muted`, `--f-display`, `--f-body`) are correct. `src/index.css` is the source of truth for tokens — always verify against it rather than trusting a brief.
 
 ---
 

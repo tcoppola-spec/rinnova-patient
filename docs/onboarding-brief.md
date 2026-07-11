@@ -52,7 +52,7 @@ Centered vertical stack, `text-align: center`, `align-items: center`:
 **Icons** are gradient-filled via `background-clip: text` on the glyph (same technique for the Fraunces "R" and the line icons), so they read as one family:
 - Screen 1: Fraunces **"R"** (~42px), gradient fill. This is the welcome mark — match the app icon / home-screen R.
 - Screen 2: **camera** + a small muted "or" + **microphone** (outline line icons, ~34px), gradient fill.
-- Screen 3: **face** outline (~38px), gradient fill. *Placeholder currently `ti-face-id` — swap for the real face glyph that matches `FaceDiagram` if one exists.*
+- Screen 3: **face** outline, gradient fill. Uses `scripts/onboarding-face-icon.svg` — a purpose-drawn simplified face, inlined into `Onboarding.jsx` (same pattern as `new-face.svg` → `FaceDiagram`). Deliberately **not** `FaceDiagram`'s artwork: its ears, irises and neck turn to mush at this size. Renders at 44 × 52px, filling the icon zone.
 
 ---
 
@@ -62,9 +62,11 @@ Headline line breaks are intentional (shown with `/`). Keep them or let them flo
 
 | # | Eyebrow | Icon | Headline | Description |
 |---|---|---|---|---|
-| 1 | Welcome | Gradient "R" (Fraunces) | Your aesthetic history, / all in one place | A private record of every treatment you've had — what, where, and when — kept just for you. |
-| 2 | Adding a visit | camera + mic | Snap a photo, / or just say it | Photograph your visit note or receipt, or simply tell Rinnova what you had done — it fills in the details. |
-| 3 | Your map | face outline | See it mapped / onto your face | Every treatment lands on your face map with its date, building a visual timeline you can watch grow. |
+| 1 | Welcome | Gradient "R" (Fraunces) | Your aesthetic history, / all in one place | A private record of every treatment you’ve had. What, where, and when, kept just for you. |
+| 2 | Adding a visit | camera + mic | Snap a photo, / or just say it | Photograph your visit note or receipt, or simply tell Rinnova what you had done. It fills in the details. |
+| 3 | Your map | face outline | Know what works, / and when you’re due | See every treatment by area and date. What worked, what didn’t, and what’s wearing off. |
+
+**No em dashes in the descriptions** — each one breaks into two sentences instead. Apostrophes are typographic (’), matching the strings in `Onboarding.jsx`.
 
 Screen 3 button label: **Get started**
 
