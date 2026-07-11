@@ -89,12 +89,12 @@ function App() {
   }
 
   // First-run onboarding gates the main UI (doesn't need patient data loaded).
+  // Deliberately NOT wrapped in .app-shell: that wrapper has min-height:100vh,
+  // which forces the document taller than the visible viewport on mobile Safari
+  // and leaves the dots stranded under the browser's bottom bar. Onboarding
+  // pins itself to the visible viewport instead.
   if (needsOnboarding) {
-    return (
-      <div className="app-shell">
-        <Onboarding onDone={completeOnboarding} />
-      </div>
-    )
+    return <Onboarding onDone={completeOnboarding} />
   }
 
   if (dataLoading) {

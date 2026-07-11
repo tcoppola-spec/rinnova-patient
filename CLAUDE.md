@@ -569,10 +569,17 @@ A 3-screen swipeable carousel shown once, on first authenticated entry, before t
 
 ⚠️ **The flag is per-device, not per-account.** See "Later / non-blockers" (§13) for why the profile-column upgrade needs a `SECURITY DEFINER` RPC rather than a plain `ALTER TABLE` + UPDATE policy.
 
+**⚠️ Mobile-Safari viewport trap (this cost three failed attempts — read it).** The dots kept ending up hidden under Safari's bottom toolbar. It was NOT a spacing problem, and adding padding did nothing. `#root` and `.app-shell` both set `min-height: 100vh` — the **large** viewport, i.e. the height with the toolbar *hidden*. Rendering Onboarding inside `.app-shell` forced the document taller than the visible screen, which makes the page scrollable, which keeps Safari's bottom bar expanded over the content. An inner `100svh` can't win against a `100vh` ancestor. The fix, all three parts required:
+1. `App.jsx` returns `<Onboarding>` **directly — not wrapped in `.app-shell`.**
+2. `.onboarding` is `position: fixed; inset: 0; height: 100svh` — `svh` is the toolbar-*visible* height, so the container's bottom edge is the top of the toolbar. (In the installed PWA there's no toolbar, so `svh` is just the full screen.) **Never use `dvh` here** — the dynamic viewport can be the toolbar-hidden height, which reintroduces the bug.
+3. Onboarding locks background scroll on mount (same pattern as `VisitDetailModal`) — a scrollable page is what keeps the toolbar expanded.
+
 **Design notes worth keeping:**
-- The eyebrow row, the icon zone (52px), and the headline block (56px) are all **fixed height** on purpose. That's what keeps all three descriptions landing on the same vertical plane as you swipe. `.onboarding-desc` also has a `min-height` so the centered stacks stay the same total height across slides. Change any of those and the screens will visibly jitter between swipes.
+- The eyebrow row (18px), the icon zone (64px), and the headline block (68px) are all **fixed height** on purpose. That's what keeps the icon, headline and description landing on the same vertical plane on every slide, so nothing jumps as you swipe. `.onboarding-desc` also has a `min-height` sized to the *longest* description, so every stack is the same total height. Change any of those to `auto` and the screens will visibly jitter between swipes.
+- **The CTA slot (`.onboarding-cta-slot`) is always rendered, even on screens 1–2 where it's empty.** "Get started" only appears on screen 3, and the footer is shared — without the reserved slot the footer grows on arrival at screen 3, shrinking the viewport and jolting the content upward mid-swipe.
 - Everything gradient (the Fraunces "R", the line icons, the button) pulls `--gradient-brand`. The SVG icons use a shared inline `<linearGradient id="onboarding-grad">` whose stops are `var(--purple/--magenta/--orange)` — **no hardcoded hex anywhere.**
-- Screen 3 uses the **simplified** face icon, not `FaceDiagram`'s artwork: the real face has ears, irises and a neck that turn to mush at 52px.
+- Screen 3 uses the **simplified** face icon, not `FaceDiagram`'s artwork: the real face has ears, irises and a neck that turn to mush at this size. The icon is *filled outlines*, so its line weight is baked into the geometry (it measured 1.83px on screen vs 2.80px for the stroked camera/mic). It's stroked in the same gradient at `stroke-width: 1.7` to bring it to 2.80px, so all three icons carry equal weight.
+- **Dev-only preview:** `/preview-onboarding` (guarded by `import.meta.env.DEV` in `main.jsx`) renders the flow with no sign-in, so the design can be reviewed without burning OTP codes against Supabase's ~4/hour per-email limit. It is stripped from production builds — verified absent from the bundle.
 
 **Copy:** `docs/onboarding-brief.md` has been kept in sync with the shipped copy, so the brief and `Onboarding.jsx` agree. If you change one, change the other.
 

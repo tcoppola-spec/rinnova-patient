@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 /**
  * Onboarding — first-run, 3-screen swipeable carousel.
@@ -109,6 +109,17 @@ function Onboarding({ onDone }) {
   const touchStartX = useRef(null)
   const last = SCREENS.length - 1
 
+  // Lock background scroll while onboarding is up (same pattern as
+  // VisitDetailModal). Without this the page behind can still scroll, which on
+  // mobile Safari keeps the bottom toolbar expanded over the content.
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
   function go(i) {
     setIndex(Math.max(0, Math.min(last, i)))
   }
@@ -174,27 +185,37 @@ function Onboarding({ onDone }) {
                 aria-label={`${i + 1} of ${SCREENS.length}`}
                 aria-hidden={i !== index}
               >
+                {/* Eyebrow pins to the top; the icon/headline/description
+                    group centres in the space that's left. */}
                 <p className="onboarding-eyebrow">{screen.eyebrow}</p>
-                <div className="onboarding-iconzone">
-                  <ScreenIcon kind={screen.icon} />
+                <div className="onboarding-body">
+                  <div className="onboarding-iconzone">
+                    <ScreenIcon kind={screen.icon} />
+                  </div>
+                  <h2 className="onboarding-headline">
+                    {screen.headline[0]}
+                    <br />
+                    {screen.headline[1]}
+                  </h2>
+                  <p className="onboarding-desc">{screen.description}</p>
                 </div>
-                <h2 className="onboarding-headline">
-                  {screen.headline[0]}
-                  <br />
-                  {screen.headline[1]}
-                </h2>
-                <p className="onboarding-desc">{screen.description}</p>
               </section>
             ))}
           </div>
         </div>
 
         <div className="onboarding-footer">
-          {index === last && (
-            <button type="button" className="onboarding-cta" onClick={onDone}>
-              Get started
-            </button>
-          )}
+          {/* The slot is always present, even on screens 1-2 where it's empty.
+              Without it the footer would grow when "Get started" appears on
+              screen 3, shrinking the viewport and jolting the content upward
+              mid-swipe. */}
+          <div className="onboarding-cta-slot">
+            {index === last && (
+              <button type="button" className="onboarding-cta" onClick={onDone}>
+                Get started
+              </button>
+            )}
+          </div>
           <div className="onboarding-dots">
             {SCREENS.map((_, i) => (
               <button

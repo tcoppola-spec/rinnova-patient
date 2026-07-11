@@ -1832,16 +1832,22 @@
 
 /* ============ ONBOARDING (first-run carousel) ============ */
 
+/* Full-bleed: the flow owns the whole screen. No card, no border — the only
+   inset is the phone's safe area (notch / home indicator).
+   svh, NOT dvh: the dynamic viewport can be the toolbar-hidden height, which
+   puts the dots underneath Safari's bottom bar. svh is the toolbar-visible
+   height, so content always clears it. In the installed PWA there is no
+   toolbar, so svh is just the full screen. */
 .onboarding {
-  min-height: 100vh;
-  min-height: 100dvh;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  height: 100vh;
+  height: 100svh; /* toolbar-VISIBLE height, so the bottom bar can't cover the dots */
+  overflow-y: auto;
   background: var(--cream);
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 20px;
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
 
 .onboarding-grad-def {
@@ -1856,14 +1862,15 @@
 .onboarding-card {
   position: relative;
   width: 100%;
-  max-width: 360px;
-  height: min(600px, calc(100dvh - 40px));
+  max-width: var(--phone-width); /* centres the column on desktop; full width on phone */
+  min-height: 100%; /* fills the pinned .onboarding container */
   background: var(--cream);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 24px 20px 20px;
   display: flex;
   flex-direction: column;
+  /* Small top inset so "Skip" can sit high; a large bottom inset lifts the dots
+     and the CTA well clear of the browser's bottom bar. */
+  padding: max(14px, env(safe-area-inset-top)) 24px
+           max(78px, calc(env(safe-area-inset-bottom) + 58px));
 }
 
 .onboarding-card:focus-visible {
@@ -1873,14 +1880,14 @@
 
 .onboarding-skip {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: max(12px, env(safe-area-inset-top));
+  right: 14px;
   z-index: 1;
   background: none;
   border: none;
   padding: 6px 8px;
   font-family: var(--f-body);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -1903,56 +1910,67 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;      /* horizontal centering */
-  justify-content: center;  /* vertical centering within the viewport */
+  align-items: center;   /* horizontal centering */
   text-align: center;
   padding: 0 8px;
 }
 
-/* Fixed-height rows so all three descriptions start on the same plane */
+/* The eyebrow sits near the top, but dropped clear of the "Skip" row above it. */
 .onboarding-eyebrow {
-  height: 16px;
-  margin: 0 0 20px;
+  height: 18px;
+  margin: 64px 0 0;
+  flex-shrink: 0;
   font-family: var(--f-body);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
+/* Icon + headline + description, centred in whatever space is left below the
+   eyebrow and above the footer. */
+.onboarding-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The three blocks below are FIXED-HEIGHT on purpose: it's what keeps the
+   icon, headline and description on the same vertical plane on every slide, so
+   nothing jumps as you swipe. Don't turn them into auto heights. */
 .onboarding-iconzone {
-  height: 52px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-bottom: 26px;
 }
 
 .onboarding-headline {
-  height: 56px;
-  margin: 0 0 14px;
+  height: 68px;
+  margin: 0 0 16px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
   font-family: var(--f-display);
   font-weight: 400;
-  font-size: 22px;
-  line-height: 1.22;
+  font-size: 26px;
+  line-height: 1.24;
   letter-spacing: -0.01em;
   color: var(--ink);
-  text-wrap: balance;
 }
 
-/* min-height keeps the stack the same total height on every slide, so the
-   centered groups line up with each other across screens */
+/* min-height is sized to the LONGEST description, so every slide's stack is the
+   same total height and the centred groups align across screens. */
 .onboarding-desc {
   margin: 0;
-  max-width: 196px;
-  min-height: 62px;
+  max-width: 270px;
+  min-height: 94px;
   font-family: var(--f-body);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--body);
 }
@@ -1960,7 +1978,7 @@
 /* Gradient-filled Fraunces "R" (screen 1) */
 .onboarding-r {
   font-family: var(--f-display);
-  font-size: 42px;
+  font-size: 54px;
   font-weight: 600;
   line-height: 1;
   background: var(--gradient-brand);
@@ -1979,52 +1997,71 @@
 }
 
 .onboarding-glyph-camera svg,
-.onboarding-glyph-mic svg { width: 34px; height: 34px; }
+.onboarding-glyph-mic svg { width: 42px; height: 42px; }
 
 /* Screen 3: the simplified face icon (scripts/onboarding-face-icon.svg).
-   Filled shapes, so it takes the brand gradient like the "R" does. Sized to
-   fill the icon zone; its 94.6 x 111.9 viewBox makes it ~44px wide at 52px. */
+   Filled shapes, so it takes the brand gradient like the "R" does. Fills the
+   icon zone; its 94.6 x 111.9 viewBox makes it ~54px wide at 64px tall. */
 .onboarding-face-mark {
   display: block;
   height: 100%;
   width: auto;
 }
 
+/* The icon is filled outlines, so its line weight is baked into the geometry —
+   measured at 1.83px on screen vs 2.80px for the stroked camera/mic. Stroking
+   the shapes in the same gradient thickens them by the stroke width, bringing
+   them to 2.80px so all three icons carry the same weight. */
 .onboarding-face-mark path {
   fill: url(#onboarding-grad);
-  stroke: none;
+  stroke: url(#onboarding-grad);
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .onboarding-icon-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .onboarding-or {
   font-family: var(--f-body);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
+/* Footer sits at the very bottom — the card's safe-area padding is the only
+   thing between the dots and the edge of the screen. */
+/* The gap lifts "Get started" clear of the dots. */
 .onboarding-footer {
   margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 48px;
   padding-top: 16px;
+}
+
+/* Reserves the CTA's height on every screen so the footer never changes size —
+   see the comment in Onboarding.jsx. */
+.onboarding-cta-slot {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: stretch;
 }
 
 .onboarding-cta {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--gradient-brand);
   color: #fff;
   font-family: var(--f-body);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(123, 44, 191, 0.22);
