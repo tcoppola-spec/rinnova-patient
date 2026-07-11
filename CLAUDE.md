@@ -100,7 +100,10 @@ Patient_0/
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
-│   └── new-face.svg                # Source artwork for FaceDiagram (Illustrator export)
+│   ├── new-face.svg                # Source artwork for FaceDiagram (Illustrator export)
+│   └── onboarding-face-icon.svg    # Source artwork for the Onboarding screen-3 face icon
+├── docs/
+│   └── onboarding-brief.md         # Original design brief for the onboarding flow (see §18)
 ├── src/
 │   ├── main.jsx                    # React entry
 │   ├── App.jsx                     # Root component, routes, auth state
@@ -124,6 +127,7 @@ Patient_0/
 │   ├── PhotoLightbox.jsx           # Bottom-sheet photo viewer with edit + delete
 │   ├── ProductsSection.jsx         # Products list + add form + delete
 │   ├── SubscriptionsSection.jsx    # Currently empty state only
+│   ├── Onboarding.jsx              # First-run 3-screen carousel (see §18)
 │   └── PageFooter.jsx              # Tondo brand footer
 ├── index.html                      # HTML shell — PWA manifest link + iOS Add-to-Home meta tags
 ├── netlify.toml                    # Build config + header rule (manifest MIME type)
@@ -395,7 +399,7 @@ Capture in `Rinnova_Future_Features_Parking_Lot.docx` (in Tracy's `_Rinnova` fol
 2. **Product education pages** — V1 alternative: surface existing `summary` field inline (done)
 3. **Native mobile app** — V1 alternative: PWA (Chunk 7)
 4. **Desktop-optimized layout** — V1 alternative: Level 2 polish (done)
-5. **Patient onboarding flow** — Phase 1 transition feature
+5. **Patient onboarding flow** — ✅ **BUILT** (July 10, 2026). Shipped as a first-run 3-screen carousel; see §18. What remains parked is only the *completion-flag upgrade* (localStorage → profile column), noted in "Later / non-blockers" (§13).
 
 6. **Magic link as a primary sign-in option (alongside OTP)** — *Phase 2+, likely needs a native wrapper.*
    - **Question:** Should tapping a magic link be a first-class sign-in, including inside the installed iOS PWA?
@@ -466,7 +470,7 @@ The `usePatientData` hook exposes a `refetch` function. When App.jsx instantiate
 
 A list of decisions that should NOT be re-litigated without a strong reason:
 
-- **V1 is single-patient.** Just Tracy. No multi-tenant work, no patient onboarding flow, no admin UI. Phase 2 is when this changes.
+- **V1 is single-patient.** Just Tracy. No multi-tenant work, no admin UI. Phase 2 is when this changes. (The **first-run onboarding flow is now built** — see §18. It was previously excluded from V1, but was pulled in once Resend cleared the way for real pilot patients.)
 - **Phone-first design.** Desktop is centered phone-column. Level 3 responsive is parked.
 - **Private storage with signed URLs.** Aesthetic photos are sensitive. Never public bucket, even for V1 convenience.
 - **Magenta is the only action color.** Including destructive. Don't introduce red.
@@ -486,7 +490,8 @@ These are real and worth doing, but none blocks the Phase 1 pilot. Roughly in pr
 
 1. **Duplicate-dot save bug (highest priority — real correctness issue).** `src/faceCoordinates.js` maps each `friendly_name` to ONE coordinate. So a new AI-parsed visit that has both **Radiesse** and **Diluted Radiesse** at the same area (e.g. "Cheekbones") saves both dots at the identical point — one completely hides the other on the face diagram. Tracy's April 24 visit doesn't hit this only because its rows carry deliberately-offset coordinates from Chunk 1; the *save path* has no such offset. Fix needs deterministic fan-out: when two treatments share an area, nudge the second dot by a fixed delta (mirror the ~(+5,+2) offset already in the seed data). Until then, some multi-product visits will look like they're missing a dot.
 2. **Chunk 7 remainder.** (a) **Offline / service worker** — needed for Android/Chrome's install prompt and any offline shell caching; iOS A2HS already works without it. The manifest MIME fix is already in place. (b) **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
-3. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
+3. **Onboarding completion flag: localStorage → profile column.** The first-run flow (§18) gates on a per-user **localStorage** key, so the flag is **per-device**: it doesn't follow the account, and reinstalling the PWA re-shows onboarding. Fine for a single tester, wrong for real pilot patients. The fix is NOT just `alter table patients add column onboarding_completed boolean` — `patients` has no UPDATE RLS policy, and adding a broad one would let a patient rewrite any column of their own row. Do it with a narrow `SECURITY DEFINER` RPC (e.g. `mark_onboarding_complete()`) that flips only that column, same pattern as `save_parsed_visit`. Do this before the second patient enrolls.
+4. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
 
 ---
 
@@ -551,6 +556,27 @@ When picking up Rinnova work from a fresh Claude Code session:
 6. Wait for the Netlify deploy and verify it published (not failed).
 7. Visit `https://tondo-rinnova.netlify.app` and confirm the site still loads.
 8. Update this file (`CLAUDE.md`) if anything material changed in patterns, decisions, or schema.
+
+---
+
+## 18. Onboarding flow (first-run) — shipped July 10, 2026
+
+A 3-screen swipeable carousel shown once, on first authenticated entry, before the main UI. Built from `docs/onboarding-brief.md`.
+
+**Files:** `src/Onboarding.jsx` (component), the `.onboarding*` block at the end of `src/App.css`, the gate + flag helpers at the top of `src/App.jsx`, and `scripts/onboarding-face-icon.svg` (screen-3 icon source, inlined into the component the same way `new-face.svg` is inlined into `FaceDiagram`).
+
+**The gate.** `App.jsx` shows it when `!!userId && !isOnboarded(userId)`, rendered *after* the session check and *before* the `dataLoading` check — so it doesn't wait on patient data. Completing ("Get started") or skipping writes `rinnova.onboarding.<userId> = 'done'` to localStorage. All storage access is try/caught (private-mode browsers throw), and a storage failure fails **open** — it won't trap a patient on onboarding forever.
+
+⚠️ **The flag is per-device, not per-account.** See "Later / non-blockers" (§13) for why the profile-column upgrade needs a `SECURITY DEFINER` RPC rather than a plain `ALTER TABLE` + UPDATE policy.
+
+**Design notes worth keeping:**
+- The eyebrow row, the icon zone (52px), and the headline block (56px) are all **fixed height** on purpose. That's what keeps all three descriptions landing on the same vertical plane as you swipe. `.onboarding-desc` also has a `min-height` so the centered stacks stay the same total height across slides. Change any of those and the screens will visibly jitter between swipes.
+- Everything gradient (the Fraunces "R", the line icons, the button) pulls `--gradient-brand`. The SVG icons use a shared inline `<linearGradient id="onboarding-grad">` whose stops are `var(--purple/--magenta/--orange)` — **no hardcoded hex anywhere.**
+- Screen 3 uses the **simplified** face icon, not `FaceDiagram`'s artwork: the real face has ears, irises and a neck that turn to mush at 52px.
+
+**The brief is stale on copy.** `docs/onboarding-brief.md` is the original design input, but the shipped copy diverged during the build — screen 3's headline and description were rewritten, and all em dashes were removed from the descriptions. **`src/Onboarding.jsx` is the source of truth for copy**, not the brief.
+
+**Brief-vs-reality corrections** (the brief's token table was wrong; it told us to verify rather than trust): `--gradient` → **`--gradient-brand`**, `--border` → **`--line`**. The rest (`--cream`, `--ink`, `--body`, `--muted`, `--f-display`, `--f-body`) matched.
 
 ---
 

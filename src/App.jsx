@@ -11,7 +11,30 @@ import ProductsSection from './ProductsSection'
 import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
+import Onboarding from './Onboarding'
 import './App.css'
+
+// First-run onboarding flag, per user, in localStorage. V1 fallback for the
+// brief's preferred profile column (which would need a DEFINER RPC + migration
+// so patients can't broadly write their own row). Wrapped because private-mode
+// browsers can throw on access.
+const onboardingKey = (userId) => `rinnova.onboarding.${userId}`
+function isOnboarded(userId) {
+  if (!userId) return true
+  try {
+    return localStorage.getItem(onboardingKey(userId)) === 'done'
+  } catch {
+    return true // if storage is unavailable, don't trap the user on onboarding
+  }
+}
+function markOnboarded(userId) {
+  if (!userId) return
+  try {
+    localStorage.setItem(onboardingKey(userId), 'done')
+  } catch {
+    /* no-op: nothing we can do if storage is blocked */
+  }
+}
 
 function App() {
   const navigate = useNavigate()
@@ -19,6 +42,17 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true)
   const { data, loading: dataLoading, error: dataError, refetch } = usePatientData()
   const [openVisit, setOpenVisit] = useState(null)
+  const [onboardingDone, setOnboardingDone] = useState(false)
+
+  const userId = session?.user?.id
+  // Show the first-run flow once per user, before the main UI. Reading storage
+  // in render is a cheap, synchronous, side-effect-free read.
+  const needsOnboarding = !!userId && !onboardingDone && !isOnboarded(userId)
+
+  function completeOnboarding() {
+    markOnboarded(userId)
+    setOnboardingDone(true)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -52,6 +86,15 @@ function App() {
 
   if (!session) {
     return null
+  }
+
+  // First-run onboarding gates the main UI (doesn't need patient data loaded).
+  if (needsOnboarding) {
+    return (
+      <div className="app-shell">
+        <Onboarding onDone={completeOnboarding} />
+      </div>
+    )
   }
 
   if (dataLoading) {
