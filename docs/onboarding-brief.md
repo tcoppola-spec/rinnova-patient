@@ -22,7 +22,7 @@
 ## Tech notes
 
 - React, consistent with the existing app (same stack as `FaceDiagram.jsx` / `Login.jsx`).
-- **Reuse the existing design tokens** already defined in the app's CSS (`--gradient`, `--cream`, `--ink`, `--body`, `--muted`, `--border`, `--f-display`, `--f-body`). Do **not** hardcode new hex values — the ones below are provided only so you can verify you're pulling the right tokens.
+- **Reuse the existing design tokens** already defined in the app's CSS (`--gradient-brand`, `--cream`, `--ink`, `--body`, `--muted`, `--line`, `--f-display`, `--f-body`). Do **not** hardcode new hex values — the ones below are provided only so you can verify you're pulling the right tokens. `src/index.css` is the source of truth.
 
 ---
 
@@ -30,9 +30,9 @@
 
 | Purpose | Value | Existing var |
 |---|---|---|
-| Brand gradient (R mark, icons, button) | `linear-gradient(135deg, #7B2CBF 0%, #D63384 50%, #FF8C42 100%)` | `--gradient` |
+| Brand gradient (R mark, icons, button) | `linear-gradient(135deg, #7B2CBF 0%, #D63384 50%, #FF8C42 100%)` | `--gradient-brand` |
 | Card background | `#FAF7F2` | `--cream` |
-| Card border | `#E8E0D5` | `--border` |
+| Card border | `#E5E2DD` | `--line` |
 | Headline text | `#17172E` | `--ink` |
 | Description text | `#3A3A55` | `--body` |
 | Eyebrow / muted | `#8A8AA3` | `--muted` |

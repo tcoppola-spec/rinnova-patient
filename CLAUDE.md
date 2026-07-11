@@ -576,7 +576,7 @@ A 3-screen swipeable carousel shown once, on first authenticated entry, before t
 
 **Copy:** `docs/onboarding-brief.md` has been kept in sync with the shipped copy, so the brief and `Onboarding.jsx` agree. If you change one, change the other.
 
-**Heads-up on the brief's token table:** it lists `--gradient` and `--border`, which **do not exist**. The real tokens are **`--gradient-brand`** and **`--line`**. The rest (`--cream`, `--ink`, `--body`, `--muted`, `--f-display`, `--f-body`) are correct. `src/index.css` is the source of truth for tokens — always verify against it rather than trusting a brief.
+**Tokens:** the brief's token table has been corrected to the real vars (it originally listed `--gradient` and `--border`, which don't exist — the real ones are **`--gradient-brand`** and **`--line`**). `src/index.css` remains the source of truth; verify against it rather than trusting any brief.
 
 ---
 
