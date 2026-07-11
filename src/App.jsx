@@ -14,44 +14,37 @@ import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
 import './App.css'
 
-// First-run onboarding flag, per user, in localStorage. V1 fallback for the
-// brief's preferred profile column (which would need a DEFINER RPC + migration
-// so patients can't broadly write their own row). Wrapped because private-mode
-// browsers can throw on access.
-const onboardingKey = (userId) => `rinnova.onboarding.${userId}`
-function isOnboarded(userId) {
-  if (!userId) return true
-  try {
-    return localStorage.getItem(onboardingKey(userId)) === 'done'
-  } catch {
-    return true // if storage is unavailable, don't trap the user on onboarding
-  }
-}
-function markOnboarded(userId) {
-  if (!userId) return
-  try {
-    localStorage.setItem(onboardingKey(userId), 'done')
-  } catch {
-    /* no-op: nothing we can do if storage is blocked */
-  }
-}
-
 function App() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const { data, loading: dataLoading, error: dataError, refetch } = usePatientData()
   const [openVisit, setOpenVisit] = useState(null)
-  const [onboardingDone, setOnboardingDone] = useState(false)
+  // Lets the patient straight through the moment they finish, without waiting
+  // on the RPC round-trip — and keeps them through if that write fails.
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
 
-  const userId = session?.user?.id
-  // Show the first-run flow once per user, before the main UI. Reading storage
-  // in render is a cheap, synchronous, side-effect-free read.
-  const needsOnboarding = !!userId && !onboardingDone && !isOnboarded(userId)
-
-  function completeOnboarding() {
-    markOnboarded(userId)
-    setOnboardingDone(true)
+  /**
+   * Called on "Get started" or "Skip". Persists the flag via the
+   * complete_onboarding RPC (a narrow SECURITY DEFINER function — patients has
+   * no UPDATE policy on purpose; see db/add_onboarding_flag.sql).
+   *
+   * The write is best-effort: we dismiss FIRST, so a failed RPC can never trap
+   * the patient in onboarding. If it fails they simply see the flow again next
+   * session, which is the right retry.
+   */
+  async function completeOnboarding() {
+    setOnboardingDismissed(true)
+    try {
+      const { error } = await supabase.rpc('complete_onboarding')
+      if (error) throw error
+      await refetch() // pick up onboarding_completed = true on the patient row
+    } catch (e) {
+      console.warn(
+        '[onboarding] could not save completion — the patient will see it again next session:',
+        e?.message || e
+      )
+    }
   }
 
   useEffect(() => {
@@ -88,15 +81,6 @@ function App() {
     return null
   }
 
-  // First-run onboarding gates the main UI (doesn't need patient data loaded).
-  // Deliberately NOT wrapped in .app-shell: that wrapper has min-height:100vh,
-  // which forces the document taller than the visible viewport on mobile Safari
-  // and leaves the dots stranded under the browser's bottom bar. Onboarding
-  // pins itself to the visible viewport instead.
-  if (needsOnboarding) {
-    return <Onboarding onDone={completeOnboarding} />
-  }
-
   if (dataLoading) {
     return (
       <div className="app-shell">
@@ -121,6 +105,18 @@ function App() {
 
   const { patient, visits, photos, products, subscriptions } = data
   const lastVisit = visits[0]
+
+  // First-run onboarding, gated on the patient's own DB flag so it follows the
+  // account across devices. This sits AFTER the dataLoading check on purpose:
+  // the flag lives on the patient row, so rendering before the record loads
+  // would flash the carousel at someone who has already completed it.
+  //
+  // Deliberately NOT wrapped in .app-shell — that wrapper is min-height:100vh
+  // (the toolbar-hidden viewport), which strands the dots under mobile Safari's
+  // bottom bar. Onboarding pins itself to the visible viewport instead.
+  if (!patient.onboarding_completed && !onboardingDismissed) {
+    return <Onboarding onDone={completeOnboarding} />
+  }
 
   return (
     <div className="app-shell">

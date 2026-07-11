@@ -96,7 +96,8 @@ Patient_0/
 │       └── parse-visit.js          # Server-side Claude API call (text + image input)
 ├── db/
 │   ├── save_parsed_visit.sql       # Atomic RPC that saves a parsed visit (Chunk 6 Step 4)
-│   └── migrate_face_coordinates.sql # One-off: old 200x260 dots → new face's space
+│   ├── migrate_face_coordinates.sql # One-off: old 200x260 dots → new face's space
+│   └── add_onboarding_flag.sql     # patients.onboarding_completed + complete_onboarding() RPC
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
@@ -168,7 +169,10 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `auth_user_id` UUID (links to Supabase auth.users)
 - `first_name`, `last_name`, `email`, `dob`, `provider_name`, `provider_phone`
 - `primary_provider_id` UUID → providers
+- `onboarding_completed` BOOLEAN **NOT NULL**, default `false` — gates the first-run flow (§18). Added by `db/add_onboarding_flag.sql`.
 - Created in Chunk 1.
+
+**`patients` has NO UPDATE policy — keep it that way.** Postgres RLS is row-level, not column-level, so any UPDATE policy broad enough to let a patient set `onboarding_completed` would also let them rewrite `email`, `dob`, `primary_provider_id`, etc. The only write path into this table is the narrow `complete_onboarding()` SECURITY DEFINER RPC, which takes no arguments, resolves the patient via `get_my_patient_id()`, and sets exactly one column on exactly one row. If you ever need another patient-writable field, add another narrow RPC — do not open up UPDATE.
 
 ### `providers`
 - `id` UUID PK
@@ -399,7 +403,7 @@ Capture in `Rinnova_Future_Features_Parking_Lot.docx` (in Tracy's `_Rinnova` fol
 2. **Product education pages** — V1 alternative: surface existing `summary` field inline (done)
 3. **Native mobile app** — V1 alternative: PWA (Chunk 7)
 4. **Desktop-optimized layout** — V1 alternative: Level 2 polish (done)
-5. **Patient onboarding flow** — ✅ **BUILT** (July 10, 2026). Shipped as a first-run 3-screen carousel; see §18. What remains parked is only the *completion-flag upgrade* (localStorage → profile column), noted in "Later / non-blockers" (§13).
+5. **Patient onboarding flow** — ✅ **BUILT** (July 10–11, 2026). A first-run 3-screen carousel, gated on `patients.onboarding_completed` via the `complete_onboarding()` RPC, so the flag follows the account across devices. Fully shipped; see §18. Nothing left parked here.
 
 6. **Magic link as a primary sign-in option (alongside OTP)** — *Phase 2+, likely needs a native wrapper.*
    - **Question:** Should tapping a magic link be a first-class sign-in, including inside the installed iOS PWA?
@@ -490,8 +494,7 @@ These are real and worth doing, but none blocks the Phase 1 pilot. Roughly in pr
 
 1. **Duplicate-dot save bug (highest priority — real correctness issue).** `src/faceCoordinates.js` maps each `friendly_name` to ONE coordinate. So a new AI-parsed visit that has both **Radiesse** and **Diluted Radiesse** at the same area (e.g. "Cheekbones") saves both dots at the identical point — one completely hides the other on the face diagram. Tracy's April 24 visit doesn't hit this only because its rows carry deliberately-offset coordinates from Chunk 1; the *save path* has no such offset. Fix needs deterministic fan-out: when two treatments share an area, nudge the second dot by a fixed delta (mirror the ~(+5,+2) offset already in the seed data). Until then, some multi-product visits will look like they're missing a dot.
 2. **Chunk 7 remainder.** (a) **Offline / service worker** — needed for Android/Chrome's install prompt and any offline shell caching; iOS A2HS already works without it. The manifest MIME fix is already in place. (b) **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
-3. **Onboarding completion flag: localStorage → profile column.** The first-run flow (§18) gates on a per-user **localStorage** key, so the flag is **per-device**: it doesn't follow the account, and reinstalling the PWA re-shows onboarding. Fine for a single tester, wrong for real pilot patients. The fix is NOT just `alter table patients add column onboarding_completed boolean` — `patients` has no UPDATE RLS policy, and adding a broad one would let a patient rewrite any column of their own row. Do it with a narrow `SECURITY DEFINER` RPC (e.g. `mark_onboarding_complete()`) that flips only that column, same pattern as `save_parsed_visit`. Do this before the second patient enrolls.
-4. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
+3. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
 
 ---
 
@@ -565,9 +568,16 @@ A 3-screen swipeable carousel shown once, on first authenticated entry, before t
 
 **Files:** `src/Onboarding.jsx` (component), the `.onboarding*` block at the end of `src/App.css`, the gate + flag helpers at the top of `src/App.jsx`, and `scripts/onboarding-face-icon.svg` (screen-3 icon source, inlined into the component the same way `new-face.svg` is inlined into `FaceDiagram`).
 
-**The gate.** `App.jsx` shows it when `!!userId && !isOnboarded(userId)`, rendered *after* the session check and *before* the `dataLoading` check — so it doesn't wait on patient data. Completing ("Get started") or skipping writes `rinnova.onboarding.<userId> = 'done'` to localStorage. All storage access is try/caught (private-mode browsers throw), and a storage failure fails **open** — it won't trap a patient on onboarding forever.
+**The gate (DB-backed since July 11, 2026).** `App.jsx` shows the flow when `!patient.onboarding_completed && !onboardingDismissed`. The flag lives on the **patient row**, so it follows the account across devices and survives a PWA reinstall.
 
-⚠️ **The flag is per-device, not per-account.** See "Later / non-blockers" (§13) for why the profile-column upgrade needs a `SECURITY DEFINER` RPC rather than a plain `ALTER TABLE` + UPDATE policy.
+Two things about this that are load-bearing:
+
+1. **The gate sits AFTER the `dataLoading` / `dataError` checks, not before.** The flag comes from the patient record, so rendering earlier would flash the carousel at someone who has already completed it, for as long as the fetch takes. If you ever move this check earlier "so it doesn't wait on data," you reintroduce that flash.
+2. **The write is best-effort and fails OPEN.** `completeOnboarding()` sets `onboardingDismissed` *first*, then calls the RPC. A failed write therefore can never trap a patient in onboarding — they get into the app, and simply see the flow again next session, which is the correct retry. Don't "fix" this by awaiting the RPC before dismissing.
+
+**Persistence:** the `complete_onboarding()` RPC (`db/add_onboarding_flag.sql`) — a narrow `SECURITY DEFINER` function, because `patients` deliberately has no UPDATE policy. See the note under the `patients` schema (§7) for why that must not change. On success `App.jsx` calls `refetch()` so the in-memory patient record picks up the new value.
+
+**No backfill was run.** The column defaults to `false`, so existing rows (Tracy's) saw onboarding exactly once after the migration — which served as the end-to-end proof that the column, RPC, refetch and gate all work. New patients correctly default to `false` and see it on first entry.
 
 **⚠️ Mobile-Safari viewport trap (this cost three failed attempts — read it).** The dots kept ending up hidden under Safari's bottom toolbar. It was NOT a spacing problem, and adding padding did nothing. `#root` and `.app-shell` both set `min-height: 100vh` — the **large** viewport, i.e. the height with the toolbar *hidden*. Rendering Onboarding inside `.app-shell` forced the document taller than the visible screen, which makes the page scrollable, which keeps Safari's bottom bar expanded over the content. An inner `100svh` can't win against a `100vh` ancestor. The fix, all three parts required:
 1. `App.jsx` returns `<Onboarding>` **directly — not wrapped in `.app-shell`.**
