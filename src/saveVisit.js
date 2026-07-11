@@ -24,7 +24,44 @@
  */
 
 import { supabase } from './supabaseClient'
-import { getCoordinates, DEFAULT_COORDINATE } from './faceCoordinates'
+import { getCoordinates, assertPlacement } from './faceCoordinates'
+import { MIRROR_AXIS } from './faceGeometry'
+
+/**
+ * Deterministic fan-out for the duplicate-dot bug.
+ *
+ * faceCoordinates maps each region to ONE point. So a visit with both Radiesse
+ * and Diluted Radiesse at "Cheekbones" would place both dots on the identical
+ * pixel — one completely hides the other, and the record looks like it's missing
+ * a product. Tracy's April 24 visit only escapes this because its rows carry
+ * hand-offsets that were typed in by hand back in Chunk 1.
+ *
+ * So the Nth product at the same region is nudged by a fixed delta. The deltas
+ * mirror the hand-offsets already in the seed data ((+5,+2) in the old 200x260
+ * space, which scales by the migration affine to roughly (+8.4, +2.6)).
+ *
+ * Direction matters, to preserve the laterality invariant:
+ *   - bilateral: nudge medially + down. Stays off-axis, so it still mirrors into
+ *     two distinct dots.
+ *   - midline:   nudge DOWN ONLY. Moving x would push a midline area off the
+ *     axis of symmetry, which is anatomically wrong.
+ */
+const FAN_BILATERAL = { x: 8.4, y: 2.6 }
+const FAN_MIDLINE = { x: 0, y: 8 }
+
+function fanOut(base, mirror, seenPerArea, friendlyName) {
+  const key = friendlyName.toLowerCase().trim()
+  const n = seenPerArea[key] || 0
+  seenPerArea[key] = n + 1
+  if (n === 0) return base
+
+  const onAxis = Math.abs(base.x - MIRROR_AXIS) < 0.5
+  const d = onAxis ? FAN_MIDLINE : FAN_BILATERAL
+  return {
+    x: +(base.x + n * d.x).toFixed(1),
+    y: +(base.y + n * d.y).toFixed(1),
+  }
+}
 
 export async function saveParsedVisit(parsed) {
   const visit = parsed?.visit || {}
@@ -41,9 +78,14 @@ export async function saveParsedVisit(parsed) {
     areasByTreatment[key].push(area)
   }
 
-  // Any friendly_name we couldn't place — surfaced back to the caller and
-  // logged, so we know to add it to faceCoordinates.js.
-  const missingCoords = []
+  // Regions we could not place. These are NOT given an invented coordinate —
+  // see the header of faceCoordinates.js. They save with x/y NULL (no dot) and
+  // are handed back so the UI can tell the patient, and so we know to add them.
+  const unplaced = []
+
+  // How many times we've already placed each region in THIS visit, so a second
+  // product at the same area can be fanned out instead of stacked.
+  const seenPerArea = {}
 
   // Build the nested treatments payload, resolving each area's coordinate.
   // Drop treatments with no name (that column is NOT NULL too).
@@ -51,16 +93,45 @@ export async function saveParsedVisit(parsed) {
     .filter((t) => t?.name)
     .map((t) => {
       const tAreas = (areasByTreatment[t.name] || []).map((a) => {
-        let coord = getCoordinates(a.friendly_name)
-        if (!coord) {
-          missingCoords.push(a.friendly_name)
-          coord = DEFAULT_COORDINATE
+        const mirror = a.mirror === true
+        const base = getCoordinates(a.friendly_name)
+
+        if (!base) {
+          unplaced.push(a.friendly_name)
+          return {
+            friendly_name: a.friendly_name,
+            clinical_name: a.clinical_name ?? null,
+            dose: a.dose ?? null,
+            mirror,
+            x: null, // no invented dot — see faceCoordinates.js
+            y: null,
+          }
         }
+
+        // A bilateral region resolving to the axis is a contradiction (its two
+        // dots would coincide). Treat it as unplaced rather than draw a wrong,
+        // plausible-looking dot.
+        const problem = assertPlacement(base, mirror, a.friendly_name)
+        if (problem) {
+          console.error('[saveVisit] bad placement:', problem)
+          unplaced.push(a.friendly_name)
+          return {
+            friendly_name: a.friendly_name,
+            clinical_name: a.clinical_name ?? null,
+            dose: a.dose ?? null,
+            mirror,
+            x: null,
+            y: null,
+          }
+        }
+
+        const coord = fanOut(base, mirror, seenPerArea, a.friendly_name)
+
         return {
           friendly_name: a.friendly_name,
           clinical_name: a.clinical_name ?? null,
           dose: a.dose ?? null,
-          mirror: a.mirror === true,
+          mirror,
           x: coord.x,
           y: coord.y,
         }
@@ -94,11 +165,13 @@ export async function saveParsedVisit(parsed) {
     treatments: payloadTreatments,
   }
 
-  if (missingCoords.length > 0) {
-    console.warn(
-      '[saveVisit] No face coordinates for:',
-      missingCoords,
-      '— placed at center. Add them to faceCoordinates.js.'
+  if (unplaced.length > 0) {
+    // Loud on purpose. An injection always has a location, so an unplaced region
+    // is a GAP IN faceCoordinates.js that we need to close — not a normal state.
+    console.error(
+      '[saveVisit] Could not place on the face map:',
+      unplaced,
+      '— saved with no dot. Add these regions to faceCoordinates.js.'
     )
   }
 
@@ -106,5 +179,7 @@ export async function saveParsedVisit(parsed) {
   const { data, error } = await supabase.rpc('save_parsed_visit', { payload })
   if (error) throw error
 
-  return { visitId: data, usedToday, missingCoords }
+  // `unplaced` is returned so the UI can tell the patient which regions have no
+  // dot, rather than leaving them to notice a missing mark on their face map.
+  return { visitId: data, usedToday, unplaced }
 }

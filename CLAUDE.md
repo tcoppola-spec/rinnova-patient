@@ -97,7 +97,10 @@ Patient_0/
 ├── db/
 │   ├── save_parsed_visit.sql       # Atomic RPC that saves a parsed visit (Chunk 6 Step 4)
 │   ├── migrate_face_coordinates.sql # One-off: old 200x260 dots → new face's space
-│   └── add_onboarding_flag.sql     # patients.onboarding_completed + complete_onboarding() RPC
+│   ├── add_onboarding_flag.sql     # patients.onboarding_completed + complete_onboarding() RPC
+│   ├── fix_coordinate_precision.sql # x/y integer → double precision (fractional coords)
+│   ├── allow_unplaced_areas.sql    # x/y nullable ("we can't place this") + repair the tear trough
+│   └── allow_visit_delete.sql      # DELETE policy on visits (children cascade)
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
@@ -212,10 +215,20 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `clinical_name` TEXT (e.g., "Glabella", "Zygoma")
 - `dose` TEXT (amount at this specific area)
 - `mirror` BOOLEAN (true = bilateral, renders a second dot mirrored across the axis of symmetry)
-- `x`, `y` INTEGER **NOT NULL** — position on the FaceDiagram SVG, **viewBox 0–231.2 (x) × 0–324.1 (y)**. (NOT `x_coord`/`y_coord`.) The axis of symmetry is **x = 114.9**, which is NOT the viewBox centre (115.6) — the illustration is drawn 0.7 units off-centre. For a bilateral area, store the LEFT-side point (x < 114.9); FaceDiagram reflects it to (229.8 − x). All of this lives in one place: **`src/faceGeometry.js`**. Before the face-illustration swap this was a 200 × 260 box with axis x=100; existing rows were migrated by `db/migrate_face_coordinates.sql`.
+- `x`, `y` DOUBLE PRECISION **NOT NULL** — position on the FaceDiagram SVG, **viewBox 0–231.2 (x) × 0–324.1 (y)**. (NOT `x_coord`/`y_coord`.) **These were `integer` until July 11, 2026** and that broke saving: the coordinate space is fractional (the axis of symmetry is x = 114.9), and Postgres will not cast the text `'114.9'` to `int` — it raises `invalid input syntax for type integer`. Widened by `db/fix_coordinate_precision.sql`. **The column type and the `save_parsed_visit` cast must stay in step:** if the column were still `integer`, a numeric cast in the RPC would *silently round* on insert and drift every dot by up to half a unit, with no error at all. The axis of symmetry is **x = 114.9**, which is NOT the viewBox centre (115.6) — the illustration is drawn 0.7 units off-centre. For a bilateral area, store the LEFT-side point (x < 114.9); FaceDiagram reflects it to (229.8 − x). All of this lives in one place: **`src/faceGeometry.js`**. Before the face-illustration swap this was a 200 × 260 box with axis x=100; existing rows were migrated by `db/migrate_face_coordinates.sql`.
 - `display_order` INTEGER
 - `created_at` TIMESTAMPTZ
-- **Coordinates on save:** the AI does NOT return x/y. `src/faceCoordinates.js` maps `friendly_name → {x, y}` (seeded from Tracy's 17 April-24 areas, plus common aliases). An unmatched name falls back to face-center (`DEFAULT_COORDINATE`) and logs a warning so the gap can be filled.
+- **Coordinates on save:** the AI does NOT return x/y. `src/faceCoordinates.js` resolves `friendly_name → {x, y}` at save time.
+
+  **⚠️ There is NO fallback coordinate, on purpose. Do not add one.** An injection always has a location, so a region we can't place is a *gap in the lookup table*, not a licence to invent a position — a plausible-looking dot in the wrong place silently falsifies a medical record, which is worse than no dot. Unplaceable regions save with **`x`/`y` NULL**, render no dot, and are named to the patient in the save confirmation. (NULL also gives us non-injectables for free: a laser or peel has no discrete point.)
+
+  This replaced a `DEFAULT_COORDINATE` of (114.9, 175), which caused a real bug — see the invariant below.
+
+- **⚠️ THE BILATERAL INVARIANT: a `mirror = true` area must have an OFF-AXIS x.** `MIRROR_AXIS` is 114.9, so x = 114.9 is the *fixed point* of the reflection (229.8 − 114.9 = 114.9). A bilateral area sitting on the axis draws both of its dots on the same pixel — they stack and look like one. This is exactly how the April 14 tear-trough bug presented: "tear trough" was missing from the lookup, fell back to the old face-centre default (114.9, 175), and rendered as a **single midline dot** for a **bilateral** region. One root cause, both symptoms. `assertPlacement()` in `faceCoordinates.js` now enforces this at save time.
+
+- **Duplicate regions fan out.** Two products at the same area (Radiesse + Diluted Radiesse at "Cheekbones") would otherwise resolve to the identical point and stack. `saveVisit.js` nudges the Nth by a fixed delta — medially+down for bilateral, **down only** for midline (moving a midline area's x would push it off the axis of symmetry, which is anatomically wrong).
+
+- **Matching is token-based, not exact-string.** The AI writes "Tear trough (undereyes)", "Tear troughs", "Under-eye hollows" for the same anatomy. `getCoordinates()` strips parentheticals, handles plurals, and does a token-subset match where the most specific key wins ("lower cheeks" beats "cheeks"). Exact-string matching against free-text AI output is too brittle and was the underlying weakness.
 
 **The face illustration (`scripts/new-face.svg`).** It's line art — every "stroke" is a filled shape (Illustrator expanded them), so there is no `stroke-width` to tune, and there is **no skin fill**: dots sit on the warm gradient of `.face-diagram-wrap`. The source artwork's LEFT half has an uneven outline (the crown swells from ~5.5 to ~9.0 units thick); the right half is uniform. So `FaceDiagram` clips to `x >= 114.4` and draws that half **twice** — once as-is, once mirrored — which yields a symmetric face without touching the artwork. If the `.ai` file is ever fixed and re-exported symmetrically, delete the clip/mirror and render the paths once.
 
@@ -248,7 +261,15 @@ Every table has these policies (some are created lazily — when a new use case 
 - UPDATE — same
 - DELETE — same
 
-**Important historical pattern:** DELETE policies are easy to forget. They were added late for both `products` and `photos` after silent-failure bugs. As of Chunk 6 Step 4, `visits`, `treatments`, and `treatment_areas` have INSERT/SELECT/UPDATE policies but **NO DELETE policy** — a client-side delete on these silently no-ops. This is why the visit save uses an atomic Postgres function (`save_parsed_visit`, see `db/save_parsed_visit.sql`) instead of client-side insert-then-cleanup: the whole write commits or rolls back as one transaction, so there are never orphan rows to clean up. All three FKs are `ON DELETE CASCADE`, so if you later add a DELETE policy on `visits`, deleting a visit removes its treatments and areas automatically. If you build a delete feature for any new table, verify the DELETE policy exists first.
+**Important historical pattern:** DELETE policies are easy to forget, and forgetting one **fails silently** — PostgREST returns success with zero rows affected, so the UI happily reports "deleted" while the row sits there untouched. They were added late for `products` and `photos` after exactly that bug, and again for `visits` (July 2026) when the delete button did nothing.
+
+Current state:
+- **`visits` HAS a DELETE policy** (`db/allow_visit_delete.sql`, added when visit deletion shipped).
+- **`treatments` and `treatment_areas` deliberately have NO DELETE policy.** Their FKs are `ON DELETE CASCADE`, and cascading deletes are referential actions performed by the system — they are **not** subject to RLS on the child tables. So deleting a visit removes its treatments and dots automatically, and there is no way to orphan-delete a treatment out from under its visit. Keep it that way.
+
+The visit **save** still uses an atomic Postgres function (`save_parsed_visit`) rather than client-side insert-then-cleanup: the whole write commits or rolls back as one transaction, so partial writes are impossible.
+
+**When you build any delete feature: check the returned rows, not just the error.** `VisitDetailModal.handleDelete` does `.delete().eq(...).select('id')` and treats an empty result as a failure. Without that check a missing policy is indistinguishable from success.
 
 ### Storage RLS for `patient-photos` bucket
 - Private bucket (no public read)
@@ -492,9 +513,8 @@ A list of decisions that should NOT be re-litigated without a strong reason:
 
 These are real and worth doing, but none blocks the Phase 1 pilot. Roughly in priority order:
 
-1. **Duplicate-dot save bug (highest priority — real correctness issue).** `src/faceCoordinates.js` maps each `friendly_name` to ONE coordinate. So a new AI-parsed visit that has both **Radiesse** and **Diluted Radiesse** at the same area (e.g. "Cheekbones") saves both dots at the identical point — one completely hides the other on the face diagram. Tracy's April 24 visit doesn't hit this only because its rows carry deliberately-offset coordinates from Chunk 1; the *save path* has no such offset. Fix needs deterministic fan-out: when two treatments share an area, nudge the second dot by a fixed delta (mirror the ~(+5,+2) offset already in the seed data). Until then, some multi-product visits will look like they're missing a dot.
-2. **Chunk 7 remainder.** (a) **Offline / service worker** — needed for Android/Chrome's install prompt and any offline shell caching; iOS A2HS already works without it. The manifest MIME fix is already in place. (b) **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
-3. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
+1. **Chunk 7 remainder.** (a) **Offline / service worker** — needed for Android/Chrome's install prompt and any offline shell caching; iOS A2HS already works without it. The manifest MIME fix is already in place. (b) **Accessibility pass** — modal focus traps (VisitDetailModal, PhotoLightbox), aria labels, keyboard nav, `prefers-reduced-motion`, contrast audit.
+2. **Delete `AuthCallback.jsx`.** The `/auth/callback` route is a legacy safety net for magic links already sitting in inboxes (they expire ~1h). Once no old links matter, delete the component, its route in `main.jsx`, and this note.
 
 ---
 

@@ -90,8 +90,14 @@ begin
         a.elem ->> 'clinical_name',
         nullif(a.elem ->> 'dose', ''),
         coalesce((a.elem ->> 'mirror')::boolean, false),
-        (a.elem ->> 'x')::int,
-        (a.elem ->> 'y')::int,
+        -- double precision, NOT int: the face coordinate space is fractional
+        -- (e.g. the axis of symmetry is x = 114.9). Casting the text '114.9' to
+        -- int raises "invalid input syntax for type integer". And if the column
+        -- were still integer, a numeric cast here would SILENTLY ROUND instead
+        -- of erroring, drifting every dot by up to half a unit. Column type and
+        -- cast must stay in step -- see db/fix_coordinate_precision.sql.
+        (a.elem ->> 'x')::double precision,
+        (a.elem ->> 'y')::double precision,
         a.ord::int
       );
     end loop;

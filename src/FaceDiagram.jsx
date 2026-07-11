@@ -75,6 +75,11 @@ function FaceDiagram({ treatments = [] }) {
     const color = COLORS[treatment.color_key] || '#888'
     const areas = treatment.treatment_areas || []
     areas.forEach((area) => {
+      // x/y are NULL when the region couldn't be placed (see faceCoordinates.js
+      // — we never invent a coordinate for an injection). Draw no dot rather
+      // than a wrong one. The area still appears in the treatment list below.
+      if (area.x == null || area.y == null) return
+
       // Primary dot
       dots.push({
         id: area.id,

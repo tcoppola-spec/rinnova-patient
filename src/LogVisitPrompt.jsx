@@ -210,12 +210,23 @@ function LogVisitFlow({ onClose, onRefetch }) {
     setSaveError(null)
     setSaving(true)
     try {
-      const { usedToday } = await saveParsedVisit(parsed)
-      setSavedNote(
-        usedToday
-          ? "We used today's date since the note didn't include one."
-          : ''
-      )
+      const { usedToday, unplaced } = await saveParsedVisit(parsed)
+      const notes = []
+      if (usedToday) {
+        notes.push("We used today's date since the note didn't include one.")
+      }
+      if (unplaced?.length) {
+        // Tell the patient outright. We deliberately don't invent a dot for a
+        // region we can't map, so they'd otherwise just find a mark missing from
+        // their face map with no explanation.
+        const list = [...new Set(unplaced)].join(', ')
+        notes.push(
+          `We couldn't place ${list} on your face map, so ${
+            unplaced.length > 1 ? 'those areas have' : 'that area has'
+          } no dot yet. Everything else was saved.`
+        )
+      }
+      setSavedNote(notes.join(' '))
       setSaved(true)
       // Best-effort refresh so the timeline shows the new visit. The save has
       // already committed at this point, so a refetch hiccup shouldn't error.

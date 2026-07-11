@@ -1,10 +1,23 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from './supabaseClient'
 import FaceDiagram from './FaceDiagram'
 
-function VisitDetailModal({ visit, onClose }) {
+/**
+ * VisitDetailModal
+ *
+ * Props:
+ *   visit     — the visit, with nested treatments -> treatment_areas
+ *   onClose   — dismiss the sheet
+ *   onDeleted — called after a successful delete, so App can refetch and close
+ */
+function VisitDetailModal({ visit, onClose, onDeleted }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+
   useEffect(() => {
     function handleKey(e) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !deleting) onClose()
     }
     document.addEventListener('keydown', handleKey)
     document.body.style.overflow = 'hidden'
@@ -12,7 +25,43 @@ function VisitDetailModal({ visit, onClose }) {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [onClose, deleting])
+
+  /**
+   * Deleting the visit cascades to its treatments and treatment_areas (both FKs
+   * are ON DELETE CASCADE), so this one row removes the whole record. It relies
+   * on the DELETE policy added by db/allow_visit_delete.sql — without it the
+   * delete would silently affect zero rows and report success, so we check the
+   * returned rows rather than trusting the absence of an error.
+   */
+  async function handleDelete() {
+    setDeleteError(null)
+    setDeleting(true)
+
+    const { data, error } = await supabase
+      .from('visits')
+      .delete()
+      .eq('id', visit.id)
+      .select('id')
+
+    if (error) {
+      setDeleting(false)
+      setDeleteError(error.message || 'Could not delete this visit.')
+      return
+    }
+
+    // A missing DELETE policy doesn't error — it just deletes nothing. Catch
+    // that here instead of telling the patient it worked when it didn't.
+    if (!data || data.length === 0) {
+      setDeleting(false)
+      setDeleteError(
+        'Nothing was deleted. The delete permission may be missing — please tell Tondo.'
+      )
+      return
+    }
+
+    if (onDeleted) onDeleted()
+  }
 
   if (!visit) return null
 
@@ -125,6 +174,48 @@ function VisitDetailModal({ visit, onClose }) {
               </div>
             )}
           </footer>
+
+          <div className="lightbox-actions">
+            {!confirmingDelete ? (
+              <button
+                type="button"
+                onClick={() => { setDeleteError(null); setConfirmingDelete(true) }}
+                className="lightbox-delete-btn"
+              >
+                Delete visit
+              </button>
+            ) : (
+              <div className="lightbox-confirm-row">
+                {/* Say what actually gets destroyed — this cascades to every
+                    treatment and every dot on the face map, and it can't be
+                    undone. */}
+                <span className="lightbox-confirm-text">
+                  Delete this visit and its {treatments.length}{' '}
+                  {treatments.length === 1 ? 'treatment' : 'treatments'}? This
+                  can’t be undone.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="product-confirm-yes"
+                >
+                  {deleting ? '…' : 'Yes, delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  className="product-confirm-no"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {deleteError && (
+              <div className="form-error" style={{ marginTop: 8 }}>{deleteError}</div>
+            )}
+          </div>
         </div>
       </div>
     </>

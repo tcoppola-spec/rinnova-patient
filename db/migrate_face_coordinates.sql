@@ -31,7 +31,12 @@
 --   Radiesse and Diluted Radiesse dots survives (compare the cheekbone pairs).
 --   A name-based re-resolve would have collapsed them onto one point.
 --
---   x and y are `integer NOT NULL`, so the targets below are rounded.
+--   NOTE: when this migration ran, x and y were `integer NOT NULL`, so the
+--   targets below are rounded. The columns were later widened to
+--   `double precision` (db/fix_coordinate_precision.sql) because the coordinate
+--   space is fractional. These rounded values were deliberately left alone --
+--   they are the dot positions Tracy visually signed off on, and re-deriving
+--   them from the affine would move dots she already approved.
 --   Keep these values in sync with src/faceCoordinates.js.
 
 -- ---------------------------------------------------------------------------

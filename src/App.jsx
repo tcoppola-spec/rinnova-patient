@@ -154,6 +154,10 @@ function App() {
         <VisitDetailModal
           visit={openVisit}
           onClose={() => setOpenVisit(null)}
+          onDeleted={async () => {
+            setOpenVisit(null)
+            await refetch()
+          }}
         />
       )}
     </div>
