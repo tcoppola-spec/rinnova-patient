@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import FaceDiagram from './FaceDiagram'
+import VisitPhotos from './VisitPhotos'
 
 /**
  * VisitDetailModal
  *
  * Props:
- *   visit     — the visit, with nested treatments -> treatment_areas
- *   onClose   — dismiss the sheet
- *   onDeleted — called after a successful delete, so App can refetch and close
+ *   visit      — the visit, with nested treatments -> treatment_areas
+ *   photos     — ALL the patient's photos (this component picks out the ones
+ *                attached to this visit, and offers the rest for attaching)
+ *   onClose    — dismiss the sheet
+ *   onDeleted  — called after a successful delete, so App can refetch and close
+ *   onRefetch  — called after a photo is added / attached / detached
  */
-function VisitDetailModal({ visit, onClose, onDeleted }) {
+function VisitDetailModal({ visit, photos = [], onClose, onDeleted, onRefetch }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
@@ -160,6 +164,12 @@ function VisitDetailModal({ visit, onClose, onDeleted }) {
               )
             })}
           </div>
+
+          <VisitPhotos
+            visitId={visit.id}
+            photos={photos}
+            onRefetch={onRefetch}
+          />
 
           <footer className="modal-footer">
             {costFormatted ? (

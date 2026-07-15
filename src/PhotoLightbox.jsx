@@ -1,24 +1,35 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
+import { attachPhotoToVisit, detachPhotoFromVisit } from './photoVisitLink'
 
 /**
  * PhotoLightbox
  *
- * Bottom-sheet modal pattern (matches VisitDetailModal aesthetic) showing
- * a larger view of one photo. Supports:
+ * Bottom-sheet modal showing a larger view of one photo. Supports:
  *   - View large photo (signed URL)
  *   - View caption + taken_date
  *   - Edit caption (inline link → inline edit)
+ *   - Attach to / detach from a visit (people upload first and organise later,
+ *     so this direction has to exist — not just "upload into a visit")
  *   - Delete photo (with inline "Delete? · Yes · No" confirm)
  *   - Close via X button, Escape key, or backdrop tap
  *
  * Props:
  *   photo: the photo row to display
- *   onClose: function called when user closes the lightbox
- *   onDeleted: function called after a successful delete (parent refetches)
- *   onCaptionUpdated: function called after successful caption edit (refetch)
+ *   visits: the patient's visits, for the attach picker
+ *   onClose: called when the user closes the lightbox
+ *   onDeleted: called after a successful delete (parent refetches)
+ *   onCaptionUpdated: called after a successful caption edit (refetch)
+ *   onVisitLinkChanged: called after a successful attach/detach (refetch)
  */
-function PhotoLightbox({ photo, onClose, onDeleted, onCaptionUpdated }) {
+function PhotoLightbox({
+  photo,
+  visits = [],
+  onClose,
+  onDeleted,
+  onCaptionUpdated,
+  onVisitLinkChanged,
+}) {
   const [imageUrl, setImageUrl] = useState(null)
   const [imageError, setImageError] = useState(false)
 
@@ -30,6 +41,42 @@ function PhotoLightbox({ photo, onClose, onDeleted, onCaptionUpdated }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
+
+  const [pickingVisit, setPickingVisit] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState(null)
+
+  const attachedVisit = photo?.visit_id
+    ? visits.find((v) => v.id === photo.visit_id)
+    : null
+
+  async function handleAttach(visitId) {
+    setLinkError(null)
+    setLinking(true)
+    try {
+      // Throws if RLS refused it (zero rows) — see photoVisitLink.js.
+      await attachPhotoToVisit(photo.id, visitId)
+      setPickingVisit(false)
+      if (onVisitLinkChanged) await onVisitLinkChanged()
+    } catch (e) {
+      setLinkError(e.message)
+    } finally {
+      setLinking(false)
+    }
+  }
+
+  async function handleDetach() {
+    setLinkError(null)
+    setLinking(true)
+    try {
+      await detachPhotoFromVisit(photo.id)
+      if (onVisitLinkChanged) await onVisitLinkChanged()
+    } catch (e) {
+      setLinkError(e.message)
+    } finally {
+      setLinking(false)
+    }
+  }
 
   // Escape key closes
   useEffect(() => {
@@ -220,6 +267,68 @@ function PhotoLightbox({ photo, onClose, onDeleted, onCaptionUpdated }) {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Attach to / detach from a visit. Detaching NEVER deletes — the
+              photo stays in the archive and just loses its badge. */}
+          <div className="lightbox-visit-link">
+            {attachedVisit ? (
+              <div className="lightbox-visit-row">
+                <span className="lightbox-visit-label">
+                  From your visit on{' '}
+                  <strong>
+                    {new Date(attachedVisit.visit_date + 'T00:00:00').toLocaleDateString('en-US', {
+                      month: 'long', day: 'numeric', year: 'numeric',
+                    })}
+                  </strong>
+                </span>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={handleDetach}
+                  disabled={linking}
+                >
+                  {linking ? '…' : 'Remove from visit'}
+                </button>
+              </div>
+            ) : !pickingVisit ? (
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => { setLinkError(null); setPickingVisit(true) }}
+                disabled={visits.length === 0}
+              >
+                {visits.length === 0 ? 'No visits to link to yet' : 'Add to a visit'}
+              </button>
+            ) : (
+              <div className="lightbox-visit-picker">
+                <span className="lightbox-visit-label">Which visit?</span>
+                <div className="lightbox-visit-options">
+                  {visits.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      className="lightbox-visit-option"
+                      onClick={() => handleAttach(v.id)}
+                      disabled={linking}
+                    >
+                      {new Date(v.visit_date + 'T00:00:00').toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => setPickingVisit(false)}
+                  disabled={linking}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {linkError && <div className="form-error" style={{ marginTop: 8 }}>{linkError}</div>}
           </div>
 
           <div className="lightbox-actions">

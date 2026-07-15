@@ -1,52 +1,46 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import PhotoLightbox from './PhotoLightbox'
+import AddPhotoFlow from './AddPhotoFlow'
 
 /**
  * PhotosSection
  *
- * Manages: upload state, lightbox open state.
- *
- * Tapping a photo tile opens the lightbox for that photo.
- * Edits and deletes in the lightbox call back to trigger refetch.
+ * The ONE photo archive. Every photo lives here, whether or not it belongs to a
+ * visit — attaching to a visit is metadata, not a separate library. Photos with
+ * a visit_id show a badge naming that visit, which taps through to it.
  *
  * Props:
- *   photos: array of photo rows from data.photos
- *   onRefetch: function called after a successful save/delete
+ *   photos:      all of the patient's photos
+ *   visits:      needed to resolve visit_id -> a date for the badge
+ *   onRefetch:   called after a successful save/delete/attach
+ *   onOpenVisit: (visitId) => void — tapping a badge opens that visit
  */
-function PhotosSection({ photos, onRefetch }) {
-  const galleryPhotos = (photos || []).filter(p => p.source === 'patient_upload')
-
+function PhotosSection({ photos, visits = [], onRefetch, onOpenVisit }) {
+  const galleryPhotos = photos || []
   const [uploading, setUploading] = useState(false)
   const [uploadStartCount, setUploadStartCount] = useState(null)
   const [openPhotoId, setOpenPhotoId] = useState(null)
 
-  // When upload completes, count goes up → clear uploading state
+  // Clear the optimistic tile once the refetched list actually grew.
   useEffect(() => {
-    if (uploading && uploadStartCount !== null && galleryPhotos.length > uploadStartCount) {
+    if (uploadStartCount !== null && galleryPhotos.length > uploadStartCount) {
       setUploading(false)
       setUploadStartCount(null)
     }
-  }, [galleryPhotos.length, uploading, uploadStartCount])
+  }, [galleryPhotos.length, uploadStartCount])
 
-  // Safety: 15-second timer to clear uploading if something hung
+  // If the open photo disappears (deleted elsewhere), close the lightbox.
   useEffect(() => {
-    if (!uploading) return
-    const timer = setTimeout(() => {
-      setUploading(false)
-      setUploadStartCount(null)
-    }, 15000)
-    return () => clearTimeout(timer)
-  }, [uploading])
-
-  // If the open photo gets deleted in the background, close lightbox automatically
-  useEffect(() => {
-    if (openPhotoId && !galleryPhotos.some(p => p.id === openPhotoId)) {
+    if (openPhotoId && !galleryPhotos.some((p) => p.id === openPhotoId)) {
       setOpenPhotoId(null)
     }
   }, [galleryPhotos, openPhotoId])
 
-  const openPhoto = openPhotoId ? galleryPhotos.find(p => p.id === openPhotoId) : null
+  const visitsById = {}
+  for (const v of visits) visitsById[v.id] = v
+
+  const openPhoto = openPhotoId ? galleryPhotos.find((p) => p.id === openPhotoId) : null
   const hasContent = galleryPhotos.length > 0 || uploading
 
   return (
@@ -70,7 +64,9 @@ function PhotosSection({ photos, onRefetch }) {
             <PhotoTile
               key={photo.id}
               photo={photo}
+              visit={photo.visit_id ? visitsById[photo.visit_id] : null}
               onClick={() => setOpenPhotoId(photo.id)}
+              onOpenVisit={onOpenVisit}
             />
           ))}
         </div>
@@ -93,12 +89,16 @@ function PhotosSection({ photos, onRefetch }) {
       {openPhoto && (
         <PhotoLightbox
           photo={openPhoto}
+          visits={visits}
           onClose={() => setOpenPhotoId(null)}
           onDeleted={async () => {
             setOpenPhotoId(null)
             if (onRefetch) await onRefetch()
           }}
           onCaptionUpdated={async () => {
+            if (onRefetch) await onRefetch()
+          }}
+          onVisitLinkChanged={async () => {
             if (onRefetch) await onRefetch()
           }}
         />
@@ -118,207 +118,65 @@ function UploadingTile() {
   )
 }
 
+/** Short label for a badge: "Apr 14, 2026". Not exported — a file that exports
+    anything other than components breaks React Fast Refresh. */
+function shortVisitDate(visitDate) {
+  if (!visitDate) return ''
+  return new Date(visitDate + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 /**
- * PhotoTile — single tile in the grid. Wraps img in a button so it's
- * keyboard-accessible and clicking opens the lightbox.
+ * Two tap zones, deliberately separated (the VisitCard pattern): the tile opens
+ * the photo; the badge opens the visit it belongs to. They must never bleed into
+ * each other — hence the badge is its own <button>, not a nested click handler.
  */
-function PhotoTile({ photo, onClick }) {
+function PhotoTile({ photo, visit, onClick, onOpenVisit }) {
   const [imageUrl, setImageUrl] = useState(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    async function fetchSignedUrl() {
-      const { data, error: signedError } = await supabase
+    async function load() {
+      const { data, error: urlError } = await supabase
         .storage
         .from('patient-photos')
         .createSignedUrl(photo.storage_path, 3600)
       if (cancelled) return
-      if (signedError || !data) {
-        setError(true)
-        return
-      }
-      setImageUrl(data.signedUrl)
+      if (urlError || !data) setError(true)
+      else setImageUrl(data.signedUrl)
     }
-    fetchSignedUrl()
+    load()
     return () => { cancelled = true }
   }, [photo.storage_path])
 
   return (
-    <button type="button" onClick={onClick} className="photo-tile photo-tile-button">
-      {error ? (
-        <div className="photo-placeholder">⚠️</div>
-      ) : imageUrl ? (
-        <img src={imageUrl} alt={photo.caption || 'Patient photo'} className="photo-img" />
-      ) : (
-        <div className="photo-placeholder">…</div>
-      )}
-      {photo.caption && (
-        <div className="photo-caption">{photo.caption}</div>
-      )}
-    </button>
-  )
-}
-
-/**
- * AddPhotoFlow — unchanged from Steps 1-3
- */
-function AddPhotoFlow({ onUploadStart, onUploadComplete, onUploadError }) {
-  const [file, setFile] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [caption, setCaption] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-  const fileInputRef = useRef(null)
-
-  function openPicker() {
-    setError(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.click()
-    }
-  }
-
-  function handleFileSelect(e) {
-    const selected = e.target.files?.[0]
-    if (!selected) return
-
-    if (selected.size > 10 * 1024 * 1024) {
-      setError('Photo is too large (max 10 MB)')
-      return
-    }
-    if (!selected.type.startsWith('image/')) {
-      setError('Please select an image file')
-      return
-    }
-
-    setFile(selected)
-    setPreviewUrl(URL.createObjectURL(selected))
-    setError(null)
-  }
-
-  function cancelAdd() {
-    setFile(null)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-    setCaption('')
-    setError(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  async function handleSave() {
-    if (!file) return
-    setError(null)
-    setSaving(true)
-    if (onUploadStart) onUploadStart()
-
-    const { data: patientData, error: patientLookupError } = await supabase
-      .from('patients')
-      .select('id')
-      .single()
-
-    if (patientLookupError || !patientData) {
-      setSaving(false)
-      setError('Could not save — try again')
-      if (onUploadError) onUploadError()
-      return
-    }
-
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const randomId = crypto.randomUUID()
-    const storagePath = `${patientData.id}/${randomId}.${ext}`
-
-    const { error: uploadError } = await supabase
-      .storage
-      .from('patient-photos')
-      .upload(storagePath, file, {
-        contentType: file.type,
-        upsert: false,
-      })
-
-    if (uploadError) {
-      setSaving(false)
-      setError(uploadError.message || 'Upload failed')
-      if (onUploadError) onUploadError()
-      return
-    }
-
-    const { error: insertError } = await supabase
-      .from('photos')
-      .insert({
-        patient_id: patientData.id,
-        storage_path: storagePath,
-        caption: caption.trim() === '' ? null : caption.trim(),
-        taken_date: new Date().toISOString().split('T')[0],
-        source: 'patient_upload',
-      })
-
-    if (insertError) {
-      await supabase.storage.from('patient-photos').remove([storagePath])
-      setSaving(false)
-      setError(insertError.message || 'Could not save photo')
-      if (onUploadError) onUploadError()
-      return
-    }
-
-    cancelAdd()
-    setSaving(false)
-    if (onUploadComplete) await onUploadComplete()
-  }
-
-  if (file && previewUrl) {
-    return (
-      <div className="add-photo-form">
-        <div className="add-photo-preview">
-          <img src={previewUrl} alt="Photo preview" className="add-photo-preview-img" />
-        </div>
-        <input
-          type="text"
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          placeholder="Caption (optional)"
-          className="form-input"
-          disabled={saving}
-        />
-        {error && <div className="form-error">{error}</div>}
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="form-save-btn"
-          >
-            {saving ? 'Uploading…' : 'Save'}
-          </button>
-          <button
-            type="button"
-            onClick={cancelAdd}
-            disabled={saving}
-            className="form-cancel-btn"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-      <button type="button" onClick={openPicker} className="add-prompt">
-        <span className="add-prompt-icon" aria-hidden="true">+</span>
-        <span className="add-prompt-text">Add a photo</span>
+    <div className="photo-tile-wrap">
+      <button type="button" onClick={onClick} className="photo-tile-button">
+        {error ? (
+          <div className="photo-placeholder">—</div>
+        ) : imageUrl ? (
+          <img src={imageUrl} alt={photo.caption || 'Patient photo'} className="photo-img" />
+        ) : (
+          <div className="photo-placeholder" />
+        )}
+        {photo.caption && <div className="photo-caption">{photo.caption}</div>}
       </button>
-      {error && <div className="form-error" style={{ marginTop: 8 }}>{error}</div>}
-    </>
+
+      {visit && (
+        <button
+          type="button"
+          className="photo-visit-badge"
+          onClick={() => onOpenVisit && onOpenVisit(visit.id)}
+          title={`From your visit on ${shortVisitDate(visit.visit_date)}`}
+        >
+          {shortVisitDate(visit.visit_date)}
+        </button>
+      )}
+    </div>
   )
 }
 

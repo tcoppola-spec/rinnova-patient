@@ -2105,3 +2105,205 @@
   .onboarding-dot { transition: none; }
   .onboarding-cta { transition: none; }
 }
+
+/* ============ VISIT PHOTOS (photo <-> visit linking) ============ */
+
+/* A quiet text-link action, matching the caption-edit affordance. Magenta is
+   the only action colour in this app — see CLAUDE.md §8. */
+.link-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  margin-top: 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--magenta);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-btn:disabled {
+  color: var(--muted);
+  cursor: default;
+  text-decoration: none;
+}
+
+/* Archive tile: two tap zones that must not bleed into each other — the tile
+   opens the photo, the badge opens the visit (the VisitCard pattern). */
+.photo-tile-wrap {
+  position: relative;
+}
+
+.photo-visit-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  max-width: calc(100% - 12px);
+  padding: 3px 8px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(23, 23, 46, 0.72);
+  color: #fff;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: background 0.15s ease;
+}
+
+.photo-visit-badge:hover {
+  background: var(--magenta);
+}
+
+/* The photo strip inside a visit's detail sheet */
+.visit-photos {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.visit-photos-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.visit-photos-title {
+  font-family: var(--f-display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.visit-photos-empty {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.visit-photos-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.visit-photo-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line-soft);
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  position: relative;
+}
+
+.visit-photo-thumb-pick {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.visit-photo-thumb-pick:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(23, 23, 46, 0.14);
+}
+
+.visit-photo-thumb-loading {
+  background: var(--line-soft);
+  animation: photo-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes photo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.visit-photos-picker {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--line-soft);
+  border-radius: 12px;
+}
+
+.visit-photos-picker-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--body);
+}
+
+/* Attach / detach, inside the photo lightbox */
+.lightbox-visit-link {
+  padding-top: 16px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.lightbox-visit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lightbox-visit-label {
+  font-size: 13px;
+  color: var(--body);
+}
+
+.lightbox-visit-label strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lightbox-visit-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lightbox-visit-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lightbox-visit-option {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lightbox-visit-option:hover {
+  border-color: var(--magenta);
+  color: var(--magenta);
+  background: var(--magenta-soft);
+}
+
+.lightbox-visit-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

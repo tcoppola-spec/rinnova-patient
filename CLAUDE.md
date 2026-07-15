@@ -100,7 +100,8 @@ Patient_0/
 │   ├── add_onboarding_flag.sql     # patients.onboarding_completed + complete_onboarding() RPC
 │   ├── fix_coordinate_precision.sql # x/y integer → double precision (fractional coords)
 │   ├── allow_unplaced_areas.sql    # x/y nullable ("we can't place this") + repair the tear trough
-│   └── allow_visit_delete.sql      # DELETE policy on visits (children cascade)
+│   ├── allow_visit_delete.sql      # DELETE policy on visits (children cascade)
+│   └── add_visit_photos.sql        # photos.visit_id (ON DELETE SET NULL) + WITH CHECK attach policy
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
@@ -125,10 +126,13 @@ Patient_0/
 │   ├── LogVisitPrompt.jsx          # AI-parsing visit log flow (text/photo → parse → save)
 │   ├── VisitsTimeline.jsx          # Section + list of VisitCards
 │   ├── VisitCard.jsx               # Compact visit card with inline cost editing
-│   ├── VisitDetailModal.jsx        # Bottom-sheet modal with face diagram + treatments
+│   ├── VisitDetailModal.jsx        # Bottom-sheet modal: face diagram + treatments + photos + delete
+│   ├── VisitPhotos.jsx             # Photo strip inside a visit (upload-into / attach-from-archive)
 │   ├── FaceDiagram.jsx             # Line-art SVG face with treatment dots (right half, mirrored)
-│   ├── PhotosSection.jsx           # Photo grid + upload form + lightbox
-│   ├── PhotoLightbox.jsx           # Bottom-sheet photo viewer with edit + delete
+│   ├── PhotosSection.jsx           # The one photo archive; badges visit-linked photos
+│   ├── PhotoLightbox.jsx           # Bottom-sheet photo viewer: caption + attach/detach + delete
+│   ├── AddPhotoFlow.jsx            # Shared upload flow (archive + into-a-visit via optional visitId)
+│   ├── photoVisitLink.js           # attach/detach helpers (row-count checked)
 │   ├── ProductsSection.jsx         # Products list + add form + delete
 │   ├── SubscriptionsSection.jsx    # Currently empty state only
 │   ├── Onboarding.jsx              # First-run 3-screen carousel (see §18)
@@ -236,11 +240,18 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 
 ### `photos`
 - `id` UUID PK
-- `patient_id` UUID → patients
+- `patient_id` UUID → patients (ON DELETE CASCADE — a photo can't outlive its patient)
 - `storage_path` TEXT (path inside `patient-photos` Storage bucket)
 - `caption` TEXT
-- `taken_date` DATE
+- `taken_date` DATE — when the photo was ADDED. **Never rewritten when a photo is attached to a visit** (a photo taken 3 days after a visit still belongs to it; the date is the one thing we can't reconstruct).
 - `source` TEXT (`'patient_upload'` for self-uploaded photos)
+- `visit_id` UUID → visits, **nullable**, **`ON DELETE SET NULL`** (added July 2026, `db/add_visit_photos.sql`). Optionally attaches a photo to a visit. See below.
+
+**There is ONE photo library, not two.** Every photo lives in `photos` and shows in the archive; attaching to a visit just sets `visit_id`. A visit can hold *many* photos (the FK is on the photo, so one-to-many is free); a photo belongs to *at most one* visit (no join table, on purpose — "which visit is this from?" must stay unambiguous).
+
+**⚠️ `visit_id` is `ON DELETE SET NULL`, NOT cascade. Do not "tidy" it into a cascade by analogy with treatments.** `visits` cascades to `treatments` → `treatment_areas` because those are *derived* from the visit. It must stop dead at photos: a mis-parsed visit costs minutes to re-add, but a photo of the patient's own face is the single least-recoverable thing in the app. Putting SET NULL *in the FK* makes this a database guarantee, not app discipline — deleting a visit (from the app, raw SQL, a future admin tool, anything) can only null the badge, never destroy the photo.
+
+**Attach/detach security — plain RLS, no RPC.** The brief suggested a `SECURITY DEFINER` RPC; it wasn't needed. The `photos` UPDATE policy uses `WITH CHECK` to reject any `visit_id` that isn't one of the caller's own visits (`USING` = which rows I may touch; `WITH CHECK` = what the row may become). A DEFINER function is only for rules RLS *can't* express (like `complete_onboarding`, which needs column-level scoping). The attach/detach helpers live in `src/photoVisitLink.js` and **check the returned rows, not just the error** — a WITH-CHECK rejection returns zero rows with no error (the §14 silent-RLS trap), so an empty result is surfaced as a real failure.
 
 ### `products`
 - `id` UUID PK

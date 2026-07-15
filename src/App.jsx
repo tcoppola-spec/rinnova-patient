@@ -141,7 +141,15 @@ function App() {
           onRefetch={refetch}
         />
 
-        <PhotosSection photos={photos} onRefetch={refetch} />
+        <PhotosSection
+          photos={photos}
+          visits={visits}
+          onRefetch={refetch}
+          onOpenVisit={(visitId) => {
+            const v = visits.find((x) => x.id === visitId)
+            if (v) setOpenVisit(v)
+          }}
+        />
 
         <ProductsSection products={products} onRefetch={refetch} />
 
@@ -152,12 +160,16 @@ function App() {
 
       {openVisit && (
         <VisitDetailModal
-          visit={openVisit}
+          // Re-read from the refetched list, so photo changes made inside the
+          // sheet show up without closing and reopening it.
+          visit={visits.find((v) => v.id === openVisit.id) || openVisit}
+          photos={photos}
           onClose={() => setOpenVisit(null)}
           onDeleted={async () => {
             setOpenVisit(null)
             await refetch()
           }}
+          onRefetch={refetch}
         />
       )}
     </div>
