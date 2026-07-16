@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { usePatientData } from './usePatientData'
@@ -12,6 +12,7 @@ import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
+import Toast from './Toast'
 import './App.css'
 
 function App() {
@@ -23,6 +24,18 @@ function App() {
   // Lets the patient straight through the moment they finish, without waiting
   // on the RPC round-trip — and keeps them through if that write fails.
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+
+  // Brief confirmation pill for actions whose result isn't visible where the
+  // patient is looking (deletes, photo attach/detach). See Toast.jsx for the
+  // discipline rule on what does and doesn't get toasted.
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+  function showToast(message) {
+    setToast({ message, key: Date.now() })
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 2500)
+  }
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   /**
    * Called on "Get started" or "Skip". Persists the flag via the
@@ -145,6 +158,7 @@ function App() {
           photos={photos}
           visits={visits}
           onRefetch={refetch}
+          onToast={showToast}
           onOpenVisit={(visitId) => {
             const v = visits.find((x) => x.id === visitId)
             if (v) setOpenVisit(v)
@@ -167,11 +181,15 @@ function App() {
           onClose={() => setOpenVisit(null)}
           onDeleted={async () => {
             setOpenVisit(null)
+            showToast('Visit deleted')
             await refetch()
           }}
           onRefetch={refetch}
+          onToast={showToast}
         />
       )}
+
+      <Toast toast={toast} />
     </div>
   )
 }

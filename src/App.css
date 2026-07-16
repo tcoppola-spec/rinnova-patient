@@ -2473,3 +2473,50 @@
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* ============ TOAST (brief confirmation pill) ============ */
+
+.toast {
+  position: fixed;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110; /* above the bottom sheets (100/101) — attach fires while one is open */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(88vw, 360px);
+  padding: 10px 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(23, 23, 46, 0.16);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none; /* purely informational — never blocks a tap */
+  animation: toast-in 0.22s ease;
+}
+
+.toast-check {
+  flex-shrink: 0;
+  color: var(--magenta);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}

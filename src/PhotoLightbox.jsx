@@ -21,6 +21,8 @@ import { attachPhotoToVisit, detachPhotoFromVisit } from './photoVisitLink'
  *   onDeleted: called after a successful delete (parent refetches)
  *   onCaptionUpdated: called after a successful caption edit (refetch)
  *   onVisitLinkChanged: called after a successful attach/detach (refetch)
+ *   onToast: brief confirmation pill — attach/detach results (the badge) live
+ *            behind this modal, so they'd otherwise confirm invisibly
  */
 function PhotoLightbox({
   photo,
@@ -29,6 +31,7 @@ function PhotoLightbox({
   onDeleted,
   onCaptionUpdated,
   onVisitLinkChanged,
+  onToast,
 }) {
   const [imageUrl, setImageUrl] = useState(null)
   const [imageError, setImageError] = useState(false)
@@ -57,6 +60,7 @@ function PhotoLightbox({
       // Throws if RLS refused it (zero rows) — see photoVisitLink.js.
       await attachPhotoToVisit(photo.id, visitId)
       setPickingVisit(false)
+      if (onToast) onToast('Photo added to the visit')
       if (onVisitLinkChanged) await onVisitLinkChanged()
     } catch (e) {
       setLinkError(e.message)
@@ -70,6 +74,7 @@ function PhotoLightbox({
     setLinking(true)
     try {
       await detachPhotoFromVisit(photo.id)
+      if (onToast) onToast('Photo removed from the visit')
       if (onVisitLinkChanged) await onVisitLinkChanged()
     } catch (e) {
       setLinkError(e.message)

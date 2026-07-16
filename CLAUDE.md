@@ -338,6 +338,7 @@ The visit **save** still uses an atomic Postgres function (`save_parsed_visit`) 
 5. **Subtle text-link affordances** — small underlined text with a pencil icon for "edit" actions (cost editor). NOT big buttons. The patient page is quiet by default.
 6. **Magenta for ALL actions** — Save, primary CTAs, AND destructive confirms. We tried coral for destructive; it felt dull. Magenta with clear context (e.g., "Yes, delete" after tapping a trash icon) is the pattern.
 7. **No emoji icons in production** — replace any 📷📝🔥 with stroke-based SVGs that inherit `currentColor`. The emoji-as-placeholder is a code smell.
+7b. **Toasts only when the proof is off-screen.** `Toast.jsx` + `showToast` in App, threaded as `onToast` (same discipline as the refetch chain). Wait-and-show means most actions confirm themselves in place — toasting those trains the patient to ignore toasts. Current toast points, deliberately few: visit deleted, photo deleted, photo attached (both paths), photo detached. The "Saved to your record" screen is NOT a toast candidate — its subtext carries load-bearing info (products filed, no-map notes).
 8. **Strong design discipline** — Tracy will pushback on anything that feels off-brand. Listen carefully. Examples she pushed back on and was right: red destructive button (broke palette), beige cost strip (too prominent), emoji icons (felt placeholder).
 
 ### Component patterns to mimic

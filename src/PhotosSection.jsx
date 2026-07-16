@@ -14,9 +14,10 @@ import AddPhotoFlow from './AddPhotoFlow'
  *   photos:      all of the patient's photos
  *   visits:      needed to resolve visit_id -> a date for the badge
  *   onRefetch:   called after a successful save/delete/attach
+ *   onToast:     brief confirmation pill (deletes and attach/detach only)
  *   onOpenVisit: (visitId) => void — tapping a badge opens that visit
  */
-function PhotosSection({ photos, visits = [], onRefetch, onOpenVisit }) {
+function PhotosSection({ photos, visits = [], onRefetch, onToast, onOpenVisit }) {
   const galleryPhotos = photos || []
   const [uploading, setUploading] = useState(false)
   const [uploadStartCount, setUploadStartCount] = useState(null)
@@ -93,6 +94,7 @@ function PhotosSection({ photos, visits = [], onRefetch, onOpenVisit }) {
           onClose={() => setOpenPhotoId(null)}
           onDeleted={async () => {
             setOpenPhotoId(null)
+            if (onToast) onToast('Photo deleted')
             if (onRefetch) await onRefetch()
           }}
           onCaptionUpdated={async () => {
@@ -101,6 +103,7 @@ function PhotosSection({ photos, visits = [], onRefetch, onOpenVisit }) {
           onVisitLinkChanged={async () => {
             if (onRefetch) await onRefetch()
           }}
+          onToast={onToast}
         />
       )}
     </section>

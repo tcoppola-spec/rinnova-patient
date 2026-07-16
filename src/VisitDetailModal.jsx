@@ -13,8 +13,9 @@ import VisitPhotos from './VisitPhotos'
  *   onClose    — dismiss the sheet
  *   onDeleted  — called after a successful delete, so App can refetch and close
  *   onRefetch  — called after a photo is added / attached / detached
+ *   onToast    — brief confirmation pill, passed through to VisitPhotos
  */
-function VisitDetailModal({ visit, photos = [], onClose, onDeleted, onRefetch }) {
+function VisitDetailModal({ visit, photos = [], onClose, onDeleted, onRefetch, onToast }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
@@ -169,6 +170,7 @@ function VisitDetailModal({ visit, photos = [], onClose, onDeleted, onRefetch })
             visitId={visit.id}
             photos={photos}
             onRefetch={onRefetch}
+            onToast={onToast}
           />
 
           <footer className="modal-footer">

@@ -22,8 +22,10 @@ import { attachPhotoToVisit } from './photoVisitLink'
  *   visitId   — the visit these photos belong to
  *   photos    — ALL the patient's photos; we filter
  *   onRefetch — after add / attach
+ *   onToast   — brief confirmation pill for the attach (the archive badge it
+ *               creates is out of view behind this sheet)
  */
-function VisitPhotos({ visitId, photos = [], onRefetch }) {
+function VisitPhotos({ visitId, photos = [], onRefetch, onToast }) {
   const [picking, setPicking] = useState(false)
   const [attaching, setAttaching] = useState(false)
   const [attachError, setAttachError] = useState(null)
@@ -40,6 +42,7 @@ function VisitPhotos({ visitId, photos = [], onRefetch }) {
     try {
       await attachPhotoToVisit(photoId, visitId)
       setPicking(false)
+      if (onToast) onToast('Photo added to this visit')
       if (onRefetch) await onRefetch()
     } catch (e) {
       setAttachError(e.message)
