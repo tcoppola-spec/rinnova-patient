@@ -231,6 +231,12 @@ function LogVisitFlow({ onClose, onRefetch }) {
    * The labels come from FACE_REGIONS (our own vocabulary), so every one is
    * guaranteed to resolve to a coordinate in saveVisit — same pipeline, same
    * fan-out, same bilateral invariant. dose stays null: we never ask for it.
+   *
+   * Also composes visit.body_regions (the VisitCard title, "Forehead, cheeks,
+   * and lips") from the answers when the document didn't provide one. A receipt
+   * has no locations so the parser correctly leaves body_regions null — but a
+   * summary of what the PATIENT just told us is their own answer, not an
+   * invention. Without this, receipt visits render with no title line.
    */
   function mergeAreaAnswers(base) {
     const extra = []
@@ -247,10 +253,20 @@ function LogVisitFlow({ onClose, onRefetch }) {
       }
     }
     if (extra.length === 0) return base
-    return {
+
+    const merged = {
       ...base,
       treatment_areas: [...(base.treatment_areas || []), ...extra],
     }
+
+    if (!base.visit?.body_regions) {
+      // Distinct regions, in the order picked; duplicates across products
+      // (Radiesse + Diluted at "Cheeks") collapse to one mention.
+      const labels = [...new Set(extra.map((a) => a.friendly_name))]
+      merged.visit = { ...base.visit, body_regions: regionsSummary(labels) }
+    }
+
+    return merged
   }
 
   async function handleSave() {
@@ -532,6 +548,20 @@ function LogVisitFlow({ onClose, onRefetch }) {
       </div>
     </div>
   )
+}
+
+/**
+ * "Forehead, around the eyes, and cheeks" — the same shape as the AI's own
+ * body_regions summaries ("Face, neck, and lips"): first word capitalised,
+ * the rest lowercase, Oxford comma.
+ */
+function regionsSummary(labels) {
+  const lower = labels.map((l) => l.toLowerCase())
+  let s
+  if (lower.length === 1) s = lower[0]
+  else if (lower.length === 2) s = `${lower[0]} and ${lower[1]}`
+  else s = `${lower.slice(0, -1).join(', ')}, and ${lower[lower.length - 1]}`
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 function ParsedVisitPreview({ parsed }) {
