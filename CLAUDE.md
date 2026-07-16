@@ -101,7 +101,8 @@ Patient_0/
 │   ├── fix_coordinate_precision.sql # x/y integer → double precision (fractional coords)
 │   ├── allow_unplaced_areas.sql    # x/y nullable ("we can't place this") + repair the tear trough
 │   ├── allow_visit_delete.sql      # DELETE policy on visits (children cascade)
-│   └── add_visit_photos.sql        # photos.visit_id (ON DELETE SET NULL) + WITH CHECK attach policy
+│   ├── add_visit_photos.sql        # photos.visit_id (ON DELETE SET NULL) + WITH CHECK attach policy
+│   └── add_visit_products.sql      # save_parsed_visit also files parsed retail products
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
@@ -259,6 +260,7 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `name` TEXT
 - `notes` TEXT
 - `added_at` TIMESTAMPTZ
+- Two write paths: the Products section (manual add), and `save_parsed_visit` — the AI parser separates take-home retail items from injected treatments and files them here (patient-level; not linked to the visit for now). See §9.
 
 ### `subscriptions` (V1 scaffold only — no UI flow yet)
 - `id` UUID PK
@@ -364,22 +366,34 @@ Output shape (always):
 {
   parsed: {
     visit: { visit_date, provider_name, body_regions, cost },
-    treatments: [{ name, summary, total_dose, lot_number, color_key }],
-    treatment_areas: [{ treatment_name, friendly_name, clinical_name, dose, mirror }]
+    treatments: [{ name, summary, total_dose, lot_number, color_key }],   // injected
+    treatment_areas: [{ treatment_name, friendly_name, clinical_name, dose, mirror }],
+    products: [{ name, notes }]   // take-home / retail — NOT injected, no face location
   }
 }
 ```
 
-**Save (Chunk 6 Step 4):** the parse function itself still only parses — it does not write to the DB. Saving is a separate step in the frontend: `LogVisitPrompt.jsx` shows the parsed result with a "Save to my record" button → `src/saveVisit.js` shapes the payload (groups areas under treatments, resolves face coordinates) → calls the `save_parsed_visit` Postgres RPC, which does the atomic three-table write. `lot_number` is parsed and previewed but not persisted (no column).
+**Save (Chunk 6 Step 4):** the parse function itself only parses. Saving is a separate frontend step: `LogVisitPrompt.jsx` shows the parsed result with "Save to my record" → `src/saveVisit.js` shapes the payload (groups areas under treatments, resolves face coordinates, passes products through) → calls the `save_parsed_visit` RPC, which atomically writes visits → treatments → treatment_areas → **products** (into the patient's products list; `db/add_visit_products.sql`). `lot_number` is parsed/previewed but not persisted (no column).
 
 ### What Claude is told (system prompt)
-- color_key must be one of: `xeomin`, `radiesse`, `radiesse-light`, `rha`
-- mirror = true for bilateral areas (glabella, cheeks, jawline, temples), false for centered (lips, chin)
-- Return ONLY JSON. No prose, no markdown fences.
-- If unclear, use `null`. Don't hallucinate.
 
-### What's NOT in the system prompt yet
-- `treatment_areas` do NOT come back with `x` / `y` coordinates. The AI doesn't know Rinnova's face SVG geometry, so these are resolved at save time by the **lookup table** in `src/faceCoordinates.js` (`friendly_name → {x, y}`), seeded from Tracy's 17 April-24 areas. New friendly_names that aren't in the table fall back to face-center and log a warning — that's the signal to add them.
+**⚠️ The #1 rule: NEVER invent clinical data. This is the whole reason the prompt was rewritten (July 2026).** A *receipt* is a billing document — it records what was charged, not where on the body it went or how much was used. Those clinical fields are usually ABSENT, and a missing field must stay missing; a plausible guess in a health record is worse than a blank. Concretely the prompt forbids inventing:
+- **Location** — no `treatment_area` unless a body location is literally stated. A receipt with products + prices but no anatomy → `treatment_areas: []`. (The old prompt fabricated a generic `"Face", mirror:true` — this was the tear-trough-cousin bug on Aly's Boulevard receipt.)
+- **Dose / units** — "PER UNIT" is a *pricing* label, not a quantity. No units stated → `dose`/`total_dose` null. (The old prompt guessed `"1 unit"`.)
+- **Laterality** — `mirror` only on an area you're actually emitting.
+
+This is the same "never invent a coordinate" principle from the save path, moved UPSTREAM to the parser — which is where the fabrication actually originates.
+
+**Treatments vs products:** injected/administered things (tox, filler, biostimulator) → `treatments`; take-home retail (serums, creams, supplements) → `products`. Retail has no face location and never gets a `treatment_area`.
+
+- color_key is a colour category: any neurotoxin → `xeomin` (purple); Radiesse → `radiesse`; diluted → `radiesse-light`; any HA filler → `rha`. (So Jeuveau, Botox, Dysport, Daxxify all map to `xeomin`.)
+- Return ONLY JSON. No prose, no markdown fences.
+
+### Coordinates are resolved at save time, not by the AI
+`treatment_areas` come back with NO `x`/`y` — the AI doesn't know Rinnova's SVG geometry. `src/faceCoordinates.js` resolves `friendly_name → {x, y}` at save time. An unmatched name resolves to **null → no dot** (never face-centre — see §7), and the region is surfaced to the patient.
+
+### Receipts vs clinical notes (the core parsing reality)
+Most real-world documents patients have are **receipts** (billing: date, cost, product names, practice) — not **clinical notes** (which also carry location, dose, laterality). Rinnova turns a receipt into a real visit + products, but **can't build a face map from a receipt that has no locations, and won't fake one.** The planned path to a map for receipt visits is a guided Q&A (universal list of face regions + "not sure" + a both-sides question) that lets the patient supply locations from *their* memory — inverting the fuzzy-text-matching problem into a pick-from-our-vocabulary one. Built on top of the hardened parser. (Guided Q&A UI: not yet built as of this note; parser hardening + products split shipped first.)
 
 ### Multimodal note
 Claude Sonnet 4.5 handles images up to ~5MB. The frontend enforces a 5MB cap and rejects larger files. We don't compress; we reject.

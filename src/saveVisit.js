@@ -67,6 +67,9 @@ export async function saveParsedVisit(parsed) {
   const visit = parsed?.visit || {}
   const treatments = Array.isArray(parsed?.treatments) ? parsed.treatments : []
   const areas = Array.isArray(parsed?.treatment_areas) ? parsed.treatment_areas : []
+  // Take-home / retail items (serums, supplements). NOT injected, so they never
+  // get a treatment_area or a face dot — they save to the products list.
+  const products = Array.isArray(parsed?.products) ? parsed.products : []
 
   // Group areas under their treatment_name (the parser links them by name).
   // Skip any area with no friendly_name — that column is NOT NULL in the DB.
@@ -155,6 +158,10 @@ export async function saveParsedVisit(parsed) {
     usedToday = true
   }
 
+  const payloadProducts = products
+    .filter((p) => p?.name)
+    .map((p) => ({ name: p.name, notes: p.notes ?? null }))
+
   const payload = {
     visit: {
       visit_date: visitDate,
@@ -163,6 +170,7 @@ export async function saveParsedVisit(parsed) {
       cost: visit.cost ?? null,
     },
     treatments: payloadTreatments,
+    products: payloadProducts,
   }
 
   if (unplaced.length > 0) {
@@ -179,7 +187,23 @@ export async function saveParsedVisit(parsed) {
   const { data, error } = await supabase.rpc('save_parsed_visit', { payload })
   if (error) throw error
 
-  // `unplaced` is returned so the UI can tell the patient which regions have no
-  // dot, rather than leaving them to notice a missing mark on their face map.
-  return { visitId: data, usedToday, unplaced }
+  // Returned so the UI can be honest about what happened:
+  //   unplaced       — named regions we couldn't map (no dot)
+  //   savedProducts  — count of take-home products filed
+  //   mappedCount    — treatment dots actually placed
+  //   hasTreatments  — were there injectables at all
+  // A receipt with treatments but zero placed dots is the "no face map from this
+  // receipt" case — the moment to nudge toward a clinical note / adding locations.
+  const mappedCount = payloadTreatments.reduce(
+    (n, t) => n + t.areas.filter((a) => a.x != null).length,
+    0
+  )
+  return {
+    visitId: data,
+    usedToday,
+    unplaced,
+    savedProducts: payloadProducts.length,
+    mappedCount,
+    hasTreatments: payloadTreatments.length > 0,
+  }
 }

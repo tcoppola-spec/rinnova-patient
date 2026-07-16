@@ -1660,6 +1660,32 @@
   padding-bottom: 0;
 }
 
+/* Take-home products, shown separately from injected treatments */
+.parsed-products {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.parsed-products-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.parsed-product {
+  font-size: 14px;
+  color: var(--ink);
+  padding: 3px 0;
+}
+
+.parsed-product-notes {
+  color: var(--muted);
+}
+
 .parsed-treatment-head {
   display: flex;
   align-items: flex-start;

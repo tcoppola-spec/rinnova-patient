@@ -30,3 +30,7 @@ dist-ssr
 .env.production
 # Local Netlify folder
 .netlify
+
+# Real test receipts/notes — contain real names + partial card numbers.
+# Keep these local; never commit real people's medical/billing docs.
+test_notes_receipts/

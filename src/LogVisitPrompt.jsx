@@ -210,20 +210,30 @@ function LogVisitFlow({ onClose, onRefetch }) {
     setSaveError(null)
     setSaving(true)
     try {
-      const { usedToday, unplaced } = await saveParsedVisit(parsed)
+      const { usedToday, unplaced, savedProducts, mappedCount, hasTreatments } =
+        await saveParsedVisit(parsed)
       const notes = []
       if (usedToday) {
         notes.push("We used today's date since the note didn't include one.")
       }
+      if (savedProducts > 0) {
+        notes.push(
+          `${savedProducts} take-home ${savedProducts === 1 ? 'product' : 'products'} added to your products list.`
+        )
+      }
       if (unplaced?.length) {
-        // Tell the patient outright. We deliberately don't invent a dot for a
-        // region we can't map, so they'd otherwise just find a mark missing from
-        // their face map with no explanation.
+        // A named region we couldn't map — deliberately no invented dot.
         const list = [...new Set(unplaced)].join(', ')
         notes.push(
           `We couldn't place ${list} on your face map, so ${
             unplaced.length > 1 ? 'those areas have' : 'that area has'
-          } no dot yet. Everything else was saved.`
+          } no dot yet.`
+        )
+      } else if (hasTreatments && mappedCount === 0) {
+        // The receipt case: real treatments, but the document had no locations,
+        // so there's no face map. Frame it as an upgrade path, not a failure.
+        notes.push(
+          'This looks like a receipt — it doesn’t say where on the face each treatment went, so there’s no face map yet. You can add the areas yourself, or ask your provider for a clinical note and Rinnova will map it in detail.'
         )
       }
       setSavedNote(notes.join(' '))
@@ -452,6 +462,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
 
 function ParsedVisitPreview({ parsed }) {
   const { visit, treatments, treatment_areas } = parsed
+  const products = parsed.products || []
 
   const areasByTreatment = {}
   for (const area of treatment_areas || []) {
@@ -545,6 +556,18 @@ function ParsedVisitPreview({ parsed }) {
           )}
         </div>
       ))}
+
+      {products.length > 0 && (
+        <div className="parsed-products">
+          <div className="parsed-products-label">Products (take-home)</div>
+          {products.map((p, idx) => (
+            <div key={idx} className="parsed-product">
+              <span className="parsed-product-name">{p.name}</span>
+              {p.notes && <span className="parsed-product-notes"> · {p.notes}</span>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,25 +1,14 @@
--- save_parsed_visit(payload jsonb) -> uuid
+-- add_visit_products.sql
 --
--- Atomically writes an AI-parsed visit across three tables (visits ->
--- treatments -> treatment_areas). Because it all runs inside one function
--- call, it commits together or rolls back together — a visit can never be
--- left half-written. Called from the browser via supabase.rpc().
+-- The AI parser now separates take-home / retail PRODUCTS (serums, supplements,
+-- skincare) from injected TREATMENTS. Previously a retail line item on a receipt
+-- (e.g. "PAV Bioadaptive Stress Repair") was silently dropped. This teaches the
+-- save RPC to write the parsed `products[]` array into the products list.
 --
--- SECURITY INVOKER (the default): the function runs as the logged-in user, so
--- Row-Level Security still applies and patient_id is resolved server-side via
--- get_my_patient_id() — the client can't spoof whose record it writes to.
---
--- Expected payload shape:
---   {
---     "visit": { "visit_date", "provider_name", "body_regions", "cost" },
---     "treatments": [
---       { "name", "summary", "total_dose", "color_key",
---         "areas": [ { "friendly_name", "clinical_name", "dose",
---                      "mirror", "x", "y" } ] }
---     ]
---   }
---
--- Returns the new visit's id.
+-- Only save_parsed_visit changes -- one added loop at the end. No schema change:
+-- the products table already exists, and products are patient-level (not linked
+-- to a visit) for now. `create or replace` swaps the function in place and keeps
+-- its grants. Run once, in the Supabase SQL editor.
 
 create or replace function save_parsed_visit(payload jsonb)
 returns uuid
@@ -39,7 +28,6 @@ begin
     raise exception 'No patient record found for the current user';
   end if;
 
-  -- 1) The visit. status/ai_parsed_at are set here, not trusted from the client.
   insert into visits (
     patient_id, visit_date, provider_name, body_regions, cost,
     status, ai_parsed_at
@@ -55,7 +43,6 @@ begin
   )
   returning id into v_visit_id;
 
-  -- 2) Each treatment, in payload order (display_order = position).
   for t in
     select elem, ord
     from jsonb_array_elements(coalesce(payload -> 'treatments', '[]'::jsonb))
@@ -74,7 +61,6 @@ begin
     )
     returning id into v_treatment_id;
 
-    -- 3) That treatment's areas, in order. x/y come pre-resolved from the client.
     for a in
       select elem, ord
       from jsonb_array_elements(coalesce(t.elem -> 'areas', '[]'::jsonb))
@@ -90,11 +76,6 @@ begin
         a.elem ->> 'clinical_name',
         nullif(a.elem ->> 'dose', ''),
         coalesce((a.elem ->> 'mirror')::boolean, false),
-        -- double precision AND nullable. Fractional because the axis of symmetry
-        -- is x=114.9 (int cast of '114.9' errors, and an int column would
-        -- SILENTLY ROUND). NULL because an injection we can't place gets no dot
-        -- rather than an invented one. See db/fix_coordinate_precision.sql and
-        -- db/allow_unplaced_areas.sql.
         nullif(a.elem ->> 'x', '')::double precision,
         nullif(a.elem ->> 'y', '')::double precision,
         a.ord::int
@@ -102,8 +83,8 @@ begin
     end loop;
   end loop;
 
-  -- Retail / take-home products (serums, supplements). Not injected, so they
-  -- have no visit/area link — they go to the patient's products list.
+  -- NEW: retail / take-home products. Not injected -> no visit/area link; they
+  -- land in the patient's products list.
   for a in
     select elem
     from jsonb_array_elements(coalesce(payload -> 'products', '[]'::jsonb)) as x(elem)
