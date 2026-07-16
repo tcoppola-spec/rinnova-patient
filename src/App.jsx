@@ -141,6 +141,7 @@ function App() {
         <Greeting firstName={patient.first_name} />
 
         <HeroCard
+          visits={visits}
           lastVisitDate={lastVisit?.visit_date}
           providerName={patient.primary_provider?.name || patient.provider_name}
           providerPhone={patient.primary_provider?.phone || patient.provider_phone}

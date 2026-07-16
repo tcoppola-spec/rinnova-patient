@@ -341,6 +341,16 @@ The visit **save** still uses an atomic Postgres function (`save_parsed_visit`) 
 7b. **Toasts only when the proof is off-screen.** `Toast.jsx` + `showToast` in App, threaded as `onToast` (same discipline as the refetch chain). Wait-and-show means most actions confirm themselves in place — toasting those trains the patient to ignore toasts. Current toast points, deliberately few: visit deleted, photo deleted, photo attached (both paths), photo detached. The "Saved to your record" screen is NOT a toast candidate — its subtext carries load-bearing info (products filed, no-map notes).
 8. **Strong design discipline** — Tracy will pushback on anything that feels off-brand. Listen carefully. Examples she pushed back on and was right: red destructive button (broke palette), beige cost strip (too prominent), emoji icons (felt placeholder).
 
+### The hero card renewal model (July 2026)
+
+`HeroCard` leads with a "what's wearing off" insight — the onboarding promise delivered. **Deterministic, no AI:** `src/renewals.js` crosses the patient's own treatment dates with an editable table of industry-standard duration ranges (tox 3–4mo, HA filler 6–12, Radiesse 12–18, hyperdilute 10–14 — Tracy-reviewed; tune there). Rules that must hold:
+- The clock is per **category** (`color_key`), not product — Botox then Xeomin is one tox clock, latest resets it.
+- **"Typically" + ranges, never prescriptive.** "May be wearing off," never "you need." Information about their own record, not medical advice.
+- **Uncategorised products get NO duration claim** — silence over invention.
+- All-active state uses Tracy's chosen "refresh window" voice ("Nothing's due yet — your next refresh window opens around July 24…").
+
+**Booking CTA + multiple providers (decided, not yet built):** the CTA will *follow the insight* — a "your Xeomin is fading" card books with the provider who did that Xeomin (visits already carry per-visit `provider_name`); the refresh-window state books with the primary provider; the button *names its target* ("Book with Dr. Del Campo →"). Fallbacks: insight-provider has no contact info → primary; none → no button (never a dead button). This lands with the providers brief (`docs/providers-and-invites-brief.md`), which makes providers entities — until then the CTA stays "Make an appointment" → patient's provider phone.
+
 ### Component patterns to mimic
 
 - **VisitCard.jsx** — two-zone pattern: main tappable area opens modal, secondary cost link is its own button that opens an inline editor. Tap zones never bleed into each other.
