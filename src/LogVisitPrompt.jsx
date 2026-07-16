@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { saveParsedVisit } from './saveVisit'
+import AreaQuestions from './AreaQuestions'
 
 /**
  * LogVisitPrompt
@@ -53,6 +54,9 @@ function LogVisitFlow({ onClose, onRefetch }) {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null)
   const [photoBase64, setPhotoBase64] = useState(null)
   const [parsed, setParsed] = useState(null)
+  // Guided-Q&A answers for treatments the document gave no location for:
+  // { [treatmentName]: { regions: [{ label, mirror }], notSure: bool } }
+  const [areaAnswers, setAreaAnswers] = useState({})
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
@@ -147,6 +151,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
         return
       }
       setParsed(data.parsed)
+      setAreaAnswers({}) // answers belong to one parse; a new parse starts clean
       setStep('result')
     } catch (e) {
       setError(e.message || 'Could not reach AI parser')
@@ -182,6 +187,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
         return
       }
       setParsed(data.parsed)
+      setAreaAnswers({}) // answers belong to one parse; a new parse starts clean
       setStep('result')
     } catch (e) {
       setError(e.message || 'Could not reach AI parser')
@@ -196,6 +202,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
     setPhotoPreviewUrl(null)
     setPhotoBase64(null)
     setParsed(null)
+    setAreaAnswers({})
     setError(null)
     setSaveError(null)
     setSaved(false)
@@ -206,12 +213,52 @@ function LogVisitFlow({ onClose, onRefetch }) {
     setStep('choose')
   }
 
+  /**
+   * Treatments the document named but gave NO location for (the receipt case).
+   * These get the guided Q&A. A treatment that came with real areas from a
+   * clinical note is left alone — the document is a better source than memory.
+   */
+  function treatmentsNeedingAreas() {
+    if (!parsed) return []
+    const withAreas = new Set(
+      (parsed.treatment_areas || []).map((a) => a.treatment_name)
+    )
+    return (parsed.treatments || []).filter((t) => t?.name && !withAreas.has(t.name))
+  }
+
+  /**
+   * Merge the Q&A answers into the parsed result as ordinary treatment_areas.
+   * The labels come from FACE_REGIONS (our own vocabulary), so every one is
+   * guaranteed to resolve to a coordinate in saveVisit — same pipeline, same
+   * fan-out, same bilateral invariant. dose stays null: we never ask for it.
+   */
+  function mergeAreaAnswers(base) {
+    const extra = []
+    for (const [treatmentName, answer] of Object.entries(areaAnswers)) {
+      if (answer?.notSure) continue
+      for (const r of answer?.regions || []) {
+        extra.push({
+          treatment_name: treatmentName,
+          friendly_name: r.label,
+          clinical_name: null,
+          dose: null,
+          mirror: r.mirror === true,
+        })
+      }
+    }
+    if (extra.length === 0) return base
+    return {
+      ...base,
+      treatment_areas: [...(base.treatment_areas || []), ...extra],
+    }
+  }
+
   async function handleSave() {
     setSaveError(null)
     setSaving(true)
     try {
       const { usedToday, unplaced, savedProducts, mappedCount, hasTreatments } =
-        await saveParsedVisit(parsed)
+        await saveParsedVisit(mergeAreaAnswers(parsed))
       const notes = []
       if (usedToday) {
         notes.push("We used today's date since the note didn't include one.")
@@ -230,10 +277,11 @@ function LogVisitFlow({ onClose, onRefetch }) {
           } no dot yet.`
         )
       } else if (hasTreatments && mappedCount === 0) {
-        // The receipt case: real treatments, but the document had no locations,
-        // so there's no face map. Frame it as an upgrade path, not a failure.
+        // Real treatments but zero placed dots — the document had no locations
+        // and the patient skipped (or wasn't sure in) the guided questions.
+        // Frame it as an upgrade path, not a failure.
         notes.push(
-          'This looks like a receipt — it doesn’t say where on the face each treatment went, so there’s no face map yet. You can add the areas yourself, or ask your provider for a clinical note and Rinnova will map it in detail.'
+          'This visit has no face map yet — the document didn’t say where each treatment went. A clinical note from your provider can fill that in anytime.'
         )
       }
       setSavedNote(notes.join(' '))
@@ -407,6 +455,32 @@ function LogVisitFlow({ onClose, onRefetch }) {
           </p>
         </div>
         <ParsedVisitPreview parsed={parsed} />
+
+        {/* Guided Q&A — only for treatments the document gave no location for
+            (the receipt case). The patient's picks come from our own region
+            vocabulary, so they always land on the face map. */}
+        {treatmentsNeedingAreas().length > 0 && (
+          <div className="qa-section">
+            <div className="qa-section-head">
+              <div className="qa-section-title">Help map this visit</div>
+              <p className="qa-section-sub">
+                This document doesn’t say where each treatment went. If you
+                remember, tap the areas and they’ll show on your face map.
+              </p>
+            </div>
+            {treatmentsNeedingAreas().map((t) => (
+              <AreaQuestions
+                key={t.name}
+                treatmentName={t.name}
+                value={areaAnswers[t.name]}
+                onChange={(next) =>
+                  setAreaAnswers((prev) => ({ ...prev, [t.name]: next }))
+                }
+              />
+            ))}
+          </div>
+        )}
+
         {saveError && <div className="form-error">{saveError}</div>}
         <div className="form-actions" style={{ marginTop: 20 }}>
           <button

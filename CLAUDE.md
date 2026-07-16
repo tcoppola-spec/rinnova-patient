@@ -119,6 +119,8 @@ Patient_0/
 │   ├── usePatientData.js           # Custom hook: fetches all patient data, exposes refetch
 │   ├── saveVisit.js                # Shapes parsed data + calls save_parsed_visit RPC (Chunk 6)
 │   ├── faceCoordinates.js          # friendly_name → {x,y} lookup for face dots (Chunk 6)
+│   ├── faceRegions.js              # Universal region list for the guided area Q&A
+│   ├── AreaQuestions.jsx           # Guided Q&A card: region chips + both-sides toggle
 │   ├── faceGeometry.js             # Face SVG coordinate space: viewBox, mirror axis, dot radius
 │   ├── Login.jsx                   # Sign-in: two-step email → 6-digit OTP code (verifyOtp)
 │   ├── AuthCallback.jsx            # LEGACY magic-link redirect handler (kept for in-flight links)
@@ -393,7 +395,19 @@ This is the same "never invent a coordinate" principle from the save path, moved
 `treatment_areas` come back with NO `x`/`y` — the AI doesn't know Rinnova's SVG geometry. `src/faceCoordinates.js` resolves `friendly_name → {x, y}` at save time. An unmatched name resolves to **null → no dot** (never face-centre — see §7), and the region is surfaced to the patient.
 
 ### Receipts vs clinical notes (the core parsing reality)
-Most real-world documents patients have are **receipts** (billing: date, cost, product names, practice) — not **clinical notes** (which also carry location, dose, laterality). Rinnova turns a receipt into a real visit + products, but **can't build a face map from a receipt that has no locations, and won't fake one.** The planned path to a map for receipt visits is a guided Q&A (universal list of face regions + "not sure" + a both-sides question) that lets the patient supply locations from *their* memory — inverting the fuzzy-text-matching problem into a pick-from-our-vocabulary one. Built on top of the hardened parser. (Guided Q&A UI: not yet built as of this note; parser hardening + products split shipped first.)
+Most real-world documents patients have are **receipts** (billing: date, cost, product names, practice) — not **clinical notes** (which also carry location, dose, laterality). Rinnova turns a receipt into a real visit + products, but **can't build a face map from a receipt that has no locations, and won't fake one.** The path to a map for receipt visits is the **guided Q&A** (below), which lets the patient supply locations from *their* memory.
+
+### Guided area Q&A (shipped July 2026)
+On the parse-result screen, any treatment that arrived with **no location** gets a question card: "Where was {name} applied?" The patient taps regions from `src/faceRegions.js` — a **universal, fixed list of 15 regions** — plus a per-region "Both sides / One side" toggle for off-axis regions. Component: `src/AreaQuestions.jsx`; answers merge into `parsed.treatment_areas` in `LogVisitPrompt.mergeAreaAnswers()` before the ordinary save. **No DB or RPC changes** — the answers ride the existing pipeline (coordinate resolution, duplicate fan-out, bilateral invariant).
+
+Why this shape — these rules are deliberate, don't loosen them:
+- **It inverts the matching problem.** Free text has to be fuzzy-matched onto our coordinate vocabulary; a pick-list *is* the vocabulary, so every answer is guaranteed to resolve. There's a check that every `faceRegions.js` label resolves via `getCoordinates()` and that its `midline` flag matches the axis — rerun it if either file changes.
+- **"I'm not sure" is first-class** and exclusive (clears picks). A forced choice would just move fabrication from the AI to a patient guessing under UI pressure. Not-sure → no areas → honest empty map.
+- **Dose is NEVER asked.** Patients remember where; they almost never know units. A guessed dose is invented clinical data.
+- **Off-axis regions default to "Both sides"** (visible + flippable — the overwhelming norm for tox/filler). Midline regions get no side control (a bilateral midline area is the `assertPlacement()` contradiction).
+- Treatments that came WITH areas from a clinical note are left alone — the document beats memory.
+- **Known limitation:** "One side" renders the dot on the illustration's left side regardless of which side it really was — left/right disambiguation (with its mirror-image ambiguity) was deliberately cut from V1.
+- **Provenance is deliberately deferred:** Q&A-supplied areas are stored identically to note-parsed ones (visits are all `pending_review` anyway). If provider verification ever lands, revisit whether patient-recalled locations need a source marker.
 
 ### Multimodal note
 Claude Sonnet 4.5 handles images up to ~5MB. The frontend enforces a 5MB cap and rejects larger files. We don't compress; we reject.
