@@ -191,7 +191,21 @@ function friendlySendError(error) {
   if (msg.includes('email') && msg.includes('invalid')) {
     return 'That email doesn’t look right. Check it and try again.'
   }
-  return error?.message || 'Could not send the code. Please try again.'
+  // Enrollment gate (db/gated_enrollment.sql): a non-allowlisted signup makes
+  // the trigger raise, which Supabase surfaces as a signup/database failure.
+  // Show INVITE-ONLY copy that reveals nothing about whether this specific
+  // email is on the list — never echo the raw trigger message.
+  if (
+    error?.status === 500 ||
+    msg.includes('database error') ||
+    msg.includes('saving new user') ||
+    msg.includes('enrollment') ||
+    msg.includes('unexpected')
+  ) {
+    return 'Rinnova is invite-only right now. If you were invited, double-check the email you used — otherwise reach out to the person who invited you.'
+  }
+  // Never surface the raw message: keep the neutral default.
+  return 'Could not send the code. Please try again.'
 }
 
 function friendlyVerifyError(error) {

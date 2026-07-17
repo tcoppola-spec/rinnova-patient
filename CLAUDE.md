@@ -35,7 +35,7 @@ Tracy's first visit:   cd0337f4-69ba-4a90-aba9-e85afb1ca2b4  (April 24, 2026)
 Roberta provider_id:   fdda2aa6-e834-4514-ab2d-543b5229ac87
 GitHub username:       tcoppola-spec
 Local path:            ~/Documents/TONDO_LLC/Apps/_Rinnova/Patient_0
-Production URL:        https://tondo-rinnova.netlify.app
+Production URL:        https://app.rinnova.io  (primary; CNAME → tondo-rinnova.netlify.app)
 GitHub repo:           github.com/tcoppola-spec/rinnova-patient
 ```
 
@@ -75,6 +75,22 @@ Sign-in is passwordless via an **email OTP code**, not a magic link. Flow (see `
 **Email delivery — custom SMTP (Resend), configured (July 10, 2026).** Sends now go through Resend (`smtp.resend.com`, verified sender domain), which clears Supabase's built-in ~2 emails/hour cap. Verified end-to-end: code arrives, on-brand template renders, not flagged as spam. Before Resend this was the hard V1 blocker (the built-in sender made sign-in single-tester-only). Configured in Supabase → Project Settings → Authentication → SMTP Settings.
 
 **`AuthCallback.jsx` is legacy.** The `/auth/callback` route is retained only as a safety net for any magic link already sitting in an inbox (they expire ~1h). It is unused by the OTP flow and can be deleted once no old links matter.
+
+### Gated enrollment (friends & family, July 2026)
+
+Rinnova is **invite-only**, enforced in the database. `db/gated_enrollment.sql` adds an `allowed_emails` allowlist and a `handle_new_user()` SECURITY DEFINER trigger on `auth.users` that does two things on a first-time signup:
+1. **Gate** — email not on `allowed_emails` → the trigger raises, the `auth.users` insert rolls back, no account is created. Enforced server-side; a client-side check would be bypassable.
+2. **Provision** — allowed email → creates that user's own empty `patients` row (no provider, no name). RLS isolates it; testers never see each other's or Tracy's data.
+
+**Enrollment ≠ authentication (the easy thing to get wrong).** The gate fires only when a *new* auth user is created. A returning tester signing in via OTP does not re-trigger it, so the allowlist never blocks an existing account. Removing someone from `allowed_emails` does NOT lock out an already-created account (revocation isn't a feature here — fine for f&f).
+
+**Add a tester:** `insert into allowed_emails (email, note) values ('x@y.com', 'who');` in the SQL editor. That's the whole admin path (no console, on purpose).
+
+**Neutral failure copy.** A blocked signup surfaces as a Supabase 500 / "database error saving new user"; `Login.friendlySendError` maps that (and the raw trigger message) to invite-only copy that never reveals whether a specific email is on the list. Do not echo the raw error.
+
+**Why an allowlist, not the full single-use invite codes** in `docs/providers-and-invites-brief.md`: for people you know, a server-enforced allowlist is real security with far less machinery (no codes table, no redemption UI, no service-role Netlify Function). The full invite-code system is the Phase-1 path for a provider's real patients; still parked. **New testers get NO provider** (f&f decision) — so the booking CTA hides for them, and `Greeting` drops the name cleanly (they have none yet).
+
+**Domain (app.rinnova.io).** The app now serves from `https://app.rinnova.io` (CNAME → Netlify). The app is origin-relative (manifest `start_url`/`scope` are `/`, no hardcoded URLs), so no code changed. **Supabase Auth → URL Configuration must list `https://app.rinnova.io`** as Site URL + redirect target. Installed PWAs are per-origin: install from app.rinnova.io, not the netlify.app URL.
 
 **Parked auth work (see §11):** magic-link-as-primary (needs iOS Universal Links) and Face ID / WebAuthn unlock for PWA re-entry.
 
