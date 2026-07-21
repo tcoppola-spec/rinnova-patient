@@ -71,6 +71,11 @@ const COORDINATES = {
   'crows feet': { x: 46.7, y: 148.5 },
   'lateral canthus': { x: 46.7, y: 148.5 },
   'orbicularis oculi': { x: 46.7, y: 148.5 },
+  // "Periorbital" = around the orbit, i.e. this region — NOT the tear trough
+  // below it. A clinical note pairing them ("Periorbitals/Infraorbital") used to
+  // match only on the infraorbital half and place the dot under the eye.
+  'periorbital': { x: 46.7, y: 148.5 },
+  'periorbitals': { x: 46.7, y: 148.5 },
   // Hollow under the inner half of the lower lid. Measured against the artwork:
   // lower lid sits at y=159.5, iris centre x=74.6, inner canthus x=96.4.
   'tear trough': { x: 84, y: 168 },

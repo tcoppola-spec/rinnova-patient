@@ -96,7 +96,7 @@ export async function saveParsedVisit(parsed) {
     .filter((t) => t?.name)
     .map((t) => {
       const tAreas = (areasByTreatment[t.name] || []).map((a) => {
-        const mirror = a.mirror === true
+        let mirror = a.mirror === true
         const base = getCoordinates(a.friendly_name)
 
         if (!base) {
@@ -111,21 +111,30 @@ export async function saveParsedVisit(parsed) {
           }
         }
 
-        // A bilateral region resolving to the axis is a contradiction (its two
-        // dots would coincide). Treat it as unplaced rather than draw a wrong,
-        // plausible-looking dot.
+        // Bilateral + on-axis is a contradiction: the mirror maps the point onto
+        // itself, so both dots land on the same pixel. When it happens now, the
+        // TABLE wins and we draw one honest dot.
+        //
+        // Why coerce rather than drop, and why that's safe here: `mirror` is the
+        // parser's claim about anatomy ("a platysma is paired"), while `x` is our
+        // claim about this illustration ("Rinnova draws the neck as one central
+        // zone" — faceRegions.js says midline: true for Neck as well). On a
+        // midline point the illustration is authoritative, and one dot is exactly
+        // what the guided Q&A produces for the same region.
+        //
+        // This did NOT used to be safe. During the tear-trough bug an on-axis
+        // coordinate meant "unmatched name fell back to face-centre" — invented,
+        // so dropping it was right. There is no fallback any more (see
+        // faceCoordinates.js), so reaching the axis now always means a curated
+        // entry deliberately placed there. Dropping it would delete a real
+        // treatment from the record to protect against a fabrication that can no
+        // longer occur.
         const problem = assertPlacement(base, mirror, a.friendly_name)
         if (problem) {
-          console.error('[saveVisit] bad placement:', problem)
-          unplaced.push(a.friendly_name)
-          return {
-            friendly_name: a.friendly_name,
-            clinical_name: a.clinical_name ?? null,
-            dose: a.dose ?? null,
-            mirror,
-            x: null,
-            y: null,
-          }
+          console.warn(
+            `[saveVisit] ${problem} — this region is drawn on the midline, so it saves as a single dot.`
+          )
+          mirror = false
         }
 
         const coord = fanOut(base, mirror, seenPerArea, a.friendly_name)
