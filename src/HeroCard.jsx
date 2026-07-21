@@ -107,7 +107,7 @@ function HeroCard({ visits = [], lastVisitDate, providerName, providerPhone }) {
       ? `Your last visit with ${providerName}.`
       : 'Your most recent appointment.'
   } else {
-    headline = 'Welcome to your record'
+    headline = 'Welcome to your aesthetic record'
     subtext = 'Log your first visit to start building your aesthetic care history.'
   }
 
