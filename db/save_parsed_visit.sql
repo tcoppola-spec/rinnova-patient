@@ -20,6 +20,10 @@
 --   }
 --
 -- Returns the new visit's id.
+--
+-- Product filing is idempotent (ON CONFLICT DO NOTHING against the unique
+-- index from db/dedupe_products.sql), so re-parsing the same receipt cannot
+-- duplicate the patient's products list.
 
 create or replace function save_parsed_visit(payload jsonb)
 returns uuid
@@ -104,16 +108,29 @@ begin
 
   -- Retail / take-home products (serums, supplements). Not injected, so they
   -- have no visit/area link — they go to the patient's products list.
+  --
+  -- ON CONFLICT DO NOTHING makes this idempotent. Re-parsing the same receipt
+  -- (which happens whenever a visit is deleted and re-uploaded) used to file
+  -- every product again; now the visit still saves, existing products are left
+  -- exactly as they are — a re-parse never overwrites a note the patient
+  -- wrote — and only genuinely new products are added. Without it the unique
+  -- index would raise and roll back the ENTIRE visit save.
+  --
+  -- Blank names are skipped: a nameless product isn't a product, and NULL name
+  -- would slip past the unique index (NULLs don't collide in Postgres).
   for a in
     select elem
     from jsonb_array_elements(coalesce(payload -> 'products', '[]'::jsonb)) as x(elem)
   loop
-    insert into products (patient_id, name, notes)
-    values (
-      v_patient_id,
-      a.elem ->> 'name',
-      nullif(a.elem ->> 'notes', '')
-    );
+    if nullif(btrim(coalesce(a.elem ->> 'name', '')), '') is not null then
+      insert into products (patient_id, name, notes)
+      values (
+        v_patient_id,
+        btrim(a.elem ->> 'name'),
+        nullif(btrim(coalesce(a.elem ->> 'notes', '')), '')
+      )
+      on conflict (patient_id, lower(btrim(name))) do nothing;
+    end if;
   end loop;
 
   return v_visit_id;

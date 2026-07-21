@@ -185,6 +185,14 @@ function AddProductForm({ onSaved }) {
     setSaving(false)
 
     if (saveError) {
+      // 23505 = unique violation. The DB enforces one row per product per
+      // patient (db/dedupe_products.sql), matched case- and space-insensitively,
+      // so this fires for "alpharet" when "AlphaRet" is already listed. Say what
+      // happened in plain words — the raw constraint text is meaningless here.
+      if (saveError.code === '23505') {
+        setError(`${trimmedName} is already in your products list.`)
+        return
+      }
       setError(saveError.message || 'Could not save')
       return
     }
