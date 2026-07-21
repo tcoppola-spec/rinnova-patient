@@ -17,8 +17,15 @@ import { supabase } from './supabaseClient'
  * never sees the session. A code is typed IN the app, so it works identically
  * in Safari, the installed PWA, and on Android.
  *
- * NOTE: for the code to arrive, the Supabase "Magic Link" email template must
- * include {{ .Token }} (default templates only show the link). See CLAUDE.md.
+ * NOTE: for the code to arrive, TWO Supabase email templates must include
+ * {{ .Token }} — default templates only show the link:
+ *   "Magic Link"     → sent to a RETURNING user
+ *   "Confirm signup" → sent to a FIRST-TIME user
+ * Both, not just Magic Link. This screen promises "we'll email you a code" and
+ * it cannot branch that copy: signInWithOtp deliberately returns the same
+ * response for a new and an existing address, so the client never learns which
+ * one it is (and leaking that would undercut our neutral invite-only copy).
+ * The consistency has to come from the templates. See CLAUDE.md §4.
  *
  * On successful verify we navigate to '/' ourselves — App isn't mounted on the
  * /login route, so its auth listener can't do the redirect for us.

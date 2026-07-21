@@ -52,6 +52,15 @@ html, body {
   font-feature-settings: 'ss01', 'cv11';
 }
 
+/* Rinnova is a phone-width column — it should never pan sideways. `clip` not
+   `hidden` on purpose: `hidden` would force overflow-y to `auto` and make the
+   document a scroll container, which changes how mobile Safari's toolbar
+   collapses (see the onboarding viewport note in CLAUDE.md §18). `clip` cuts
+   horizontal overflow without creating a scroll container at all. */
+html {
+  overflow-x: clip;
+}
+
 #root {
   min-height: 100vh;
   background: var(--cream);

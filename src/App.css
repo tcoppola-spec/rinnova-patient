@@ -1871,6 +1871,11 @@
   height: 100vh;
   height: 100svh; /* toolbar-VISIBLE height, so the bottom bar can't cover the dots */
   overflow-y: auto;
+  /* Must be explicit. CSS computes `visible` to `auto` on one axis when the
+     other axis is non-visible — so overflow-y:auto alone silently makes this
+     container horizontally scrollable, and a swipe pans the whole screen. */
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   background: var(--cream);
   display: flex;
   justify-content: center;

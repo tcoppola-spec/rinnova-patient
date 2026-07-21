@@ -68,7 +68,20 @@ Sign-in is passwordless via an **email OTP code**, not a magic link. Flow (see `
 
 **Why OTP, not magic link:** a magic link opens in Safari, a *separate storage context* from an installed iOS PWA, so the PWA never receives the session — the user is bounced back to sign-in on every launch. A typed code works identically in Safari, the installed PWA, and on Android.
 
-**Dashboard dependency (easy to miss):** the emailed code is rendered by the Supabase **"Magic Link" email template**, which MUST include `{{ .Token }}`. Default templates render only `{{ .ConfirmationURL }}` (the link), so without editing the template the code never appears. If codes ever stop arriving, check that template first. The code expires in 1 hour by default.
+**Dashboard dependency — TWO templates, easy to miss (this shipped broken to the first real tester, July 21 2026).** The emailed code is rendered from a Supabase email template that MUST include `{{ .Token }}`; defaults render only `{{ .ConfirmationURL }}` (the link), so without editing them the code never appears. There are **two** such templates, and which one fires depends on whether the account already exists:
+
+| Template | Fires for | Was edited? |
+|---|---|---|
+| **Magic Link** | a **returning** user | ✅ edited early — this is why Tracy's codes always worked |
+| **Confirm signup** | a **first-time** user | ❌ missed until the first f&f signup hit it |
+
+Because Tracy's account already existed when OTP was set up, every test took the Magic Link path and the gap stayed invisible until a brand-new address signed up and received "Confirm your email address" — a link, no code — while the app sat on the "enter your code" screen. **Fix both templates; keep their bodies identical** so the two paths are indistinguishable to the patient.
+
+**Why the copy can't just branch instead.** `Login` promises "we'll email you a code" unconditionally, and that is correct: `signInWithOtp` deliberately returns the *same* response for a new and an existing address, so the client cannot know which email is being sent. That's a feature — it's what stops the screen leaking whether an account exists, the same discipline as the neutral invite-only failure copy. Consistency therefore has to live in the templates, not in conditional UI.
+
+**The link still works in a browser** (a first-time tester who taps "Confirm your email address" in mobile Safari lands in the app fine) — which is exactly what makes this bug quiet. It fails for someone who **installed the PWA first**: a link opens Safari, a separate storage context, so the session never reaches the installed app. That is the original reason for OTP (see below), and it's why "the link worked for me" must not be read as "this is fine."
+
+The code expires in 1 hour by default.
 
 **Code length is a dashboard setting, not fixed at 6.** Supabase's **Authentication → Providers → Email → Email OTP Length** is configurable (6–10 digits; default 6, but the pilot project is set to 8). `Login.jsx` therefore validates `^\d{6,10}$` — do NOT hard-code 6, or a dashboard change silently truncates the input and rejects every code (this exact bug locked out sign-in once).
 
