@@ -88,7 +88,9 @@ Rinnova is **invite-only**, enforced in the database. `db/gated_enrollment.sql` 
 
 **Neutral failure copy.** A blocked signup surfaces as a Supabase 500 / "database error saving new user"; `Login.friendlySendError` maps that (and the raw trigger message) to invite-only copy that never reveals whether a specific email is on the list. Do not echo the raw error.
 
-**Why an allowlist, not the full single-use invite codes** in `docs/providers-and-invites-brief.md`: for people you know, a server-enforced allowlist is real security with far less machinery (no codes table, no redemption UI, no service-role Netlify Function). The full invite-code system is the Phase-1 path for a provider's real patients; still parked. **New testers get NO provider** (f&f decision) — so the booking CTA hides for them, and `Greeting` drops the name cleanly (they have none yet).
+**Why an allowlist, not the full single-use invite codes** in `docs/providers-and-invites-brief.md`: for people you know, a server-enforced allowlist is real security with far less machinery (no codes table, no redemption UI, no service-role Netlify Function). The full invite-code system is the Phase-1 path for a provider's real patients; still parked. **New testers get NO provider** (f&f decision) — so the booking CTA hides for them.
+
+**Name capture.** Testers are provisioned nameless, so a first-run `NameCapture` prompt ("What should we call you?") appears once, after onboarding, gated on `!patient.first_name`. It writes via `set_my_name` and is skippable (`Greeting` renders cleanly without a name). Gate order in `App.jsx`: dataLoading/error → onboarding → name → app.
 
 **Domain (app.rinnova.io).** The app now serves from `https://app.rinnova.io` (CNAME → Netlify). The app is origin-relative (manifest `start_url`/`scope` are `/`, no hardcoded URLs), so no code changed. **Supabase Auth → URL Configuration must list `https://app.rinnova.io`** as Site URL + redirect target. Installed PWAs are per-origin: install from app.rinnova.io, not the netlify.app URL.
 
@@ -198,7 +200,7 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `onboarding_completed` BOOLEAN **NOT NULL**, default `false` — gates the first-run flow (§18). Added by `db/add_onboarding_flag.sql`.
 - Created in Chunk 1.
 
-**`patients` has NO UPDATE policy — keep it that way.** Postgres RLS is row-level, not column-level, so any UPDATE policy broad enough to let a patient set `onboarding_completed` would also let them rewrite `email`, `dob`, `primary_provider_id`, etc. The only write path into this table is the narrow `complete_onboarding()` SECURITY DEFINER RPC, which takes no arguments, resolves the patient via `get_my_patient_id()`, and sets exactly one column on exactly one row. If you ever need another patient-writable field, add another narrow RPC — do not open up UPDATE.
+**`patients` has NO UPDATE policy — keep it that way.** Postgres RLS is row-level, not column-level, so any UPDATE policy broad enough to let a patient set `onboarding_completed` would also let them rewrite `email`, `dob`, `primary_provider_id`, etc. The only write paths into this table are narrow SECURITY DEFINER RPCs, each resolving the patient via `get_my_patient_id()` and setting exactly one column on one row: `complete_onboarding()` (the flag) and `set_my_name(p_first_name)` (`db/add_set_name_rpc.sql`, for nameless testers). If you ever need another patient-writable field, add another narrow RPC — do not open up UPDATE.
 
 ### `providers`
 - `id` UUID PK

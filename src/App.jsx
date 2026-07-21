@@ -12,6 +12,7 @@ import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
+import NameCapture from './NameCapture'
 import Toast from './Toast'
 import './App.css'
 
@@ -24,6 +25,7 @@ function App() {
   // Lets the patient straight through the moment they finish, without waiting
   // on the RPC round-trip — and keeps them through if that write fails.
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [nameDismissed, setNameDismissed] = useState(false)
 
   // Brief confirmation pill for actions whose result isn't visible where the
   // patient is looking (deletes, photo attach/detach). See Toast.jsx for the
@@ -57,6 +59,21 @@ function App() {
         '[onboarding] could not save completion — the patient will see it again next session:',
         e?.message || e
       )
+    }
+  }
+
+  /**
+   * "What should we call you?" — persists first_name via set_my_name (narrow
+   * SECURITY DEFINER RPC; patients has no UPDATE policy). Called by NameCapture
+   * only on success, so refetch here just picks up the new name. Dismiss first
+   * so a refetch hiccup can't strand the patient on the prompt.
+   */
+  async function handleNameSaved() {
+    setNameDismissed(true)
+    try {
+      await refetch()
+    } catch (e) {
+      console.warn('[name] refetch after save failed:', e)
     }
   }
 
@@ -129,6 +146,18 @@ function App() {
   // bottom bar. Onboarding pins itself to the visible viewport instead.
   if (!patient.onboarding_completed && !onboardingDismissed) {
     return <Onboarding onDone={completeOnboarding} />
+  }
+
+  // After onboarding, ask nameless testers what to call them. Sits here (after
+  // the data load, after onboarding) so it never flashes before we know whether
+  // a name exists. Skippable — never traps the patient.
+  if (!patient.first_name && !nameDismissed) {
+    return (
+      <NameCapture
+        onSaved={handleNameSaved}
+        onSkip={() => setNameDismissed(true)}
+      />
+    )
   }
 
   return (
