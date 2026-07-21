@@ -133,7 +133,10 @@ Patient_0/
 │   ├── allow_unplaced_areas.sql    # x/y nullable ("we can't place this") + repair the tear trough
 │   ├── allow_visit_delete.sql      # DELETE policy on visits (children cascade)
 │   ├── add_visit_photos.sql        # photos.visit_id (ON DELETE SET NULL) + WITH CHECK attach policy
-│   └── add_visit_products.sql      # save_parsed_visit also files parsed retail products
+│   ├── add_visit_products.sql      # save_parsed_visit also files parsed retail products
+│   ├── gated_enrollment.sql        # allowed_emails allowlist + handle_new_user() trigger
+│   ├── add_set_name_rpc.sql        # set_my_name() — narrow name setter for nameless testers
+│   └── dedupe_products.sql         # one row per product: unique index + idempotent RPC
 ├── scripts/
 │   ├── icon-source.svg             # App-icon source: white Fraunces "R" (vector) on gradient
 │   ├── generate-icons.mjs          # Renders public/ PNG icons from the source (sharp, dev-only)
@@ -170,6 +173,9 @@ Patient_0/
 │   ├── ProductsSection.jsx         # Products list + add form + delete
 │   ├── SubscriptionsSection.jsx    # Currently empty state only
 │   ├── Onboarding.jsx              # First-run 3-screen carousel (see §18)
+│   ├── NameCapture.jsx             # First-run "what should we call you?" (set_my_name RPC)
+│   ├── Toast.jsx                   # Brief confirmation pill (App owns state; see §8.7b)
+│   ├── renewals.js                 # Deterministic renewal windows for HeroCard
 │   └── PageFooter.jsx              # Tondo brand footer
 ├── index.html                      # HTML shell — PWA manifest link + iOS Add-to-Home meta tags
 ├── netlify.toml                    # Build config + header rule (manifest MIME type)
@@ -276,8 +282,8 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `id` UUID PK
 - `patient_id` UUID → patients (ON DELETE CASCADE — a photo can't outlive its patient)
 - `storage_path` TEXT (path inside `patient-photos` Storage bucket)
-- `caption` TEXT
-- `taken_date` DATE — when the photo was ADDED. **Never rewritten when a photo is attached to a visit** (a photo taken 3 days after a visit still belongs to it; the date is the one thing we can't reconstruct).
+- `caption` TEXT — **the UI calls this "Notes"** (renamed July 21 2026). Captions are short labels; this is where a patient describes a side effect or how something settled, so both editors are textareas and the lightbox renders it with `pre-wrap` in the body font. The **column keeps the name `caption`** — the rename was a product decision, not a schema one, and migrating it would touch every read path for no behavioural gain. If the drift ever gets confusing, rename the column; do NOT rename the UI back. Reasoning is also recorded in `PhotoLightbox.jsx`.
+- `taken_date` DATE — when the photo was ADDED. **This is what the photo tile displays** (not the note): notes run to sentences, and on a ~150px tile they either truncated to uselessness or covered the photo. The date is short, always present, and what you scan an archive by; the note is one tap away in the lightbox. **Never rewritten when a photo is attached to a visit** (a photo taken 3 days after a visit still belongs to it; the date is the one thing we can't reconstruct).
 - `source` TEXT (`'patient_upload'` for self-uploaded photos)
 - `visit_id` UUID → visits, **nullable**, **`ON DELETE SET NULL`** (added July 2026, `db/add_visit_photos.sql`). Optionally attaches a photo to a visit. See below.
 
@@ -294,6 +300,13 @@ All tables have Row Level Security (RLS) enabled. The helper function `get_my_pa
 - `notes` TEXT
 - `added_at` TIMESTAMPTZ
 - Two write paths: the Products section (manual add), and `save_parsed_visit` — the AI parser separates take-home retail items from injected treatments and files them here (patient-level; not linked to the visit for now). See §9.
+- **UNIQUE INDEX `products_patient_name_uniq` on `(patient_id, lower(btrim(name)))`** (`db/dedupe_products.sql`, July 21 2026). One row per product per patient, matched case- and whitespace-insensitively.
+
+**Why a DB constraint and not an app check.** Both write paths could file the same product twice, and re-parsing a receipt (which happens every time a visit is deleted and re-uploaded) duplicated the whole retail list. Same reasoning as `photos.visit_id`'s `ON DELETE SET NULL`: a rule the database holds can't be bypassed by a new code path, a future admin tool, or raw SQL.
+
+**The list answers "what am I using?", not "what have I ever bought?"** Buying the same serum twice is not a second product. If purchase history is ever wanted, it belongs in its own table with a date per row — do NOT relax this index to get it.
+
+**`save_parsed_visit` MUST keep `on conflict … do nothing` on the products insert.** Without it the index raises on any re-parse and rolls back the **entire visit save**, not just the product. It also means a re-parse never overwrites a note the patient wrote. Blank/whitespace names are skipped — NULLs don't collide in a Postgres unique index, so they'd slip through.
 
 ### `subscriptions` (V1 scaffold only — no UI flow yet)
 - `id` UUID PK
@@ -379,6 +392,8 @@ The visit **save** still uses an atomic Postgres function (`save_parsed_visit`) 
 - **"Typically" + ranges, never prescriptive.** "May be wearing off," never "you need." Information about their own record, not medical advice.
 - **Uncategorised products get NO duration claim** — silence over invention.
 - All-active state uses Tracy's chosen "refresh window" voice ("Nothing's due yet — your next refresh window opens around July 24…").
+- **An "opens soon" state fires within `OPENING_SOON_DAYS` (30) of the next `fadeStart`.** Added July 21 2026, when the live card said "Nothing's due yet" while its own subtext admitted the window opened in three days — technically true, practically useless, since appointments are booked ahead. The actionable moment is *before* the window, not after. Phrased the way a person speaks ("in 3 days", "tomorrow", "in about 3 weeks"). Threshold is a named constant beside its reasoning — tune it like `DURATIONS`.
+- **Days-since-last-visit shows in EVERY state**, not just as a fallback. It used to appear only when there was no renewal insight, i.e. it vanished exactly when the card got smarter — but it's the number patients check every time. The insight leads; the day count stays. Deliberately **independent of the provider**: it's a fact about the record, not about who performed the visit. Suppressed only in the fallback state, where the headline already says it.
 
 **Booking CTA + multiple providers (decided, not yet built):** the CTA will *follow the insight* — a "your Xeomin is fading" card books with the provider who did that Xeomin (visits already carry per-visit `provider_name`); the refresh-window state books with the primary provider; the button *names its target* ("Book with Dr. Del Campo →"). Fallbacks: insight-provider has no contact info → primary; none → no button (never a dead button). This lands with the providers brief (`docs/providers-and-invites-brief.md`), which makes providers entities — until then the CTA stays "Make an appointment" → patient's provider phone.
 
@@ -428,13 +443,27 @@ Output shape (always):
 
 This is the same "never invent a coordinate" principle from the save path, moved UPSTREAM to the parser — which is where the fabrication actually originates.
 
+**⚠️ Laterality is ANATOMY, not wording (fixed July 21 2026).** The "never invent" rules originally lumped `mirror` in with location and dose, and the model responded by defaulting *everything* to `false` — so a clinical note listing brows, periorbitals, DAOs, zygoma, buccal, lateral cheeks and mandibular angle saved seven paired regions as single dots and rendered a lopsided half-face. Laterality is not the same kind of claim: a zygoma is a paired bone, and reading "Zygoma" as both is comprehension. The fabrication would be asserting a *specific single side* the note never named. The prompt now decides in a fixed order — explicit side wins → midline structures false → paired structures true — with both lists spelled out so it isn't a judgement call. This also matches the guided Q&A, which already defaults off-axis regions to "Both sides".
+
+**⚠️ VOICE: the record is read by the PATIENT.** Two fields were collapsing into clinical language:
+- **`friendly_name` is the everyday name; `clinical_name` is the clinical term.** The prompt used to ask for the area "AS STATED in the document", which filled the patient-facing field with "Glabella" / "DAOs" / "Mandibular angle" and left `clinical_name` redundant. The original Chunk 1 data had it right: `friendly_name` "Between the brows", `clinical_name` "Glabella". Translating is not inventing — the clinical term is preserved, so nothing is lost. **But see §9 "Coordinates are resolved at save time": placement reads `clinical_name` first precisely so this wording can never move a dot.**
+- **Plain words must not merge distinct sites.** Buccal → "Cheeks" but lateral cheeks → "Outer cheeks", zygoma → "Cheekbones". If two treated places end up with the same everyday name the patient can't tell them apart on the page.
+- **`body_regions` is a TITLE, not a list** — at most three or four broad zones. "Face, neck, and lips", never the full clinical string. The test in the prompt: *if it reads like a chart, it is wrong.*
+- **Summarising groups the general but never drops the notable.** "Face" absorbs forehead, brows, nose and cheeks — but **lips, eyes/under-eyes, jawline and neck are landmark areas patients track on their own** and get named. "Face and neck" for a visit that included lips is wrong (this shipped once).
+
 **Treatments vs products:** injected/administered things (tox, filler, biostimulator) → `treatments`; take-home retail (serums, creams, supplements) → `products`. Retail has no face location and never gets a `treatment_area`.
 
 - color_key is a colour category: any neurotoxin → `xeomin` (purple); Radiesse → `radiesse`; diluted → `radiesse-light`; any HA filler → `rha`. (So Jeuveau, Botox, Dysport, Daxxify all map to `xeomin`.)
 - Return ONLY JSON. No prose, no markdown fences.
 
 ### Coordinates are resolved at save time, not by the AI
-`treatment_areas` come back with NO `x`/`y` — the AI doesn't know Rinnova's SVG geometry. `src/faceCoordinates.js` resolves `friendly_name → {x, y}` at save time. An unmatched name resolves to **null → no dot** (never face-centre — see §7), and the region is surfaced to the patient.
+`treatment_areas` come back with NO `x`/`y` — the AI doesn't know Rinnova's SVG geometry. `src/faceCoordinates.js` resolves the area name → `{x, y}` at save time. An unmatched name resolves to **null → no dot** (never face-centre — see §7), and the region is surfaced to the patient.
+
+**⚠️ Placement resolves from `clinical_name` FIRST, then falls back to `friendly_name`** (`saveVisit.js`). This is not a preference — it is a correctness rule, and it was learned the hard way (July 21 2026). Everyday speech is *coarser* than anatomy: "buccal" and "lateral cheeks" are distinct sites a patient calls "cheeks" for both. When placement read the display field, making the wording friendlier collapsed three regions onto the cheekbone point, and the duplicate fan-out then scattered them from a location none of them is at. **The stacking check passed** — the dots were separated, just separated from the wrong origin, which is precisely the "plausible dot in the wrong place" this system exists to prevent.
+
+The rule it encodes: **`friendly_name` is for reading, `clinical_name` is for placement.** Rewording patient-facing copy must never be able to move a dot. Receipts and guided-Q&A answers carry no `clinical_name` and fall through to the friendly name as before.
+
+**Bilateral + on-axis is now COERCED, not dropped.** A midline coordinate can't be bilateral (the mirror maps it onto itself), and `assertPlacement()` still detects it — but `saveVisit` now sets `mirror = false` and draws one honest dot instead of saving NULL. `mirror` is the parser's claim about anatomy ("a platysma is paired"); `x` is our claim about this illustration ("the neck is one central zone" — `faceRegions.js` agrees, `Neck` is `midline: true`). On a midline point the illustration wins. **This reversal is only safe because there is no fallback coordinate any more:** during the tear-trough bug an on-axis coordinate meant "unmatched name fell back to face-centre" — invented, so dropping was right. Now reaching the axis always means a curated entry, and dropping would delete a real treatment to guard against a fabrication that can no longer occur.
 
 ### Receipts vs clinical notes (the core parsing reality)
 Most real-world documents patients have are **receipts** (billing: date, cost, product names, practice) — not **clinical notes** (which also carry location, dose, laterality). Rinnova turns a receipt into a real visit + products, but **can't build a face map from a receipt that has no locations, and won't fake one.** The path to a map for receipt visits is the **guided Q&A** (below), which lets the patient supply locations from *their* memory.
