@@ -2642,3 +2642,128 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ============ AREA CADENCE (how often you treat each area) ============ */
+
+.cadence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cadence-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cadence-list li:last-child .cadence-row {
+  border-bottom: none;
+}
+
+.cadence-row:hover .cadence-label {
+  color: var(--magenta);
+}
+
+/* The treatment-colour dots, so a row ties back to the face map's legend. */
+.cadence-dots {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.cadence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  /* Overlap when an area has had several categories — reads as one cluster
+     rather than a row of unrelated pips. */
+  margin-right: -3px;
+  box-shadow: 0 0 0 1.5px var(--card);
+}
+
+.cadence-dot:last-child {
+  margin-right: 0;
+}
+
+.cadence-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cadence-label {
+  font-family: var(--f-display);
+  font-size: 15px;
+  color: var(--ink);
+  transition: color 0.15s ease;
+}
+
+.cadence-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cadence-chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.cadence-footnote {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---- Area detail sheet ---- */
+
+.area-due {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--magenta-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.area-timeline {
+  border-top: 1px solid var(--line-soft);
+}
+
+.area-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.area-entry-date {
+  font-family: var(--f-display);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.area-entry-gap {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.area-footnote {
+  margin-top: 16px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}

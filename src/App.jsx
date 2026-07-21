@@ -6,6 +6,7 @@ import Greeting from './Greeting'
 import HeroCard from './HeroCard'
 import LogVisitPrompt from './LogVisitPrompt'
 import VisitsTimeline from './VisitsTimeline'
+import AreaCadenceSection from './AreaCadenceSection'
 import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
 import SubscriptionsSection from './SubscriptionsSection'
@@ -183,6 +184,10 @@ function App() {
           onVisitClick={(visit) => setOpenVisit(visit)}
           onRefetch={refetch}
         />
+
+        {/* Sits under the timeline: it's a reading OF the visits, so it should
+            follow them rather than compete with them for the top of the page. */}
+        <AreaCadenceSection visits={visits} />
 
         <PhotosSection
           photos={photos}
