@@ -97,7 +97,21 @@ export async function saveParsedVisit(parsed) {
     .map((t) => {
       const tAreas = (areasByTreatment[t.name] || []).map((a) => {
         let mirror = a.mirror === true
-        const base = getCoordinates(a.friendly_name)
+
+        // Place from the CLINICAL name when we have one, and only fall back to
+        // the friendly name. Everyday speech is coarser than anatomy: "buccal"
+        // and "lateral cheeks" are distinct sites that a patient calls
+        // "cheeks" for both, so resolving from display wording silently
+        // collapses them onto one point and the fan-out then scatters the dots
+        // from a location neither of them is at. Clinical terms are exactly the
+        // vocabulary this table is keyed on, so they place precisely.
+        //
+        // It also decouples the two jobs: friendly_name is for reading,
+        // clinical_name is for placement. Rewording the patient-facing copy can
+        // no longer move a dot. Receipts and guided-Q&A answers carry no
+        // clinical_name, so they fall through to the friendly name as before.
+        const base =
+          getCoordinates(a.clinical_name) || getCoordinates(a.friendly_name)
 
         if (!base) {
           unplaced.push(a.friendly_name)

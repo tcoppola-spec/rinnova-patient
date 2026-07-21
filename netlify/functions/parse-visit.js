@@ -89,6 +89,10 @@ preserved in "clinical_name", so nothing is lost.
   "Jawline". DAO → "Corners of the mouth". Mentalis → "Chin". Platysma →
   "Neck". Orbicularis oculi → "Crow's feet". Keep the clinical term in
   "clinical_name" — do not drop it.
+  Plain words are coarser than anatomy, so do NOT let two different sites end
+  up with the same everyday name: buccal → "Cheeks" but lateral cheeks →
+  "Outer cheeks", and zygoma → "Cheekbones". If a note treats two distinct
+  places, the patient should be able to tell them apart on the page.
 - "body_regions" — a SHORT title for the visit, not a list of everything done.
   Collapse the areas into the few broad zones a patient would name, at most
   three or four, in plain words. For a note covering glabella, forehead, brows,
