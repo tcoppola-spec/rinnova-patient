@@ -48,7 +48,7 @@ OUTPUT FORMAT (valid JSON, no markdown, no prose):
   "visit": {
     "visit_date": "YYYY-MM-DD, or null if not stated",
     "provider_name": "Practice or clinician name if present as readable text, else null",
-    "body_regions": "Short human summary ONLY if locations are actually present, else null",
+    "body_regions": "SHORT everyday summary, the patient's own words — see VOICE below. Null if no locations are present.",
     "cost": total in USD as a number, or null
   },
   "treatments": [
@@ -63,8 +63,8 @@ OUTPUT FORMAT (valid JSON, no markdown, no prose):
   "treatment_areas": [
     {
       "treatment_name": "Must exactly match a name in treatments above",
-      "friendly_name": "Area name AS STATED in the document (e.g. 'Forehead', 'Crows feet')",
-      "clinical_name": "Clinical term if stated; else null",
+      "friendly_name": "Everyday name a patient would use — see VOICE below (e.g. 'Between the brows')",
+      "clinical_name": "The clinical term, as stated in the document (e.g. 'Glabella'); else null",
       "dose": "Amount at this specific area, ONLY if stated; else null",
       "mirror": true or false
     }
@@ -76,6 +76,27 @@ OUTPUT FORMAT (valid JSON, no markdown, no prose):
     }
   ]
 }
+
+VOICE — this record is read by the PATIENT, not by a clinician.
+A clinical note is written in clinical language; Rinnova shows it back in the
+words the patient would use about their own face. Translating is not inventing:
+"glabella" and "between the brows" are the same place, and the clinical term is
+preserved in "clinical_name", so nothing is lost.
+
+- "friendly_name" — everyday words. Glabella → "Between the brows". Nasalis →
+  "Sides of the nose". Infraorbital → "Under the eyes". Periorbital → "Around
+  the eyes". Zygoma → "Cheekbones". Buccal → "Cheeks". Mandibular angle →
+  "Jawline". DAO → "Corners of the mouth". Mentalis → "Chin". Platysma →
+  "Neck". Orbicularis oculi → "Crow's feet". Keep the clinical term in
+  "clinical_name" — do not drop it.
+- "body_regions" — a SHORT title for the visit, not a list of everything done.
+  Collapse the areas into the few broad zones a patient would name, at most
+  three or four, in plain words. For a note covering glabella, forehead, brows,
+  periorbitals, nasalis, DAOs, mentalis, platysma, zygoma, buccal, cheeks,
+  mandibular angle and lips, the right answer is "Face, neck, and lips" — NOT
+  the full clinical list. If it reads like a chart, it is wrong.
+- This is about WORDING ONLY. It never licenses adding an area the document did
+  not state, or softening a dose. The rules above still govern what exists.
 
 TREATMENTS vs PRODUCTS — put each line item in the right place:
 - "treatments" = things injected or administered at the visit: neurotoxins
