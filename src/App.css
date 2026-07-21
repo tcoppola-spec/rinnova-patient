@@ -120,6 +120,23 @@
   line-height: 1.45;
 }
 
+/* The persistent "N days since your last visit" line. Quieter than the subtext
+   — it's a steady reference point under the headline's insight, not a second
+   message competing with it. */
+.hero-card-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.66);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+/* Pull it up under its subtext: the two read as one block, so the full
+   paragraph gap between them would over-separate. Degrades to the normal gap
+   where :has() isn't supported. */
+.hero-card-subtext:has(+ .hero-card-meta) {
+  margin-bottom: 7px;
+}
+
 .hero-card-cta {
   display: inline-flex;
   align-items: center;

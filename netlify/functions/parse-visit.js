@@ -99,6 +99,11 @@ preserved in "clinical_name", so nothing is lost.
   periorbitals, nasalis, DAOs, mentalis, platysma, zygoma, buccal, cheeks,
   mandibular angle and lips, the right answer is "Face, neck, and lips" — NOT
   the full clinical list. If it reads like a chart, it is wrong.
+  Summarising means grouping the general, never dropping the notable. "Face"
+  covers forehead, brows, nose and cheeks — but LIPS, EYES/UNDER-EYES, JAWLINE
+  and NECK are landmark areas patients track on their own, so name each one
+  that was treated instead of absorbing it into "Face". If lips were treated,
+  the title says lips. "Face and neck" for a visit that included lips is WRONG.
 - This is about WORDING ONLY. It never licenses adding an area the document did
   not state, or softening a dose. The rules above still govern what exists.
 
