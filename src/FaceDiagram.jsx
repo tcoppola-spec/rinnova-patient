@@ -65,13 +65,16 @@ function FaceArt() {
   )
 }
 
-function FaceDiagram({ treatments = [] }) {
+function FaceDiagram({ treatments = [], dots: dotsProp, legend }) {
   // useId can contain ':', which is not valid inside a url(#...) reference.
   const clipId = `face-half-${useId().replace(/:/g, '')}`
 
-  // Flatten all treatment_areas with their color attached, expanding mirrors
-  const dots = []
-  treatments.forEach((treatment) => {
+  // A caller can supply its own dots (AreaCadenceSection weights them by how
+  // often an area is treated). Keeping that here rather than forking the
+  // component means the illustration, the clip/mirror trick and the coordinate
+  // space live in exactly one place — see the note in faceGeometry.js.
+  const dots = dotsProp || []
+  if (!dotsProp) treatments.forEach((treatment) => {
     const color = COLORS[treatment.color_key] || '#888'
     const areas = treatment.treatment_areas || []
     areas.forEach((area) => {
@@ -134,12 +137,21 @@ function FaceDiagram({ treatments = [] }) {
         {/* Treatment dots — rendered last so they sit on top of everything */}
         {dots.map((dot) => (
           <g key={dot.id} className="area-dot">
-            <circle cx={dot.x} cy={dot.y} r={DOT_RADIUS} fill={dot.color} />
+            <circle
+              cx={dot.x}
+              cy={dot.y}
+              r={dot.r ?? DOT_RADIUS}
+              fill={dot.color}
+              opacity={dot.opacity}
+            />
           </g>
         ))}
       </svg>
 
-      {/* Color legend below the face */}
+      {/* Color legend below the face. A caller supplying its own dots supplies
+          its own legend too (or none) — the treatment list wouldn't describe
+          what's drawn. */}
+      {legend !== undefined ? legend : (
       <div className="face-diagram-legend">
         {treatments.map((t) => (
           <div key={t.id} className="legend-item">
@@ -152,6 +164,7 @@ function FaceDiagram({ treatments = [] }) {
           </div>
         ))}
       </div>
+      )}
     </div>
   )
 }

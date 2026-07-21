@@ -2645,18 +2645,29 @@
 
 /* ============ AREA CADENCE (how often you treat each area) ============ */
 
-.cadence-list {
+/* A summary, not a list: the face carries the pattern, the text names it. */
+.cadence-headline {
+  margin: 14px 0 10px;
+  font-family: var(--f-display);
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.cadence-summary {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.cadence-row {
+.cadence-summary-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
-  padding: 12px 0;
+  padding: 9px 0;
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--line-soft);
@@ -2665,60 +2676,25 @@
   cursor: pointer;
 }
 
-.cadence-list li:last-child .cadence-row {
+.cadence-summary li:last-child .cadence-summary-row {
   border-bottom: none;
 }
 
-.cadence-row:hover .cadence-label {
+.cadence-summary-label {
+  font-size: 14px;
+  color: var(--body);
+}
+
+.cadence-summary-row:hover .cadence-summary-label {
   color: var(--magenta);
 }
 
-/* The treatment-colour dots, so a row ties back to the face map's legend. */
-.cadence-dots {
-  display: flex;
+/* The insight itself — "about twice a year" — carries the emphasis. */
+.cadence-summary-value {
   flex-shrink: 0;
-  align-items: center;
-}
-
-.cadence-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  /* Overlap when an area has had several categories — reads as one cluster
-     rather than a row of unrelated pips. */
-  margin-right: -3px;
-  box-shadow: 0 0 0 1.5px var(--card);
-}
-
-.cadence-dot:last-child {
-  margin-right: 0;
-}
-
-.cadence-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.cadence-label {
   font-family: var(--f-display);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink);
-  transition: color 0.15s ease;
-}
-
-.cadence-meta {
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
-.cadence-chevron {
-  flex-shrink: 0;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--muted);
 }
 
 .cadence-footnote {

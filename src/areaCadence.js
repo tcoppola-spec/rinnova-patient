@@ -49,9 +49,12 @@ const ESTABLISHED_MIN_VISITS = 3
  * products at one area sit on slightly different points and would split into
  * two regions.
  */
+function regionCoord(area) {
+  return getCoordinates(area.clinical_name) || getCoordinates(area.friendly_name)
+}
+
 function regionKey(area) {
-  const coord =
-    getCoordinates(area.clinical_name) || getCoordinates(area.friendly_name)
+  const coord = regionCoord(area)
   if (coord) return `pt:${coord.x},${coord.y}`
 
   // Unplaceable (a laser, a peel, or a gap in the lookup). Still countable —
@@ -118,6 +121,7 @@ export function describeCadence(months) {
  *   key,            // canonical region key
  *   label,          // patient-facing area name
  *   colorKeys,      // categories treated here (for the dot colours)
+ *   x, y, mirror,   // where to draw it (null when unplaceable)
  *   dates,          // Date[] ascending, one per DISTINCT treatment date
  *   count,          // dates.length
  *   intervals,      // months between consecutive dates
@@ -149,11 +153,24 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
         if (!key) continue
 
         if (!groups.has(key)) {
-          groups.set(key, { key, labels: [], colorKeys: new Set(), byDate: new Map() })
+          groups.set(key, {
+            key,
+            labels: [],
+            colorKeys: new Set(),
+            byDate: new Map(),
+            // The un-nudged lookup coordinate, so the summary can draw this
+            // region on the face. Deliberately NOT the stored x/y, which carry
+            // the duplicate fan-out offset — one region, one point.
+            coord: regionCoord(area),
+            mirror: false,
+          })
         }
         const g = groups.get(key)
         g.labels.push(area.friendly_name || area.clinical_name)
         if (treatment.color_key) g.colorKeys.add(treatment.color_key)
+        // Bilateral if it was EVER recorded bilateral: a note that named one
+        // side once shouldn't make the whole region read as one-sided.
+        if (area.mirror) g.mirror = true
 
         // Keyed by DATE, not by row. Radiesse and diluted Radiesse in the same
         // cheek on the same day is ONE time that cheek was treated — counting
@@ -192,6 +209,9 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
       key: g.key,
       label: pickLabel(g.labels),
       colorKeys: [...g.colorKeys],
+      x: g.coord ? g.coord.x : null,
+      y: g.coord ? g.coord.y : null,
+      mirror: g.mirror,
       dates,
       count: dates.length,
       intervals,
