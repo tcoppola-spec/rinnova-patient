@@ -79,6 +79,12 @@ const COORDINATES = {
   // Hollow under the inner half of the lower lid. Measured against the artwork:
   // lower lid sits at y=159.5, iris centre x=74.6, inner canthus x=96.4.
   'tear trough': { x: 84, y: 168 },
+  // "Tear through" is what autocorrect and dictation do to "tear trough", and
+  // it turns up in real notes. Left unmapped it silently costs a dot — a real
+  // treatment with no mark on the map, which is the failure this table exists
+  // to prevent. A misspelling of a known region is not an ambiguous region.
+  'tear through': { x: 84, y: 168 },
+  'teartrough': { x: 84, y: 168 },
   'under eye': { x: 84, y: 168 },
   'under eyes': { x: 84, y: 168 },
   'undereye': { x: 84, y: 168 },
