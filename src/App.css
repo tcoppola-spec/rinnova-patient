@@ -386,15 +386,22 @@
   color: var(--muted);
 }
 
-.photo-caption {
+/* The date stamp on a photo tile. One line, never wraps — it's a scanning aid,
+   so it must not grow and eat the image the way free-text notes did. */
+.photo-date {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.55), transparent);
-  color: white;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.58), transparent);
+  color: #fff;
   font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   padding: 16px 8px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============ PRODUCTS ============ */
@@ -1423,12 +1430,17 @@
   gap: 12px;
 }
 
+/* Notes, not a caption: body font and pre-wrap, because these run to sentences
+   and the patient's own line breaks are part of what they wrote. The display
+   serif suited a three-word caption and gets tiring over a paragraph. */
 .lightbox-caption-text {
   flex: 1;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink);
-  line-height: 1.4;
-  font-family: var(--f-display);
+  line-height: 1.5;
+  font-family: var(--f-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .lightbox-caption-empty {

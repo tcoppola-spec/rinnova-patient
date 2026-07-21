@@ -166,7 +166,14 @@ function PhotoTile({ photo, visit, onClick, onOpenVisit }) {
         ) : (
           <div className="photo-placeholder" />
         )}
-        {photo.caption && <div className="photo-caption">{photo.caption}</div>}
+        {/* The tile shows the DATE, not the note. Notes are free text — a
+            patient documenting a side effect writes sentences — and a tile is
+            ~150px wide, so it either truncated to uselessness or covered the
+            photo. The date is short, always present, and it's what you scan a
+            photo archive by. The note is one tap away in the lightbox. */}
+        {photo.taken_date && (
+          <div className="photo-date">{shortVisitDate(photo.taken_date)}</div>
+        )}
       </button>
 
       {visit && (

@@ -7,8 +7,14 @@ import { attachPhotoToVisit, detachPhotoFromVisit } from './photoVisitLink'
  *
  * Bottom-sheet modal showing a larger view of one photo. Supports:
  *   - View large photo (signed URL)
- *   - View caption + taken_date
- *   - Edit caption (inline link → inline edit)
+ *   - View notes + taken_date
+ *   - Edit notes (inline link → inline edit)
+ *
+ * NAMING: the patient sees "Notes"; the DB column is still `photos.caption`.
+ * The rename was a product change (captions are short labels, notes are where
+ * someone describes a side effect), and renaming the column would mean a
+ * migration touching every read path for no behavioural gain. If that drift
+ * ever gets confusing, rename the column — don't rename the UI back.
  *   - Attach to / detach from a visit (people upload first and organise later,
  *     so this direction has to exist — not just "upload into a visit")
  *   - Delete photo (with inline "Delete? · Yes · No" confirm)
@@ -227,12 +233,12 @@ function PhotoLightbox({
 
             {editingCaption ? (
               <div className="lightbox-caption-edit">
-                <input
-                  type="text"
+                <textarea
                   value={captionInput}
                   onChange={(e) => setCaptionInput(e.target.value)}
-                  placeholder="Caption (optional)"
-                  className="form-input"
+                  placeholder="Notes (optional) — how it looked, how it felt, anything worth remembering"
+                  className="form-textarea"
+                  rows={4}
                   disabled={savingCaption}
                   autoFocus
                 />
@@ -261,7 +267,7 @@ function PhotoLightbox({
                 {photo.caption ? (
                   <div className="lightbox-caption-text">{photo.caption}</div>
                 ) : (
-                  <div className="lightbox-caption-empty">No caption</div>
+                  <div className="lightbox-caption-empty">No notes yet</div>
                 )}
                 <button
                   type="button"

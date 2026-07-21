@@ -130,12 +130,16 @@ function AddPhotoFlow({
         <div className="add-photo-preview">
           <img src={previewUrl} alt="Photo preview" className="add-photo-preview-img" />
         </div>
-        <input
-          type="text"
+        {/* A textarea, not a one-line input: these are notes, not captions.
+            Patients use them to describe how something looked or felt — a side
+            effect, swelling, how it settled — and a single line signals "a few
+            words" and hides everything past the first sentence. */}
+        <textarea
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          placeholder="Caption (optional)"
-          className="form-input"
+          placeholder="Notes (optional) — how it looked, how it felt, anything worth remembering"
+          className="form-textarea"
+          rows={3}
           disabled={saving}
         />
         {error && <div className="form-error">{error}</div>}
