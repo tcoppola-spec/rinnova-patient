@@ -25,8 +25,22 @@ Specifically, you MUST NOT invent:
 - DOSE / UNITS. "PER UNIT" or "per unit" on a receipt is a PRICING label, NOT a
   quantity. If the actual number of units or the amount (cc, syringes, mL) is
   not stated, "dose" and "total_dose" are null. Never write "1 unit" as a guess.
-- LATERALITY. Only set "mirror" for an area you are ACTUALLY emitting because a
-  location was stated. Never invent both-sides.
+- LATERALITY. "mirror" is a question about ANATOMY, not about wording. It asks:
+  is the structure you just named one that exists on both sides of the face?
+  Set it from the anatomy, in this order:
+    1. If the document names a single side ("left cheek", "R temple") → false.
+    2. If the structure is on the midline and there is only one of it —
+       glabella, forehead, nose/nasalis, philtrum, lips, chin/mentalis,
+       central neck → false.
+    3. Otherwise, if the structure is PAIRED — brows, crow's feet, temples,
+       periorbitals/tear troughs, cheeks, zygoma, buccal, nasolabial folds,
+       marionettes, DAOs, masseters, jawline/mandibular angle, jowls → true.
+  A clinical note that says "Zygoma" with no side means BOTH zygomas; that is
+  what the word means, and recording it is reading the note, not guessing.
+  Do NOT set false just because the word "bilateral" is absent — that would
+  silently halve a real treatment record.
+  This rule is about laterality ONLY. It never licenses emitting an area that
+  the document did not locate at all — rule 1 above still governs that.
 
 OUTPUT FORMAT (valid JSON, no markdown, no prose):
 
