@@ -2164,6 +2164,9 @@
   .onboarding-track { transition: none; }
   .onboarding-dot { transition: none; }
   .onboarding-cta { transition: none; }
+  .cadence-nav-dot { transition: none; }
+  /* Snap still works; it just lands instead of gliding. */
+  .cadence-carousel { scroll-behavior: auto; }
 }
 
 /* ============ VISIT PHOTOS (photo <-> visit linking) ============ */
@@ -2655,46 +2658,92 @@
   color: var(--ink);
 }
 
-.cadence-summary {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* Horizontal cards, not a stacked list. Overflow is declared on BOTH axes on
+   purpose: CSS computes `visible` to `auto` on one axis when the other isn't
+   visible, so `overflow-x: auto` alone would quietly make this a vertical
+   scroller too — the same rule that let the onboarding screen pan sideways. */
+.cadence-carousel {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.cadence-summary-row {
+.cadence-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* 78% so the next card peeks past the edge. That peek is the main "there's
+   more" signal — the dots confirm it, they don't carry it alone. */
+.cadence-card {
+  flex: 0 0 78%;
+  scroll-snap-align: center;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--line-soft);
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
-.cadence-summary li:last-child .cadence-summary-row {
-  border-bottom: none;
+.cadence-card:hover {
+  border-color: var(--magenta);
 }
 
-.cadence-summary-label {
-  font-size: 14px;
-  color: var(--body);
-}
-
-.cadence-summary-row:hover .cadence-summary-label {
+/* Both lines carry the action colour: this card opens the area's history, and
+   ink-coloured text read as a caption rather than something you could tap. */
+.cadence-card-label {
+  font-size: 13px;
   color: var(--magenta);
 }
 
-/* The insight itself — "about twice a year" — carries the emphasis. */
-.cadence-summary-value {
-  flex-shrink: 0;
+.cadence-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-family: var(--f-display);
-  font-size: 14px;
-  color: var(--ink);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--magenta);
+}
+
+.cadence-card-chevron {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.cadence-nav {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.cadence-nav-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.2s ease, width 0.2s ease;
+}
+
+/* The active dot stretches rather than just recolouring — position stays
+   readable at a glance even against the cream background. */
+.cadence-nav-dot.is-active {
+  width: 16px;
+  background: var(--magenta);
 }
 
 .cadence-footnote {

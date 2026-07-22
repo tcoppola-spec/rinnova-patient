@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { computeAreaCadence } from './areaCadence'
 import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
 import FaceDiagram from './FaceDiagram'
@@ -46,8 +46,15 @@ const COLORS = {
  */
 const REVEAL_MIN_REPEATS = 2
 
-// How many areas get named in prose. Past three it stops being a summary.
+// How many areas get named in the headline sentence. Past three it stops
+// reading as a summary.
 const NAMED_IN_SUMMARY = 3
+
+// How many cards the carousel holds. The dots are a position indicator, and
+// past this many they stop being countable at a glance — the rest collapse
+// into the footnote. Cards are ordered most-treated first, so the cut only
+// ever drops the least-established patterns.
+const CAROUSEL_MAX = 8
 
 function listPhrase(items) {
   if (items.length === 1) return items[0]
@@ -59,6 +66,43 @@ function AreaCadenceSection({ visits = [] }) {
   // Captured once per mount — same purity discipline as HeroCard.
   const [now] = useState(() => Date.now())
   const [openArea, setOpenArea] = useState(null)
+  const [index, setIndex] = useState(0)
+  const trackRef = useRef(null)
+
+  /**
+   * Which card is currently centred.
+   *
+   * Measured from actual geometry rather than derived from scrollLeft and a
+   * fixed card width: the cards are a percentage of the viewport, and the
+   * first and last are padded so they can centre, so any arithmetic shortcut
+   * drifts. Nearest-centre is exact whatever the layout does.
+   */
+  function syncIndex() {
+    const el = trackRef.current
+    if (!el) return
+    const mid = el.scrollLeft + el.clientWidth / 2
+    let best = 0
+    let bestDistance = Infinity
+    for (let i = 0; i < el.children.length; i++) {
+      const child = el.children[i]
+      const childMid = child.offsetLeft + child.offsetWidth / 2
+      const distance = Math.abs(childMid - mid)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        best = i
+      }
+    }
+    setIndex((prev) => (prev === best ? prev : best))
+  }
+
+  function goTo(i) {
+    const el = trackRef.current
+    const child = el?.children[i]
+    if (!el || !child) return
+    const left = child.offsetLeft - (el.clientWidth - child.offsetWidth) / 2
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.scrollTo({ left, behavior: reduced ? 'auto' : 'smooth' })
+  }
 
   const areas = computeAreaCadence(visits, now)
   const repeated = areas.filter((a) => a.count >= REVEAL_MIN_REPEATS)
@@ -94,6 +138,8 @@ function AreaCadenceSection({ visits = [] }) {
   }
 
   const named = repeated.slice(0, NAMED_IN_SUMMARY)
+  const shown = repeated.slice(0, CAROUSEL_MAX)
+  const extra = repeated.length - shown.length
   const onceOnly = areas.length - repeated.length
 
   const top = repeated[0]
@@ -112,37 +158,56 @@ function AreaCadenceSection({ visits = [] }) {
 
       <p className="cadence-headline">{headline}</p>
 
-      {/* Only the repeated areas get a line, and each line is the insight —
-          how often — rather than a record of what happened. */}
-      <ul className="cadence-summary">
-        {named.map((area) => (
-          <li key={area.key}>
-            <button
-              type="button"
-              className="cadence-summary-row"
-              onClick={() => setOpenArea(area)}
-            >
-              <span className="cadence-summary-label">{area.label}</span>
-              <span className="cadence-summary-value">
-                {area.cadenceText || `${area.count} times so far`}
-              </span>
-            </button>
-          </li>
+      {/* A carousel, not a list. These rows are tappable, and stacked plain
+          text reads as prose — nothing said "there is more here" or "this
+          opens something". Horizontal cards in the action colour say both:
+          the next card peeks past the edge, and the dots show position. */}
+      <div
+        className="cadence-carousel"
+        ref={trackRef}
+        onScroll={syncIndex}
+      >
+        {shown.map((area) => (
+          <button
+            key={area.key}
+            type="button"
+            className="cadence-card"
+            onClick={() => setOpenArea(area)}
+          >
+            <span className="cadence-card-label">{area.label}</span>
+            <span className="cadence-card-value">
+              {area.cadenceText || `${area.count} times so far`}
+              <span className="cadence-card-chevron" aria-hidden="true">›</span>
+            </span>
+          </button>
         ))}
-      </ul>
+      </div>
 
-      {repeated.length > NAMED_IN_SUMMARY && (
-        <p className="cadence-footnote">
-          Plus {repeated.length - NAMED_IN_SUMMARY} more{' '}
-          {repeated.length - NAMED_IN_SUMMARY === 1 ? 'area' : 'areas'} you've
-          treated more than once
-          {onceOnly > 0 ? `, and ${onceOnly} treated once.` : '.'}
-        </p>
+      {shown.length > 1 && (
+        <div className="cadence-nav" role="tablist" aria-label="Areas">
+          {shown.map((area, i) => (
+            <button
+              key={area.key}
+              type="button"
+              role="tab"
+              aria-selected={i === index}
+              aria-label={area.label}
+              className={`cadence-nav-dot${i === index ? ' is-active' : ''}`}
+              onClick={() => goTo(i)}
+            />
+          ))}
+        </div>
       )}
 
-      {repeated.length <= NAMED_IN_SUMMARY && onceOnly > 0 && (
+      {(extra > 0 || onceOnly > 0) && (
         <p className="cadence-footnote">
-          Plus {onceOnly} {onceOnly === 1 ? 'area' : 'areas'} treated once.
+          {extra > 0 &&
+            `Plus ${extra} more ${extra === 1 ? 'area' : 'areas'} you've treated more than once`}
+          {extra > 0 && onceOnly > 0 && ', and '}
+          {extra === 0 && onceOnly > 0 && 'Plus '}
+          {onceOnly > 0 &&
+            `${onceOnly} ${onceOnly === 1 ? 'area' : 'areas'} treated once`}
+          .
         </p>
       )}
 
