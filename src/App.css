@@ -1124,6 +1124,26 @@
   line-height: 1.4;
 }
 
+/* ⚠️ THE SIDEWAYS-DRIFT FIX. iOS zooms the page when you focus a form control
+   whose font-size is under 16px, and a zoomed page is wider than the viewport —
+   so it pans left and right. That is what "the app drifts" actually was: not
+   overflow, which is why the html/body clip guards never touched it.
+
+   NameCapture already carried this fix (see .namecap-input, "so iOS doesn't
+   zoom on focus") and Login sets 16px inline; the shared form controls just
+   never got it. Any NEW input or textarea must be ≥16px on touch, or the drift
+   comes straight back on that screen.
+
+   Scoped to coarse pointers so desktop keeps the 14px type. */
+@media (pointer: coarse) {
+  .form-input,
+  .form-textarea,
+  .cost-editor-input,
+  .logvisit-textarea {
+    font-size: 16px;
+  }
+}
+
 .form-error {
   margin-bottom: 8px;
   font-size: 12px;
