@@ -433,6 +433,29 @@
   color: var(--muted);
   margin-top: 2px;
   line-height: 1.4;
+  /* Notes are free text and can run to a sentence or two — keep the patient's
+     own line breaks rather than collapsing them into one run. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The quiet text-link affordance used for cost editing, not a button: a row
+   per product with a real button would make this calm list feel like a form. */
+.product-note-btn {
+  margin-top: 4px;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--magenta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.product-note-edit {
+  margin-top: 6px;
 }
 
 /* ============ SUBSCRIPTIONS ============ */
@@ -2671,6 +2694,10 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* Keep the swipe inside this strip. Without it, swiping past the first card
+     chains outward — which on iOS is the back-navigation gesture, so flicking
+     the carousel could leave the app entirely. */
+  overscroll-behavior-x: contain;
 }
 
 .cadence-carousel::-webkit-scrollbar {

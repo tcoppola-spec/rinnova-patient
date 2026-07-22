@@ -52,6 +52,46 @@ function ProductRow({ product, onRefetch }) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState(null)
 
+  const [editingNote, setEditingNote] = useState(false)
+  const [noteInput, setNoteInput] = useState(product.notes || '')
+  const [savingNote, setSavingNote] = useState(false)
+
+  /**
+   * Notes are what a product is FOR — "retinol, 2 nights a week", "only on the
+   * neck". Products filed off a receipt arrive with no note at all, which is
+   * exactly when the patient needs to write one, so this can't be add-time only.
+   *
+   * Checks the returned rows, not just the error. `products` had no UPDATE
+   * policy before this shipped, and a missing policy doesn't error — it updates
+   * nothing and reports success (see CLAUDE.md §14). An empty result is a real
+   * failure and says so rather than showing a saved note that isn't saved.
+   */
+  async function saveNote() {
+    setError(null)
+    setSavingNote(true)
+
+    const next = noteInput.trim() === '' ? null : noteInput.trim()
+    const { data, error: saveError } = await supabase
+      .from('products')
+      .update({ notes: next })
+      .eq('id', product.id)
+      .select('id')
+
+    setSavingNote(false)
+
+    if (saveError) {
+      setError(saveError.message || 'Could not save your note.')
+      return
+    }
+    if (!data || data.length === 0) {
+      setError('Nothing was saved — the update permission may be missing. Please tell Tondo.')
+      return
+    }
+
+    setEditingNote(false)
+    if (onRefetch) onRefetch()
+  }
+
   async function handleDelete() {
     setError(null)
     setDeleting(true)
@@ -77,8 +117,59 @@ function ProductRow({ product, onRefetch }) {
       <div className="product-row">
         <div className="product-row-text">
           <div className="product-name">{product.name}</div>
-          {product.notes && (
-            <div className="product-notes">{product.notes}</div>
+
+          {editingNote ? (
+            <div className="product-note-edit">
+              <textarea
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="What do you use it for?"
+                className="form-textarea"
+                rows={2}
+                disabled={savingNote}
+                autoFocus
+              />
+              <div className="form-actions">
+                <button
+                  type="button"
+                  onClick={saveNote}
+                  disabled={savingNote}
+                  className="form-save-btn"
+                >
+                  {savingNote ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteInput(product.notes || '')
+                    setEditingNote(false)
+                    setError(null)
+                  }}
+                  disabled={savingNote}
+                  className="form-cancel-btn"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {product.notes && (
+                <div className="product-notes">{product.notes}</div>
+              )}
+              {/* Quiet text link, the cost-editor affordance — the products
+                  list should stay calm, not sprout a button per row. */}
+              <button
+                type="button"
+                className="product-note-btn"
+                onClick={() => {
+                  setNoteInput(product.notes || '')
+                  setEditingNote(true)
+                }}
+              >
+                {product.notes ? 'Edit note' : 'Add a note'}
+              </button>
+            </>
           )}
         </div>
 
