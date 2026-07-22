@@ -185,7 +185,7 @@ function InstallPrompt({ onToast, variant = 'card' }) {
 
       <h2 className="install-title">Keep Rinnova on your home screen</h2>
       <p className="install-text">
-        Opens full screen, straight to your record — no browser, no bookmark.
+        Opens full screen, straight to your record. No browser, no bookmark.
       </p>
 
       {renderAction()}

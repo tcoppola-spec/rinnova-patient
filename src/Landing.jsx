@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import FaceDiagram from './FaceDiagram'
 import InstallPrompt from './InstallPrompt'
+import RequestAccess from './RequestAccess'
 
 /**
  * Landing — the public page at app.rinnova.io.
@@ -29,12 +30,12 @@ import InstallPrompt from './InstallPrompt'
 
 const FEATURES = [
   {
-    title: 'Notes or receipts — either works',
-    body: 'Photograph a clinical note or a checkout receipt and Rinnova reads it into a real visit. Products, doses, dates, cost.',
+    title: 'Notes or receipts, either works',
+    body: 'Photograph a clinical note or a checkout receipt. Rinnova reads it into a real visit with products, doses, dates and cost.',
   },
   {
     title: 'Mapped on your face',
-    body: 'Every area you have treated, placed on a diagram. If a document does not say where something went, Rinnova asks rather than guessing.',
+    body: 'Every area you have treated, placed on a diagram. If a document does not say where something went, Rinnova asks you rather than guessing.',
   },
   {
     title: 'Know what is wearing off',
@@ -42,7 +43,7 @@ const FEATURES = [
   },
   {
     title: 'How often you treat each area',
-    body: 'Lips twice a year, forehead every four months — a pattern no single provider can see, because it spans all of them.',
+    body: 'Lips twice a year, forehead every four months. A pattern no single provider can see, because it spans all of them.',
   },
   {
     title: 'Photos and products, together',
@@ -85,9 +86,10 @@ function Landing() {
         <header className="landing-hero">
           <h1 className="landing-brand">Rinnova</h1>
           <p className="landing-tagline">
-            Your aesthetic treatment history — organized, understandable, and
+            Your aesthetic treatment history, organized, understandable, and
             actually yours.
           </p>
+          <p className="landing-beta">Private pilot</p>
         </header>
 
         <div className="landing-preview" aria-hidden="true">
@@ -107,6 +109,25 @@ function Landing() {
           </div>
         </div>
 
+        {/* Above the features on purpose: someone who already knows what
+            Rinnova is should not have to scroll past the pitch to get in. The
+            features are there to persuade anyone who does not. */}
+        <div className="landing-actions">
+          <InstallPrompt variant="landing" />
+          <Link to="/login" className="landing-signin">
+            Sign in in your browser
+          </Link>
+        </div>
+
+        <p className="landing-invite">
+          Rinnova is invite only while we pilot it. If someone invited you, sign
+          in with the email they used.
+        </p>
+
+        <div className="landing-request">
+          <RequestAccess />
+        </div>
+
         <ul className="landing-features">
           {FEATURES.map((f) => (
             <li key={f.title} className="landing-feature">
@@ -116,24 +137,11 @@ function Landing() {
           ))}
         </ul>
 
-        {/* Two equal doors. Install renders its own platform-correct control
-            (a real prompt where the OS allows one, Add-to-Home-Screen steps on
-            iOS); browser sign-in sits beside it, never beneath it. */}
-        <div className="landing-actions">
-          <InstallPrompt variant="landing" />
-          <Link to="/login" className="landing-signin">
-            Sign in in your browser
-          </Link>
-        </div>
-
-        <p className="landing-invite">
-          Rinnova is invite-only while we are in early testing. If someone
-          invited you, sign in with the email they used.
-        </p>
-
         <footer className="landing-footer">
-          <span className="landing-footer-brand">Tondo</span>
-          <span className="landing-footer-note">Rinnova is a Tondo product.</span>
+          <span className="landing-footer-brand">Tondo LLC</span>
+          <span className="landing-footer-note">
+            Rinnova is a Tondo LLC product. Currently in private pilot.
+          </span>
         </footer>
       </div>
     </div>
