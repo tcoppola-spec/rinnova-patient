@@ -87,7 +87,7 @@ function Landing() {
           <h1 className="landing-brand">Rinnova</h1>
           <p className="landing-tagline">
             Your aesthetic treatment history, organized, understandable, and
-            actually yours.
+            kept.
           </p>
           <p className="landing-beta">Private pilot</p>
         </header>
