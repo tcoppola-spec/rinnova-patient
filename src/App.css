@@ -2844,3 +2844,83 @@
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* ============ INSTALL PROMPT (add to home screen) ============ */
+
+.install-card {
+  position: relative;
+  margin-top: 32px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.install-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.install-close:hover {
+  color: var(--ink);
+}
+
+.install-title {
+  font-family: var(--f-display);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 4px;
+  padding-right: 24px;
+}
+
+.install-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.install-btn {
+  padding: 9px 18px;
+  background: var(--magenta);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.install-btn:hover {
+  opacity: 0.9;
+}
+
+/* iOS only: Apple exposes no install API, so the steps ARE the feature. */
+.install-steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--body);
+}
+
+.install-steps strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.install-steps svg {
+  vertical-align: -2px;
+  color: var(--magenta);
+}

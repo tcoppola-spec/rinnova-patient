@@ -10,6 +10,7 @@ import AreaCadenceSection from './AreaCadenceSection'
 import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
 import SubscriptionsSection from './SubscriptionsSection'
+import InstallPrompt from './InstallPrompt'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
@@ -203,6 +204,10 @@ function App() {
         <ProductsSection products={products} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />
+
+        {/* Near the bottom on purpose: an invitation, not a demand. Anyone
+            already installed never sees it (App runs in the installed app too). */}
+        <InstallPrompt onToast={showToast} />
 
         <PageFooter />
       </div>

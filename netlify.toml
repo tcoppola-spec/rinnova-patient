@@ -9,3 +9,13 @@
   for = "/manifest.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
+
+# The service worker must always be revalidated. If a stale copy is served, the
+# worker can never be updated — and a bad worker that can't be replaced strands
+# every installed user on old code. Browsers already bypass the HTTP cache for
+# the SW script by default; this makes it explicit and survives that default
+# changing.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
