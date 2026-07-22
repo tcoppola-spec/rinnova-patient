@@ -31,7 +31,7 @@
  * Bump CACHE_VERSION to force old caches out on the next activation.
  */
 
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v2'
 const CACHE_NAME = `rinnova-${CACHE_VERSION}`
 
 // The shell needed to render something useful offline. Deliberately tiny and
@@ -60,11 +60,30 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-function isCacheableAsset(url) {
-  // Content-hashed build output and the static icons. Hashed filenames make
-  // cache-first safe: a changed file is a different URL.
+/**
+ * Content-hashed build output. Cache-first is safe here and ONLY here: Vite
+ * puts the content hash in the filename, so a changed file is a different URL
+ * and a cached one can never be stale.
+ */
+function isHashedAsset(url) {
+  return url.pathname.startsWith('/assets/')
+}
+
+/**
+ * Static files that change IN PLACE at the same URL: icons, the favicon, the
+ * manifest.
+ *
+ * ⚠️ These must NOT be cache-first. v1 of this worker treated every .svg and
+ * .png that way, which pinned the old favicon on every device that had loaded
+ * the site — a new one was deployed and simply never appeared, with no way for
+ * the user to fix it short of clearing site data. Same URL, new bytes, cached
+ * forever is the whole failure mode.
+ *
+ * Network-first with a cache fallback: fresh whenever there's a connection,
+ * still available offline.
+ */
+function isStaticAsset(url) {
   return (
-    url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.svg') ||
     url.pathname === '/manifest.webmanifest'
@@ -97,19 +116,36 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (!isCacheableAsset(url)) return
-
-  // Static assets: cache-first, safe because the filenames are hashed.
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
-        }
-        return response
+  // Hashed build output: cache-first. A changed file has a different URL.
+  if (isHashedAsset(url)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const copy = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
       })
-    })
-  )
+    )
+    return
+  }
+
+  // Icons, favicon, manifest: network-first, because these change in place at
+  // a stable URL. Cache is the offline fallback, never the source of truth.
+  if (isStaticAsset(url)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
+        .catch(() => caches.match(request))
+    )
+  }
 })
