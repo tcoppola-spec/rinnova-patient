@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import InstallPrompt from './InstallPrompt'
 
 /**
  * Login — passwordless sign-in via email OTP code.
@@ -185,6 +186,15 @@ function Login() {
           </form>
         )}
       </div>
+
+      {/* Also offered BEFORE sign-in. The install card originally lived only
+          inside App, i.e. behind auth — which put it everywhere except the one
+          screen a new patient actually starts on. Someone invited to Rinnova
+          should be able to install it as they arrive, not discover the option
+          later. Renders nothing when already installed or dismissed. */}
+      <div style={styles.installSlot}>
+        <InstallPrompt />
+      </div>
     </div>
   )
 }
@@ -255,6 +265,10 @@ const styles = {
     minHeight: '100vh',
     background: 'var(--page)',
     display: 'flex',
+    // Column so the install card stacks UNDER the sign-in card rather than
+    // beside it. alignItems still centres horizontally, justifyContent
+    // vertically, so the sign-in card sits where it always did.
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
@@ -262,6 +276,11 @@ const styles = {
     color: 'var(--body)',
   },
   card: {
+    width: '100%',
+    maxWidth: '380px',
+  },
+  // Matches the sign-in card's column so the two read as one stack.
+  installSlot: {
     width: '100%',
     maxWidth: '380px',
   },
