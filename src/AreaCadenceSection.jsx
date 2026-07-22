@@ -162,8 +162,12 @@ function AreaCadenceSection({ visits = [] }) {
           text reads as prose — nothing said "there is more here" or "this
           opens something". Horizontal cards in the action colour say both:
           the next card peeks past the edge, and the dots show position. */}
+      {/* The 78% card width exists to let the next card peek — that peek IS the
+          "there's more" signal. With a single card there is nothing to reveal,
+          so the narrow width would just be a truncated card promising something
+          that isn't there. Full width until a second area earns the swipe. */}
       <div
-        className="cadence-carousel"
+        className={`cadence-carousel${shown.length === 1 ? ' is-single' : ''}`}
         ref={trackRef}
         onScroll={syncIndex}
       >

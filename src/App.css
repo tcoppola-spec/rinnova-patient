@@ -2726,6 +2726,11 @@
   border-color: var(--magenta);
 }
 
+/* Nothing to peek at, so don't imply there is. */
+.cadence-carousel.is-single .cadence-card {
+  flex-basis: 100%;
+}
+
 /* Both lines carry the action colour: this card opens the area's history, and
    ink-coloured text read as a caption rather than something you could tap. */
 .cadence-card-label {
