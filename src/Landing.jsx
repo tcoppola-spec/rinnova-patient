@@ -66,6 +66,10 @@ const PREVIEW_DOTS = [
 function Landing() {
   const navigate = useNavigate()
   const [checking, setChecking] = useState(true)
+  // Read once, in a state initializer, rather than during render: reading the
+  // clock while rendering is impure (the lint rule HeroCard tripped). Dynamic
+  // rather than hardcoded so the notice cannot quietly go stale in January.
+  const [year] = useState(() => new Date().getFullYear())
 
   useEffect(() => {
     let cancelled = false
@@ -141,6 +145,9 @@ function Landing() {
           <span className="landing-footer-brand">Tondo LLC</span>
           <span className="landing-footer-note">
             Rinnova is a Tondo LLC product. Currently in private pilot.
+          </span>
+          <span className="landing-copyright">
+            &copy; {year} Tondo LLC. All rights reserved.
           </span>
         </footer>
       </div>

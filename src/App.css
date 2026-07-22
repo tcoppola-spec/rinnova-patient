@@ -3238,3 +3238,9 @@
   font-size: 11.5px;
   color: var(--muted);
 }
+
+.landing-copyright {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
