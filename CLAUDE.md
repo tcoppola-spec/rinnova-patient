@@ -23,15 +23,45 @@ The thesis: aesthetic medicine patients accumulate detailed treatment history (B
 
 ---
 
-## 3. Patient 0 reference data (Tracy's record)
+## 3. Accounts and reference data
 
-These IDs are in the production Supabase database. Many flows depend on them.
+### ⚠️ Two accounts, and it is NOT the one you would guess
+
+| Account | Role |
+|---|---|
+| **`tracy.coppola@gmail.com`** | **Tracy's REAL, personal record.** Her actual treatment history lives here. |
+| `tcoppola@tozadigital.com` | **Test account.** Holds the original Chunk 1 seed data below. |
+
+**This is counter-intuitive and has already caused a mistake.** The tozadigital
+address is the older one and appears throughout this file's history, so it reads
+like the canonical patient — it is not. A session that assumed so proposed
+seeding *invented* visits into the gmail account "since it's just a tester,"
+which would have written fiction into Tracy's own medical record. It was caught
+only because Tracy said so.
+
+Rules that follow from this:
+- **Never write test/demo/synthetic data into `tracy.coppola@gmail.com`.** If
+  you need throwaway data, use the tozadigital test account.
+- **"Tracy's record" in conversation means the gmail account**, unless she says
+  otherwise. When she reports a bug in *her* data, that is where it is.
+- Both are on `allowed_emails`; both are real signups with their own
+  `patients` row, isolated by RLS.
+- The gmail account's own `patient_id` is not recorded here — derive it when
+  needed rather than assuming the ID below:
+  ```sql
+  select p.id from patients p join auth.users u on u.id = p.auth_user_id
+  where u.email = 'tracy.coppola@gmail.com';
+  ```
+
+### Seed data (test account — `tcoppola@tozadigital.com`)
+
+These are the Chunk 1 IDs in production. Several docs and flows reference them.
 
 ```
-Tracy's auth UUID:     dcf6359b-65a2-47f9-9c73-aee21eb7d2b0
-Tracy's email:         tcoppola@tozadigital.com
-Tracy's patient_id:    90d7b547-8dc5-4ab7-b297-6a6d1f15e5eb
-Tracy's first visit:   cd0337f4-69ba-4a90-aba9-e85afb1ca2b4  (April 24, 2026)
+Auth UUID:             dcf6359b-65a2-47f9-9c73-aee21eb7d2b0
+Email:                 tcoppola@tozadigital.com   (TEST account — see above)
+patient_id:            90d7b547-8dc5-4ab7-b297-6a6d1f15e5eb
+First visit:           cd0337f4-69ba-4a90-aba9-e85afb1ca2b4  (April 24, 2026)
 Roberta provider_id:   fdda2aa6-e834-4514-ab2d-543b5229ac87
 GitHub username:       tcoppola-spec
 Local path:            ~/Documents/TONDO_LLC/Apps/_Rinnova/Patient_0
@@ -39,14 +69,16 @@ Production URL:        https://app.rinnova.io  (primary; CNAME → tondo-rinnova
 GitHub repo:           github.com/tcoppola-spec/rinnova-patient
 ```
 
-Tracy's April 24 visit contains:
+The April 24 seed visit contains:
 - 4 treatments (Xeomin, Radiesse, Diluted Radiesse, RHA2)
 - 17 treatment areas
 - Total cost $2,500
 - Provider: Dr. Roberta Del Campo, MD
 - Body regions: "Face, neck, and lips"
 
-This is the canonical example. When testing, this is the visit to compare against.
+It remains the canonical example for verifying the face map, coordinate
+migrations and the parser — it is the most thoroughly hand-checked record in the
+system. Just don't mistake it for Tracy's actual history.
 
 ---
 
