@@ -25,6 +25,11 @@ import { useEffect, useState } from 'react'
  *
  * Props:
  *   onToast — optional, for confirming a successful install
+ *   variant — 'card' (default): a dismissible card, for inside the app.
+ *             'landing': a bare primary button for the landing page's action
+ *             row. Not dismissible there — it's one of the two ways in, so it
+ *             must not disappear, and it falls back to browser-menu
+ *             instructions when no install event has fired.
  */
 
 const DISMISS_KEY = 'rinnova.install.dismissed'
@@ -60,7 +65,7 @@ function ShareGlyph() {
   )
 }
 
-function InstallPrompt({ onToast }) {
+function InstallPrompt({ onToast, variant = 'card' }) {
   const [deferred, setDeferred] = useState(null)
   const [installed, setInstalled] = useState(() => isStandalone())
   const [dismissed, setDismissed] = useState(
@@ -88,12 +93,16 @@ function InstallPrompt({ onToast }) {
     }
   }, [onToast])
 
-  if (installed || dismissed) return null
+  const landing = variant === 'landing'
+
+  if (installed) return null
+  if (dismissed && !landing) return null
 
   const ios = isIOS()
-  // Nothing to offer: not iOS, and the browser never said it could install
-  // (already installed elsewhere, an unsupported browser, or criteria unmet).
-  if (!ios && !deferred) return null
+  // In the CARD variant there's nothing to say when the browser hasn't offered
+  // an install — stay silent rather than explain. On the LANDING page this is a
+  // primary action and can't vanish, so it falls through to instructions.
+  if (!ios && !deferred && !landing) return null
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, '1')
@@ -108,6 +117,57 @@ function InstallPrompt({ onToast }) {
     // so the button doesn't sit there doing nothing when tapped again.
     setDeferred(null)
     if (outcome === 'dismissed') dismiss()
+  }
+
+  // A render function, not a nested component: declaring a component inside a
+  // component gives it a new identity every render, which remounts its subtree
+  // and drops any state it holds.
+  function renderAction() {
+    if (!ios && deferred) {
+      return (
+        <button type="button" className="install-btn" onClick={install}>
+          Install Rinnova
+        </button>
+      )
+    }
+    if (!showSteps) {
+      return (
+        <button type="button" className="install-btn" onClick={() => setShowSteps(true)}>
+          {ios ? 'Add to home screen' : 'How to install'}
+        </button>
+      )
+    }
+    return ios ? (
+      // Apple allows no programmatic install, so the honest version is showing
+      // exactly where to tap.
+      <ol className="install-steps">
+        <li>
+          Tap <ShareGlyph /> <strong>Share</strong> in Safari&apos;s toolbar
+        </li>
+        <li>
+          Choose <strong>Add to Home Screen</strong>
+        </li>
+      </ol>
+    ) : (
+      // Desktop/Android where the event hasn't fired: usually the site is
+      // already installed, or the browser wants more engagement first.
+      <ol className="install-steps">
+        <li>
+          Open your browser menu (<strong>⋮</strong> or the address-bar install icon)
+        </li>
+        <li>
+          Choose <strong>Install Rinnova</strong>
+        </li>
+      </ol>
+    )
+  }
+
+  if (landing) {
+    return (
+      <div className="install-landing">
+        {renderAction()}
+      </div>
+    )
   }
 
   return (
@@ -128,26 +188,7 @@ function InstallPrompt({ onToast }) {
         Opens full screen, straight to your record — no browser, no bookmark.
       </p>
 
-      {!ios ? (
-        <button type="button" className="install-btn" onClick={install}>
-          Install Rinnova
-        </button>
-      ) : !showSteps ? (
-        <button type="button" className="install-btn" onClick={() => setShowSteps(true)}>
-          Show me how
-        </button>
-      ) : (
-        // Apple allows no programmatic install, so the honest version is
-        // showing exactly where to tap.
-        <ol className="install-steps">
-          <li>
-            Tap <ShareGlyph /> <strong>Share</strong> in Safari&apos;s toolbar
-          </li>
-          <li>
-            Choose <strong>Add to Home Screen</strong>
-          </li>
-        </ol>
-      )}
+      {renderAction()}
     </section>
   )
 }

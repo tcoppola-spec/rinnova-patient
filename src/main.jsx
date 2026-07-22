@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
+import Landing from './Landing.jsx'
 import Login from './Login.jsx'
 import AuthCallback from './AuthCallback.jsx'
 import Onboarding from './Onboarding.jsx'
@@ -11,7 +12,12 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        {/* "/" is the public landing page — it's the link that gets shared, so
+            it explains the product and offers both ways in. Signed-in visitors
+            are redirected to /app by Landing itself, which also means an older
+            installed app whose start_url is still "/" lands correctly. */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/app" element={<App />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 

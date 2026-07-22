@@ -28,8 +28,8 @@ import InstallPrompt from './InstallPrompt'
  * one it is (and leaking that would undercut our neutral invite-only copy).
  * The consistency has to come from the templates. See CLAUDE.md §4.
  *
- * On successful verify we navigate to '/' ourselves — App isn't mounted on the
- * /login route, so its auth listener can't do the redirect for us.
+ * On successful verify we navigate to '/app' ourselves — App isn't mounted on
+ * the /login route, so its auth listener can't do the redirect for us.
  */
 function Login() {
   const navigate = useNavigate()
@@ -101,8 +101,9 @@ function Login() {
       setError(friendlyVerifyError(error))
       return
     }
-    // Session is now stored; App will pick it up on '/'.
-    navigate('/')
+    // Session is now stored; App picks it up on '/app'. ("/" is the public
+    // landing page and would just bounce us here again.)
+    navigate('/app')
   }
 
   function useDifferentEmail() {
