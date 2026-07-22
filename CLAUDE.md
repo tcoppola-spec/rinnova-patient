@@ -417,6 +417,29 @@ The visit **save** still uses an atomic Postgres function (`save_parsed_visit`) 
 7b. **Toasts only when the proof is off-screen.** `Toast.jsx` + `showToast` in App, threaded as `onToast` (same discipline as the refetch chain). Wait-and-show means most actions confirm themselves in place — toasting those trains the patient to ignore toasts. Current toast points, deliberately few: visit deleted, photo deleted, photo attached (both paths), photo detached. The "Saved to your record" screen is NOT a toast candidate — its subtext carries load-bearing info (products filed, no-map notes).
 8. **Strong design discipline** — Tracy will pushback on anything that feels off-brand. Listen carefully. Examples she pushed back on and was right: red destructive button (broke palette), beige cost strip (too prominent), emoji icons (felt placeholder).
 
+### Area cadence — "how often do you treat this?" (July 21–22 2026)
+
+`AreaCadenceSection` + `AreaDetailModal`, computed by **`src/areaCadence.js`**. Counts the patient's OWN repeats per area — no AI, no population averages. It's the one thing no single provider can tell them: a provider knows their own chart, nobody knows you've treated your lips six times across two injectors.
+
+**It's also the groundwork for reminders.** `renewals.js` runs on industry ranges — averages a patient may not match. Once repeats accumulate here, "you refresh your lips every 7 months" is a fact about *them*. Build reminders on this, not on `DURATIONS`, or they'll fire wrong for exactly the areas the patient cares most about and teach them to ignore the app. (Decided direction for notifications: **patient-controlled, opt-in per area, off by default, delivered by email via Resend + a scheduled Netlify Function — NOT web push.** Push needs a service worker, an installed PWA and a subscription store, and is optimised for "now"; a booking nudge is a "sometime in the next three weeks" message, which is email's job.)
+
+Rules that must hold:
+- **Group by PLACE, not by name.** "Zygoma", "Cheekbones" and the patient-facing translation are one area, three strings. Names are re-resolved through `getCoordinates()` (clinical name first) and grouped by the resolved point. It re-resolves from the NAME rather than reading stored `x`/`y`, because saved coordinates carry the duplicate fan-out offset and would split one region into several.
+- **A DATE is one event, not a row.** Radiesse + diluted Radiesse in the same cheek on the same day is ONE treatment of that cheek. Counting rows would double the apparent frequency and halve the interval — and that error would flow straight into reminders.
+- **Medians, not means** — one long gap shouldn't redefine a rhythm.
+- **Confidence gating, and don't loosen it:** 1 date = no cadence, no estimate. 2 dates = ONE interval, shown as a gap and labelled provisional (one gap is an anecdote a holiday can move). 3+ = `established`, the first point a median means anything, and the only point a named cadence ("about twice a year") or a due estimate appears.
+- **Descriptive, never prescriptive** — "at your usual pace, the next would land around…", never "book now". Same discipline as the hero card.
+
+**The reveal gate counts repeats in ONE area (`REVEAL_MIN_REPEATS = 2`), not visits.** Visits are a proxy that fails both ways: four visits to four different areas is four single dates and nothing to say, while three visits that all included the lips is a real rhythm. A calendar gate fails the same way. Below the threshold the section returns `null` — no empty state, because a patient with no history shouldn't be shown a box explaining a feature they can't use.
+
+**Shape: a face, then a summary — never a list.** A row per area is a log; it makes the reader hunt for the pattern, which is the one thing the feature exists to do for them. Dots on the face are weighted by frequency (radius floor 0.62 so single visits stay legible), then a headline sentence, then a swipeable carousel of cards in **magenta** — the cards open the detail sheet, and ink-coloured stacked text read as a caption rather than something tappable.
+- Cards are 78% wide so the next one *peeks* — that peek is the "there's more" signal; the dots only confirm position. **With one card it goes full width** (`.is-single`): nothing to reveal, so the narrow width would promise content that doesn't exist.
+- `overscroll-behavior-x: contain` on the track. Without it a swipe past the first card chains outward, and on iOS that's the back gesture — flicking through areas could leave the app.
+- The active dot is found by **nearest card centre**, not `scrollLeft / cardWidth`: cards are a percentage width and snap to centre, so arithmetic drifts as the viewport changes.
+- **Skip the mirrored dot on a midline point.** `mirrorX(114.9)` is 114.9, so the reflection lands on the original. At full opacity that was invisible; these dots are translucent, so two stacked circles render darker and would overstate frequency. Old rows can still carry `mirror = true` on a midline area — they predate the coercion in `saveVisit.js`.
+
+`FaceDiagram` takes optional `dots` and `legend` props so this reuses the artwork rather than forking it — the illustration, the clip/mirror trick and the coordinate space stay in one place.
+
 ### The hero card renewal model (July 2026)
 
 `HeroCard` leads with a "what's wearing off" insight — the onboarding promise delivered. **Deterministic, no AI:** `src/renewals.js` crosses the patient's own treatment dates with an editable table of industry-standard duration ranges (tox 3–4mo, HA filler 6–12, Radiesse 12–18, hyperdilute 10–14 — Tracy-reviewed; tune there). Rules that must hold:
@@ -679,6 +702,20 @@ These are real and worth doing, but none blocks the Phase 1 pilot. Roughly in pr
 7. **PATH issues with Netlify CLI in fresh terminals.** Installed globally via npm into `~/.npm-global/bin`. New terminal tabs opened before `.zshrc` ran won't find `netlify`. Run `source ~/.zshrc` if `netlify: command not found`.
 
 8. **Email OTP: two separate limits, plus a template dependency.** (a) The **built-in email sender** is capped at ~2 emails/hour project-wide — this was the blocker for real testing and onboarding; the fix, custom SMTP via Resend, is now configured (see §13 Known V1 blockers). If sends ever regress, this cap is the first thing to check. (b) Separately, Supabase rate-limits ~4 OTP requests per email address per hour; bump it in Authentication → Rate Limits. (c) The 6-digit code only appears in the email if the "Magic Link" template includes `{{ .Token }}` (see §4 Authentication) — a missing token is a silent "code never arrives" failure.
+
+9. **"The app drifts side to side" is almost never overflow — it's iOS input zoom.** Mobile Safari **zooms the page** when you focus a form control whose `font-size` is under 16px, and a zoomed page is wider than the viewport, so it pans horizontally. It presents exactly like a layout bug and is immune to every overflow fix: `html`/`body` `overflow-x: clip`, `max-width: 100%`, hunting for a wide element. This cost a full round of wrong fixes (July 22 2026) before the report "on the edit note screen" made it obvious.
+
+   **Diagnosis order, cheapest first:**
+   1. **Ask WHICH SCREEN.** If it's a screen with a text field, suspect zoom before overflow. If it drifts on a screen with no inputs, then it's overflow.
+   2. Zoom leaves the page pannable *after* focus and usually snaps back on blur; a genuinely overflowing element drifts with no interaction at all.
+   3. Only then hunt the element: paste into the console —
+      ```js
+      [...document.querySelectorAll('*')].filter(el => el.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+      ```
+
+   **The rule: every `<input>` and `<textarea>` must be ≥16px on touch.** `App.css` enforces it for the shared controls under `@media (pointer: coarse)`; `Login` sets 16px inline. Add a new form control below 16px and the drift returns on that screen. Note this was *already known* in the codebase — `.namecap-input` carries the comment — but the fix lived on one component instead of the shared classes, which is exactly how it stayed alive.
+
+   The `overflow-x: clip` guards on `html`/`body` (with an `@supports` fallback to `hidden`, since `clip` is Safari 16+) are still correct and still there — they protect against a real overflowing element, which is a *different* failure this rule doesn't cover.
 
 ---
 
