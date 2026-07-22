@@ -57,8 +57,22 @@ html, body {
    document a scroll container, which changes how mobile Safari's toolbar
    collapses (see the onboarding viewport note in CLAUDE.md §18). `clip` cuts
    horizontal overflow without creating a scroll container at all. */
-html {
+html,
+body {
   overflow-x: clip;
+  max-width: 100%;
+}
+
+/* `overflow: clip` is Safari 16+. On anything older the declaration is invalid
+   and dropped entirely — meaning no guard at all, which is exactly when a
+   sideways drag would still work. Fall back to `hidden` there and accept its
+   side effect (it forces the other axis to `auto`, making the document a
+   scroll container) rather than leaving those browsers unprotected. */
+@supports not (overflow: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
 }
 
 #root {
