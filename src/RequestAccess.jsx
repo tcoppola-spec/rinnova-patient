@@ -23,7 +23,8 @@ import { supabase } from './supabaseClient'
  */
 function RequestAccess({ onDone }) {
   const [open, setOpen] = useState(false)
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [refFirst, setRefFirst] = useState('')
   const [refLast, setRefLast] = useState('')
@@ -36,15 +37,19 @@ function RequestAccess({ onDone }) {
     e.preventDefault()
     setError('')
 
+    const first = firstName.trim()
+    const last = lastName.trim()
     const payload = {
-      full_name: fullName.trim(),
+      // Stored in the existing full_name column, composed from the two fields —
+      // no schema change needed just to collect the name in two boxes.
+      full_name: `${first} ${last}`.trim(),
       email: email.trim(),
       referrer_first_name: refFirst.trim(),
       referrer_last_name: refLast.trim(),
       note: note.trim() === '' ? null : note.trim(),
     }
 
-    if (!payload.full_name) return setError('Please enter your name.')
+    if (!first || !last) return setError('Please enter your first and last name.')
     if (!payload.email || !payload.email.includes('@')) {
       return setError('Please enter a valid email address.')
     }
@@ -101,16 +106,29 @@ function RequestAccess({ onDone }) {
         you so we can check.
       </p>
 
-      <label className="request-label" htmlFor="ra-name">Your name</label>
-      <input
-        id="ra-name"
-        type="text"
-        value={fullName}
-        onChange={(e) => setFullName(e.target.value)}
-        className="form-input"
-        autoComplete="name"
-        disabled={saving}
-      />
+      <label className="request-label">Your name</label>
+      <div className="request-name-row">
+        <input
+          type="text"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="First name"
+          className="form-input"
+          autoComplete="given-name"
+          disabled={saving}
+          aria-label="Your first name"
+        />
+        <input
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last name"
+          className="form-input"
+          autoComplete="family-name"
+          disabled={saving}
+          aria-label="Your last name"
+        />
+      </div>
 
       <label className="request-label" htmlFor="ra-email">Your email</label>
       <input

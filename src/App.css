@@ -3196,16 +3196,26 @@
 }
 
 /* Two equal doors — installing is an option, never a gate. */
+/* Both doors the same width — a fixed column, each child filling it, so the
+   install button and the sign-in read as an equal pair rather than two
+   differently sized pills. */
 .landing-actions {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
-  margin-bottom: 20px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto 20px;
+}
+
+.install-landing {
+  width: 100%;
 }
 
 .install-landing .install-btn {
-  padding: 13px 30px;
+  width: 100%;
+  padding: 14px 24px;
   font-size: 15px;
 }
 
@@ -3215,14 +3225,17 @@
 }
 
 .landing-signin {
-  padding: 12px 28px;
+  width: 100%;
+  padding: 14px 24px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--card);
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
+  text-align: center;
   text-decoration: none;
+  box-sizing: border-box;
   transition: border-color 0.15s ease;
 }
 

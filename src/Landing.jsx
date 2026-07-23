@@ -119,13 +119,12 @@ function Landing() {
         <div className="landing-actions">
           <InstallPrompt variant="landing" />
           <Link to="/login" className="landing-signin">
-            Sign in in your browser
+            Sign in with your browser
           </Link>
         </div>
 
         <p className="landing-invite">
-          Rinnova is invite only while we pilot it. If someone invited you, sign
-          in with the email they used.
+          Rinnova is invite only while we pilot it.
         </p>
 
         <div className="landing-request">
