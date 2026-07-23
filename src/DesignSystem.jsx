@@ -325,11 +325,26 @@ function DesignSystem() {
 
         <section className="ds-section">
           <h2 className="ds-h2">Cards</h2>
+          {/* Mirrors VisitCard's real structure. The outer .visit-card is
+              padding: 0 — the padding lives on the inner .visit-card-main
+              button, because the card has two separate tap zones (the body
+              opens the visit, the cost row edits the cost) and they must not
+              bleed into each other. Flattening this here rendered text hard
+              against the border, which is exactly the drift this page is for. */}
           <div className="visit-card" style={{ marginBottom: 12 }}>
-            <div className="visit-card-date">APR 24, 2026</div>
-            <div className="visit-card-regions">Face, neck, and lips</div>
-            <div className="visit-card-meta">Dr. Roberta Del Campo, MD</div>
-            <div className="visit-card-cta">View details ›</div>
+            <div className="visit-card-main">
+              <div className="visit-card-date">APR 24, 2026</div>
+              <div className="visit-card-regions">Face, neck, and lips</div>
+              <div className="visit-card-meta">
+                4 treatments with Dr. Del Campo
+              </div>
+              <div className="visit-card-cta">
+                View visit details <span aria-hidden="true">→</span>
+              </div>
+            </div>
+            <div className="visit-card-cost-row">
+              <span className="cost-trigger">$2,500</span>
+            </div>
           </div>
 
           <div className="cadence-carousel is-single">
