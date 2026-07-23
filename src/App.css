@@ -388,22 +388,6 @@
 
 /* The date stamp on a photo tile. One line, never wraps — it's a scanning aid,
    so it must not grow and eat the image the way free-text notes did. */
-.photo-date {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.58), transparent);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 16px 8px 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ============ PRODUCTS ============ */
 
 .products-list {
@@ -2242,9 +2226,12 @@
   position: relative;
 }
 
+/* Bottom-left, not top. It is the only thing drawn over the image now, and the
+   foot of a portrait photo is the safest place to cover — faces sit high in
+   the frame. */
 .photo-visit-badge {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   left: 6px;
   z-index: 1;
   max-width: calc(100% - 12px);

@@ -227,8 +227,13 @@ function PhotoLightbox({
           </div>
 
           <div className="lightbox-meta">
+            {/* Labelled "Added", because this sheet can show TWO dates: when
+                the photo was added, and (below) the date of the visit it
+                belongs to. They are often days apart — a photo taken after a
+                visit still belongs to it — so a bare date here would be the
+                same ambiguity that got both dates taken off the tile. */}
             {takenDateFormatted && (
-              <div className="lightbox-date">{takenDateFormatted}</div>
+              <div className="lightbox-date">Added {takenDateFormatted}</div>
             )}
 
             {editingCaption ? (

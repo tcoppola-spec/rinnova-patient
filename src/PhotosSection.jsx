@@ -166,14 +166,12 @@ function PhotoTile({ photo, visit, onClick, onOpenVisit }) {
         ) : (
           <div className="photo-placeholder" />
         )}
-        {/* The tile shows the DATE, not the note. Notes are free text — a
-            patient documenting a side effect writes sentences — and a tile is
-            ~150px wide, so it either truncated to uselessness or covered the
-            photo. The date is short, always present, and it's what you scan a
-            photo archive by. The note is one tap away in the lightbox. */}
-        {photo.taken_date && (
-          <div className="photo-date">{shortVisitDate(photo.taken_date)}</div>
-        )}
+        {/* NOTHING is drawn over the photo here on purpose.
+            A tile used to show taken_date (when the photo was ADDED) while the
+            visit badge showed the visit's date — two different dates on one
+            ~150px tile, with no room to say which was which. Both are in the
+            lightbox, labelled, one tap away. An unattached photo therefore
+            carries no text at all: the image is the content. */}
       </button>
 
       {visit && (
