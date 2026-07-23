@@ -46,11 +46,17 @@ const COLORS = {
  */
 const REVEAL_MIN_REPEATS = 2
 
-// How many cards the carousel holds. The dots are a position indicator, and
-// past this many they stop being countable at a glance — the rest collapse
-// into the footnote. Cards are ordered most-treated first, so the cut only
-// ever drops the least-established patterns.
-const CAROUSEL_MAX = 8
+// How many cards the carousel holds.
+//
+// Kept deliberately small. At eight this showed nearly every repeated area,
+// which is a log again — the section exists to do the editing for the reader,
+// and a carousel long enough to get lost in hands that work straight back. Four
+// is a couple of flicks, and four position dots are countable at a glance.
+//
+// Cards are ordered most-treated first, so the cut only ever drops the
+// least-established patterns, and the remainder is still counted in the
+// footnote — nothing disappears silently.
+const CAROUSEL_MAX = 4
 
 function AreaCadenceSection({ visits = [] }) {
   // Captured once per mount — same purity discipline as HeroCard.
@@ -199,8 +205,12 @@ function AreaCadenceSection({ visits = [] }) {
             `Plus ${extra} more ${extra === 1 ? 'area' : 'areas'} you've treated more than once`}
           {extra > 0 && onceOnly > 0 && ', and '}
           {extra === 0 && onceOnly > 0 && 'Plus '}
+          {/* The noun is dropped when both halves run together, so it doesn't
+              read "…more areas…, and 7 areas treated once". */}
           {onceOnly > 0 &&
-            `${onceOnly} ${onceOnly === 1 ? 'area' : 'areas'} treated once`}
+            (extra > 0
+              ? `${onceOnly} treated once`
+              : `${onceOnly} ${onceOnly === 1 ? 'area' : 'areas'} treated once`)}
           .
         </p>
       )}
