@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
@@ -7,6 +7,15 @@ import Landing from './Landing.jsx'
 import Login from './Login.jsx'
 import AuthCallback from './AuthCallback.jsx'
 import Onboarding from './Onboarding.jsx'
+
+// Lazy so the design reference never lands in the patient bundle — it only
+// downloads if someone actually opens /design.
+//
+// The react-refresh rule below guards Fast Refresh for component modules. This
+// is the entry file — it has no exports by design, so there is nothing for Fast
+// Refresh to preserve, and the warning does not apply.
+// eslint-disable-next-line react-refresh/only-export-components
+const DesignSystem = lazy(() => import('./DesignSystem.jsx'))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -20,6 +29,20 @@ createRoot(document.getElementById('root')).render(
         <Route path="/app" element={<App />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+
+        {/* The visual reference for the design system. Unlinked from the app —
+            you reach it by typing the URL. Available in production on purpose:
+            Rinnova is phone-first, so the place to check a design is a real
+            phone, and a dev-only route would mean it could only ever be viewed
+            on a laptop. It exposes nothing but colours, type and components. */}
+        <Route
+          path="/design"
+          element={
+            <Suspense fallback={null}>
+              <DesignSystem />
+            </Suspense>
+          }
+        />
 
         {/* Dev-only: review the onboarding design without signing in (and
             without burning OTP codes against Supabase's ~4/hour per-email
