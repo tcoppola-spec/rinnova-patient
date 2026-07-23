@@ -120,9 +120,10 @@ export function describeCadence(months) {
  * computeAreaCadence(visits, now) -> [{
  *   key,            // canonical region key
  *   label,          // patient-facing area name
- *   colorKeys,      // categories treated here (for the dot colours)
+ *   colorKeys,      // categories treated here, DOMINANT first (dot/card colour)
  *   x, y, mirror,   // where to draw it (null when unplaceable)
  *   dates,          // Date[] ascending, one per DISTINCT treatment date
+ *   events,         // [{ date, products:[{name,colorKey,dose}] }], same order
  *   count,          // dates.length
  *   intervals,      // months between consecutive dates
  *   typicalMonths,  // median interval, or null when there's only one date
@@ -156,7 +157,10 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
           groups.set(key, {
             key,
             labels: [],
-            colorKeys: new Set(),
+            // Counted, not just collected: the card and the face dot take the
+            // area's DOMINANT category colour, so a cheek treated with Radiesse
+            // five times and hyperdilute once reads as Radiesse.
+            colorCounts: new Map(),
             byDate: new Map(),
             // The un-nudged lookup coordinate, so the summary can draw this
             // region on the face. Deliberately NOT the stored x/y, which carry
@@ -167,7 +171,9 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
         }
         const g = groups.get(key)
         g.labels.push(area.friendly_name || area.clinical_name)
-        if (treatment.color_key) g.colorKeys.add(treatment.color_key)
+        if (treatment.color_key) {
+          g.colorCounts.set(treatment.color_key, (g.colorCounts.get(treatment.color_key) || 0) + 1)
+        }
         // Bilateral if it was EVER recorded bilateral: a note that named one
         // side once shouldn't make the whole region read as one-sided.
         if (area.mirror) g.mirror = true
@@ -177,15 +183,35 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
         // rows would double the apparent frequency and halve the apparent
         // interval, which would then feed a reminder that fires twice as often
         // as it should.
-        g.byDate.set(visit.visit_date, date)
+        //
+        // But we DO keep every product from that date, so the detail view can
+        // show what was actually used ("Radiesse 0.5cc + hyperdilute") rather
+        // than a bare date. Same date collapses to one event; its products
+        // accumulate on that event.
+        if (!g.byDate.has(visit.visit_date)) {
+          g.byDate.set(visit.visit_date, { date, products: [] })
+        }
+        g.byDate.get(visit.visit_date).products.push({
+          name: treatment.name || null,
+          colorKey: treatment.color_key || null,
+          dose: area.dose || null,
+        })
       }
     }
   }
 
   const out = []
   for (const g of groups.values()) {
-    const dates = [...g.byDate.values()].sort((a, b) => a - b)
+    // One event per date, ascending, each carrying that date's products.
+    const events = [...g.byDate.values()].sort((a, b) => a.date - b.date)
+    const dates = events.map((e) => e.date)
     const lastDate = dates[dates.length - 1]
+
+    // Dominant category first, ties broken by order — drives the card and dot
+    // colour.
+    const colorKeys = [...g.colorCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([k]) => k)
 
     const intervals = []
     for (let i = 1; i < dates.length; i++) {
@@ -208,11 +234,14 @@ export function computeAreaCadence(visits = [], now = Date.now()) {
     out.push({
       key: g.key,
       label: pickLabel(g.labels),
-      colorKeys: [...g.colorKeys],
+      colorKeys,
       x: g.coord ? g.coord.x : null,
       y: g.coord ? g.coord.y : null,
       mirror: g.mirror,
       dates,
+      // Same order as `dates`: each event carries { date, products:[{name,
+      // colorKey, dose}] } for the detail view.
+      events,
       count: dates.length,
       intervals,
       typicalMonths,

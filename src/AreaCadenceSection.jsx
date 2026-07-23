@@ -11,13 +11,13 @@ import AreaDetailModal from './AreaDetailModal'
  * tell a patient, because it spans all of them. Reads straight from the record
  * via src/areaCadence.js (no AI, no population averages).
  *
- * SHAPE: a face, then a short summary. NOT a list of every area.
+ * SHAPE: a weighted face, then a row of colour-coded cards. NOT a list.
  * An enumerated row per region is a log — it makes the reader do the work of
  * finding the pattern, which is the one thing this feature exists to do for
  * them. So the face carries the answer at a glance (bigger, stronger dot = an
- * area you keep coming back to), and the text below names only what's worth
- * saying in words. Areas treated once stay in the count but out of the prose;
- * they're already visible in the timeline.
+ * area you keep coming back to), and each card is tinted to its treatment
+ * colour so a card ties visually to its dot. Areas treated once stay in the
+ * count but out of the cards; they're already in the timeline.
  *
  * Props:
  *   visits: visits with nested treatments + treatment_areas
@@ -46,21 +46,11 @@ const COLORS = {
  */
 const REVEAL_MIN_REPEATS = 2
 
-// How many areas get named in the headline sentence. Past three it stops
-// reading as a summary.
-const NAMED_IN_SUMMARY = 3
-
 // How many cards the carousel holds. The dots are a position indicator, and
 // past this many they stop being countable at a glance — the rest collapse
 // into the footnote. Cards are ordered most-treated first, so the cut only
 // ever drops the least-established patterns.
 const CAROUSEL_MAX = 8
-
-function listPhrase(items) {
-  if (items.length === 1) return items[0]
-  if (items.length === 2) return `${items[0]} and ${items[1]}`
-  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`
-}
 
 function AreaCadenceSection({ visits = [] }) {
   // Captured once per mount — same purity discipline as HeroCard.
@@ -137,16 +127,9 @@ function AreaCadenceSection({ visits = [] }) {
     }
   }
 
-  const named = repeated.slice(0, NAMED_IN_SUMMARY)
   const shown = repeated.slice(0, CAROUSEL_MAX)
   const extra = repeated.length - shown.length
   const onceOnly = areas.length - repeated.length
-
-  const top = repeated[0]
-  const headline =
-    repeated.length === 1
-      ? `You've come back to your ${top.label.toLowerCase()}`
-      : `You keep coming back to ${listPhrase(named.map((a) => a.label.toLowerCase()))}`
 
   return (
     <section className="section">
@@ -156,12 +139,11 @@ function AreaCadenceSection({ visits = [] }) {
 
       <FaceDiagram dots={dots} legend={null} />
 
-      <p className="cadence-headline">{headline}</p>
-
       {/* A carousel, not a list. These rows are tappable, and stacked plain
           text reads as prose — nothing said "there is more here" or "this
-          opens something". Horizontal cards in the action colour say both:
-          the next card peeks past the edge, and the dots show position. */}
+          opens something". Horizontal cards, each tinted to its treatment
+          colour, say both: the next card peeks past the edge, and the dots
+          show position. */}
       {/* The 78% card width exists to let the next card peek — that peek IS the
           "there's more" signal. With a single card there is nothing to reveal,
           so the narrow width would just be a truncated card promising something
@@ -171,20 +153,28 @@ function AreaCadenceSection({ visits = [] }) {
         ref={trackRef}
         onScroll={syncIndex}
       >
-        {shown.map((area) => (
-          <button
-            key={area.key}
-            type="button"
-            className="cadence-card"
-            onClick={() => setOpenArea(area)}
-          >
-            <span className="cadence-card-label">{area.label}</span>
-            <span className="cadence-card-value">
-              {area.cadenceText || `${area.count} times so far`}
-              <span className="cadence-card-chevron" aria-hidden="true">›</span>
-            </span>
-          </button>
-        ))}
+        {shown.map((area) => {
+          // Tint to the area's dominant treatment colour, so the card and its
+          // dot on the face read as the same thing. Colour is set inline (it's
+          // data-driven, one of four), with a soft wash behind and a solid
+          // accent bar so the card is legible whichever category it is.
+          const color = COLORS[area.colorKeys[0]] || 'var(--magenta)'
+          return (
+            <button
+              key={area.key}
+              type="button"
+              className="cadence-card"
+              style={{ '--card-accent': color }}
+              onClick={() => setOpenArea(area)}
+            >
+              <span className="cadence-card-label">{area.label}</span>
+              <span className="cadence-card-value">
+                {area.cadenceText || `${area.count} times so far`}
+                <span className="cadence-card-chevron" aria-hidden="true">›</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {shown.length > 1 && (

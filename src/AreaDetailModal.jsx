@@ -28,12 +28,36 @@ import { formatMonths } from './renewals'
  *   onClose — dismiss the sheet
  */
 
+const COLORS = {
+  xeomin: '#7B2CBF',
+  radiesse: '#D63384',
+  'radiesse-light': '#F06E89',
+  rha: '#FF8C42',
+}
+
 function fmtLong(d) {
   return d.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+/**
+ * Collapse repeats of the same product+dose on one day into a single line.
+ * A bilateral area records the product once per side, so "Radiesse" would
+ * otherwise appear twice for one cheekbone treatment.
+ */
+function dedupeProducts(products) {
+  const seen = new Set()
+  const out = []
+  for (const p of products) {
+    const k = `${p.name || ''}|${p.dose || ''}`
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(p)
+  }
+  return out
 }
 
 function AreaDetailModal({ area, onClose }) {
@@ -50,7 +74,7 @@ function AreaDetailModal({ area, onClose }) {
   }, [onClose])
 
   // Newest first — the timeline reads the way the visit list does.
-  const entries = [...area.dates].reverse()
+  const entries = [...area.events].reverse()
 
   let dueLine = null
   if (area.confidence === 'established' && area.daysUntilDue != null) {
@@ -94,7 +118,7 @@ function AreaDetailModal({ area, onClose }) {
           {dueLine && <p className="area-due">{dueLine}</p>}
 
           <div className="area-timeline">
-            {entries.map((d, i) => {
+            {entries.map((event, i) => {
               // Gap to the visit BEFORE this one, so it reads as "5 months
               // after the last time" sitting under each entry.
               const older = entries[i + 1]
@@ -103,8 +127,26 @@ function AreaDetailModal({ area, onClose }) {
                 : null
 
               return (
-                <div key={d.toISOString()} className="area-entry">
-                  <div className="area-entry-date">{fmtLong(d)}</div>
+                <div key={event.date.toISOString()} className="area-entry">
+                  <div className="area-entry-date">{fmtLong(event.date)}</div>
+
+                  {/* What was actually used that day — the product, and the
+                      dose only when the record has one. Dose is never invented,
+                      so most entries show just the product, which is honest. */}
+                  <div className="area-entry-products">
+                    {dedupeProducts(event.products).map((p, j) => (
+                      <span key={j} className="area-product">
+                        <span
+                          className="area-product-dot"
+                          style={{ background: COLORS[p.colorKey] || 'var(--muted)' }}
+                          aria-hidden="true"
+                        />
+                        {p.name || 'Treatment'}
+                        {p.dose ? <span className="area-product-dose"> · {p.dose}</span> : null}
+                      </span>
+                    ))}
+                  </div>
+
                   {gapMonths != null && (
                     <div className="area-entry-gap">
                       {formatMonths(gapMonths)} after the previous
