@@ -16,6 +16,7 @@ import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
 import NameCapture from './NameCapture'
 import Toast from './Toast'
+import UpdateBanner from './UpdateBanner'
 import './App.css'
 
 function App() {
@@ -230,6 +231,9 @@ function App() {
       )}
 
       <Toast toast={toast} />
+
+      {/* Shows only when this build is older than the deployed one. */}
+      <UpdateBanner />
     </div>
   )
 }

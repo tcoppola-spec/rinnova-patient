@@ -3278,3 +3278,66 @@
   font-size: 11px;
   color: var(--muted);
 }
+
+/* ============ UPDATE BANNER (a newer build is deployed) ============ */
+
+/* Bottom-pinned: the top of the app is the greeting and the insight, and a bar
+   dropping in there would shove the page down mid-read. Clears the iOS home
+   indicator via the safe-area inset. */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 32px);
+  max-width: 380px;
+  padding: 11px 12px 11px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: 0 6px 24px rgba(23, 23, 46, 0.26);
+  animation: update-banner-in 0.28s ease-out;
+}
+
+@keyframes update-banner-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.update-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #fff;
+}
+
+.update-banner-btn {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--magenta);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.update-banner-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.update-banner-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-banner { animation: none; }
+}
