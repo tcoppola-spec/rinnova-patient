@@ -3512,3 +3512,130 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* ============ FOOTER LINKS (privacy / terms / help) ============ */
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.footer-link {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--magenta);
+}
+
+.footer-dot {
+  font-size: 12px;
+  color: var(--line);
+}
+
+.footer-built {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ============ INFO PAGES (privacy / terms / help) ============ */
+
+.info {
+  min-height: 100vh;
+  background: var(--cream);
+  padding: 28px 20px 56px;
+}
+
+.info-inner {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.info-back {
+  display: inline-block;
+  margin-bottom: 22px;
+  font-size: 13px;
+  color: var(--magenta);
+  text-decoration: none;
+}
+
+.info-title {
+  font-family: var(--f-display);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.info-updated {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+/* The opening paragraph carries the summary, so it gets a touch more weight
+   than the body — most people read this line and nothing else. */
+.info-lead {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.info-h2 {
+  font-family: var(--f-display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 26px 0 8px;
+}
+
+.info-p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--body);
+  margin-bottom: 10px;
+}
+
+.info-list {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+
+.info-list li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--body);
+  margin-bottom: 6px;
+}
+
+.info-list strong,
+.info-p strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.info-link {
+  color: var(--magenta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.info-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}

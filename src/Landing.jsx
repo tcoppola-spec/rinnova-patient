@@ -141,10 +141,21 @@ function Landing() {
         </ul>
 
         <footer className="landing-footer">
-          <span className="landing-footer-brand">Tondo LLC</span>
+          <span className="landing-footer-brand">Built by Tondo LLC</span>
           <span className="landing-footer-note">
-            Rinnova is a Tondo LLC product. Currently in private pilot.
+            Currently in private pilot.
           </span>
+
+          {/* Reachable before sign-in on purpose: anyone deciding whether to
+              trust Rinnova with their medical history should be able to read
+              the privacy page first. */}
+          <nav className="footer-links">
+            <Link to="/privacy" className="footer-link">Privacy</Link>
+            <span className="footer-dot" aria-hidden="true">·</span>
+            <Link to="/terms" className="footer-link">Terms</Link>
+            <span className="footer-dot" aria-hidden="true">·</span>
+            <Link to="/help" className="footer-link">Help</Link>
+          </nav>
           <span className="landing-copyright">
             &copy; {year} Tondo LLC. All rights reserved.
           </span>

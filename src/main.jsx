@@ -17,6 +17,15 @@ import Onboarding from './Onboarding.jsx'
 // eslint-disable-next-line react-refresh/only-export-components
 const DesignSystem = lazy(() => import('./DesignSystem.jsx'))
 
+// Privacy, Terms and Help share one chunk — they are one small file and a
+// visitor reading one often reads another.
+// eslint-disable-next-line react-refresh/only-export-components
+const Privacy = lazy(() => import('./InfoPages.jsx').then((m) => ({ default: m.Privacy })))
+// eslint-disable-next-line react-refresh/only-export-components
+const Terms = lazy(() => import('./InfoPages.jsx').then((m) => ({ default: m.Terms })))
+// eslint-disable-next-line react-refresh/only-export-components
+const Help = lazy(() => import('./InfoPages.jsx').then((m) => ({ default: m.Help })))
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
@@ -43,6 +52,13 @@ createRoot(document.getElementById('root')).render(
             </Suspense>
           }
         />
+
+        {/* Public, and reachable without signing in on purpose: someone
+            deciding whether to trust Rinnova with their medical history needs
+            to read the privacy page BEFORE creating an account. */}
+        <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
+        <Route path="/terms" element={<Suspense fallback={null}><Terms /></Suspense>} />
+        <Route path="/help" element={<Suspense fallback={null}><Help /></Suspense>} />
 
         {/* Dev-only: review the onboarding design without signing in (and
             without burning OTP codes against Supabase's ~4/hour per-email
