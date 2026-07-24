@@ -1,1 +1,5 @@
+# /favicon.ico must be answered before the SPA catch-all below, or the catch-all
+# returns index.html for it and browsers that ask for .ico get a webpage.
+/favicon.ico  /favicon-32.png  200
+
 /*    /index.html   200
