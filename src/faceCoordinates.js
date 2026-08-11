@@ -144,6 +144,16 @@ const COORDINATES = {
   'upper neck': { x: 114.9, y: 286.3 },
   'neck': { x: 114.9, y: 286.3 },
   'platysma': { x: 114.9, y: 286.3 },
+
+  // --- Whole face ---
+  // For field treatments (laser, Ultherapy, peels) done everywhere. Resolves to
+  // the face centre so it counts as a PLACED region (never a false "couldn't
+  // map" note); FaceDiagram recognises the "full face" NAME and draws one large
+  // halo rather than a mark at this point. An injectable would never be labelled
+  // full-face, so a stray dot here is not a real risk.
+  'full face': { x: 114.9, y: 168 },
+  'whole face': { x: 114.9, y: 168 },
+  'entire face': { x: 114.9, y: 168 },
 }
 
 // Pre-tokenise the table once.

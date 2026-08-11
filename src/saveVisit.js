@@ -166,8 +166,10 @@ export async function saveParsedVisit(parsed) {
         name: t.name,
         summary: t.summary ?? null,
         total_dose: t.total_dose ?? null,
-        // color_key is NOT NULL; fall back to a valid key if the AI left it out.
-        color_key: t.color_key || 'xeomin',
+        // color_key is NOT NULL. Fall back to 'other' (neutral grey) when the
+        // AI left it blank — NOT 'xeomin', which would silently paint an
+        // unknown treatment as a neurotoxin. Silence over a wrong category.
+        color_key: t.color_key || 'other',
         areas: tAreas,
       }
     })

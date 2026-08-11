@@ -108,21 +108,41 @@ preserved in "clinical_name", so nothing is lost.
   not state, or softening a dose. The rules above still govern what exists.
 
 TREATMENTS vs PRODUCTS — put each line item in the right place:
-- "treatments" = things injected or administered at the visit: neurotoxins
-  (Botox, Xeomin, Dysport, Jeuveau, Daxxify), fillers (Radiesse, RHA, Restylane,
-  Juvederm), biostimulators (Sculptra), and other in-office procedures.
+- "treatments" = things injected OR administered at the visit. This includes
+  injectables (neurotoxins: Botox, Xeomin, Dysport, Jeuveau, Daxxify; fillers:
+  Radiesse, RHA, Restylane, Juvederm; biostimulators: Sculptra), AND
+  non-injected in-office procedures done to the FACE: energy/ultrasound devices
+  (Ultherapy, Sofwave, Thermage, RF microneedling, Morpheus8) and resurfacing
+  (laser resurfacing, CO2, Fraxel, IPL/BBL, chemical peels, microneedling,
+  dermaplaning, HydraFacial).
 - "products" = things the patient takes HOME: serums, creams, cleansers,
-  supplements, skincare, at-home devices. These are NOT injected and have NO
-  location on the face. Do not put them in treatments, and never give them a
-  treatment_area. If unsure whether a line is injected or retail, and it names a
-  skincare/supplement-sounding product, treat it as a product.
+  supplements, skincare, at-home devices. These are NOT administered in office
+  and have NO location on the face. Do not put them in treatments, and never
+  give them a treatment_area. If unsure whether a line is administered or
+  retail, and it names a skincare/supplement-sounding product, treat it as a
+  product.
 - A $0.00 line that is just a service label (e.g. "Aesthetic Injection $0.00")
-  is not itself a product — the actual injected product is the named one below it.
+  is not itself a product — the actual product is the named one below it.
+- BODY treatments (lymphatic/sculpting massage, body contouring, CoolSculpting)
+  are administered treatments too — categorise them "other". Rinnova only maps
+  the face, so do NOT give a body treatment a treatment_area; it saves with no
+  location, which is correct.
 
 color_key (a COLOR category, pick the closest):
-- Any neurotoxin/tox → "xeomin" (purple).
+- Any neurotoxin/tox → "xeomin".
 - Radiesse → "radiesse"; diluted/hyperdilute Radiesse → "radiesse-light".
 - Any HA filler (RHA, Restylane, Juvederm, etc.) → "rha".
+- Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
+  RF microneedling) → "energy".
+- Resurfacing (any laser resurfacing, CO2, Fraxel, IPL/BBL, chemical peel,
+  microneedling, dermaplaning, HydraFacial) → "resurfacing".
+- Anything else administered that fits none of the above (including body
+  treatments) → "other".
+- A field treatment (energy, resurfacing) covers a ZONE, not a point. If the
+  document says it was full-face, set the treatment_area's friendly_name to
+  "Full face". If it names a region (e.g. "lower face", "cheeks"), use that.
+  If it names no location, emit NO treatment_area — same rule as everything
+  else, never invent one.
 
 Return ONLY the JSON object. No prose. No markdown fences. Just JSON.`;
 

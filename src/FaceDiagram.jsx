@@ -46,7 +46,13 @@ import { categoryColor, categoryMark } from './treatmentColors'
 // A region name that means "the whole face" rather than a point. Field
 // treatments (resurfacing, Ultherapy) are often applied everywhere; this draws
 // one big halo instead of scattering marks. Matched case-insensitively.
-const FULL_FACE_NAMES = new Set(['full face', 'whole face', 'entire face', 'face'])
+//
+// Bare "face" is deliberately NOT here: it resolves to null in faceCoordinates
+// (a generic "Face" area was historically a fabrication signal — see the old
+// receipt bug), so treating it as full-face here would draw a halo while
+// saveVisit reports the area as unplaced. Only the explicit whole-face names,
+// all of which resolve, trigger the big halo.
+const FULL_FACE_NAMES = new Set(['full face', 'whole face', 'entire face'])
 
 /**
  * The face illustration, straight from scripts/new-face.svg.
