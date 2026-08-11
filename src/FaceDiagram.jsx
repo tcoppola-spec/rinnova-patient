@@ -1,40 +1,52 @@
 import { useId } from 'react'
-import { VIEWBOX, MIRROR_AXIS, CLIP_X, DOT_RADIUS, mirrorX } from './faceGeometry'
+import {
+  VIEWBOX,
+  MIRROR_AXIS,
+  CLIP_X,
+  DOT_RADIUS,
+  FIELD_RADIUS,
+  FULL_FACE,
+  mirrorX,
+} from './faceGeometry'
+import { categoryColor, categoryMark } from './treatmentColors'
 
 /**
  * FaceDiagram
  *
- * Renders the Rinnova face illustration as an SVG, with treatment dots
- * positioned on top based on the visit's treatment_areas.
+ * Renders the Rinnova face illustration as an SVG, with treatment marks on top
+ * based on the visit's treatment_areas.
  *
- * For each treatment_area:
- *   - A single dot is rendered at (x, y) using the parent treatment's color
- *   - If mirror=true, a SECOND dot is also rendered, reflected across the
- *     artwork's axis of symmetry (x = 114.9, NOT the viewBox centre)
+ * TWO KINDS OF MARK, decided by the treatment's category (see treatmentColors):
+ *   - 'point' (injectables) → a DOT at (x, y). Filler goes to a specific spot.
+ *   - 'field' (energy, resurfacing) → a soft HALO centred at (x, y). A laser
+ *     covers a zone, and a dot would claim a precision we don't have. Halos
+ *     render UNDER the dots, so on a mixed visit the injectable points stay
+ *     crisp on top of the wash. A "Full face" area draws one large halo over
+ *     the centre instead of a mark per region.
  *
- * The artwork is line art with no skin fill — dots sit on the warm gradient of
+ * For a bilateral area (mirror=true) a second mark is reflected across the
+ * artwork's axis of symmetry (x = 114.9, NOT the viewBox centre).
+ *
+ * The artwork is line art with no skin fill — marks sit on the warm gradient of
  * .face-diagram-wrap. Only the RIGHT half of the illustration is drawn: once
  * as-is, and once mirrored to form the left half. The source SVG's left side
  * has an uneven outline (see faceGeometry.js), so mirroring the uniform right
  * half gives a symmetric face for free.
  *
- * Colors map from treatment.color_key to design system colors:
- *   xeomin = purple    (#7B2CBF)
- *   radiesse = magenta (#D63384)
- *   radiesse-light = coral (#F06E89)
- *   rha = orange       (#FF8C42)
+ * Colours come from treatmentColors.js — the single source of truth — never a
+ * local map, so the face and the cards can't disagree about what a colour means.
  *
  * Props:
- *   treatments: array of treatment objects, each with nested treatment_areas
+ *   treatments: treatment objects with nested treatment_areas (the visit path)
+ *   dots:  optional pre-built point marks [{id,x,y,color,r?,opacity?}]
+ *   halos: optional pre-built field marks (same shape); defaults to none
+ *   legend: optional node; pass null to suppress the auto legend
  */
 
-// Color map — matches the locked design system colors for product dots
-const COLORS = {
-  xeomin: '#7B2CBF',
-  radiesse: '#D63384',
-  'radiesse-light': '#F06E89',
-  rha: '#FF8C42',
-}
+// A region name that means "the whole face" rather than a point. Field
+// treatments (resurfacing, Ultherapy) are often applied everywhere; this draws
+// one big halo instead of scattering marks. Matched case-insensitively.
+const FULL_FACE_NAMES = new Set(['full face', 'whole face', 'entire face', 'face'])
 
 /**
  * The face illustration, straight from scripts/new-face.svg.
@@ -65,42 +77,57 @@ function FaceArt() {
   )
 }
 
-function FaceDiagram({ treatments = [], dots: dotsProp, legend }) {
+function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend }) {
   // useId can contain ':', which is not valid inside a url(#...) reference.
-  const clipId = `face-half-${useId().replace(/:/g, '')}`
+  const uid = useId().replace(/:/g, '')
+  const clipId = `face-half-${uid}`
 
-  // A caller can supply its own dots (AreaCadenceSection weights them by how
-  // often an area is treated). Keeping that here rather than forking the
+  // A caller can supply its own marks (AreaCadenceSection weights dots by how
+  // often an area is treated). Keeping the build here rather than forking the
   // component means the illustration, the clip/mirror trick and the coordinate
   // space live in exactly one place — see the note in faceGeometry.js.
   const dots = dotsProp || []
-  if (!dotsProp) treatments.forEach((treatment) => {
-    const color = COLORS[treatment.color_key] || '#888'
-    const areas = treatment.treatment_areas || []
-    areas.forEach((area) => {
-      // x/y are NULL when the region couldn't be placed (see faceCoordinates.js
-      // — we never invent a coordinate for an injection). Draw no dot rather
-      // than a wrong one. The area still appears in the treatment list below.
-      if (area.x == null || area.y == null) return
+  const halos = halosProp || []
 
-      // Primary dot
-      dots.push({
-        id: area.id,
-        x: area.x,
-        y: area.y,
-        color,
+  if (!dotsProp && !halosProp) {
+    treatments.forEach((treatment) => {
+      const color = categoryColor(treatment.color_key)
+      const isField = categoryMark(treatment.color_key) === 'field'
+      const bucket = isField ? halos : dots
+      const areas = treatment.treatment_areas || []
+
+      areas.forEach((area) => {
+        // A field treatment applied to the whole face draws ONE big centred
+        // halo, regardless of the region row's coordinate.
+        const name = (area.friendly_name || area.clinical_name || '').trim().toLowerCase()
+        if (isField && FULL_FACE_NAMES.has(name)) {
+          halos.push({
+            id: `${area.id}-full`,
+            x: FULL_FACE.x,
+            y: FULL_FACE.y,
+            r: FULL_FACE.radius,
+            color,
+          })
+          return
+        }
+
+        // x/y are NULL when the region couldn't be placed (see
+        // faceCoordinates.js — we never invent a coordinate). Draw no mark
+        // rather than a wrong one. The area still appears in the list below.
+        if (area.x == null || area.y == null) return
+
+        bucket.push({ id: area.id, x: area.x, y: area.y, color })
+        // Mirror mark (if mirror=true), reflected across the axis of symmetry.
+        if (area.mirror) {
+          bucket.push({ id: `${area.id}-mirror`, x: mirrorX(area.x), y: area.y, color })
+        }
       })
-      // Mirror dot (if mirror=true), reflected across the axis of symmetry
-      if (area.mirror) {
-        dots.push({
-          id: `${area.id}-mirror`,
-          x: mirrorX(area.x),
-          y: area.y,
-          color,
-        })
-      }
     })
-  })
+  }
+
+  // One radial gradient per distinct halo colour: a soft centre fading to fully
+  // transparent, so a halo reads as "broadly here", never a hard bubble.
+  const haloColors = [...new Set(halos.map((h) => h.color))]
 
   return (
     <div className="face-diagram-wrap">
@@ -120,6 +147,13 @@ function FaceDiagram({ treatments = [], dots: dotsProp, legend }) {
               height={VIEWBOX.height}
             />
           </clipPath>
+          {haloColors.map((c, i) => (
+            <radialGradient key={c} id={`halo-${uid}-${i}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={c} stopOpacity="0.32" />
+              <stop offset="55%" stopColor={c} stopOpacity="0.16" />
+              <stop offset="100%" stopColor={c} stopOpacity="0" />
+            </radialGradient>
+          ))}
         </defs>
 
         {/* Right half of the illustration, as drawn */}
@@ -133,6 +167,22 @@ function FaceDiagram({ treatments = [], dots: dotsProp, legend }) {
             <FaceArt />
           </g>
         </g>
+
+        {/* Field halos: over the line art (they're a treatment layer), but
+            BELOW the dots, so injectable points stay crisp on the wash. */}
+        {halos.map((halo) => {
+          const gi = haloColors.indexOf(halo.color)
+          return (
+            <circle
+              key={halo.id}
+              className="area-halo"
+              cx={halo.x}
+              cy={halo.y}
+              r={halo.r ?? FIELD_RADIUS}
+              fill={`url(#halo-${uid}-${gi})`}
+            />
+          )
+        })}
 
         {/* Treatment dots — rendered last so they sit on top of everything */}
         {dots.map((dot) => (
@@ -156,8 +206,10 @@ function FaceDiagram({ treatments = [], dots: dotsProp, legend }) {
         {treatments.map((t) => (
           <div key={t.id} className="legend-item">
             <span
-              className="legend-dot"
-              style={{ background: COLORS[t.color_key] || '#888' }}
+              className={`legend-dot${categoryMark(t.color_key) === 'field' ? ' legend-dot-field' : ''}`}
+              // color drives the field ring (currentColor); background drives
+              // the solid point swatch. Setting both lets the class pick.
+              style={{ background: categoryColor(t.color_key), color: categoryColor(t.color_key) }}
               aria-hidden="true"
             />
             <span className="legend-name">{t.name}</span>

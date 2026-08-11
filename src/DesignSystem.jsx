@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import FaceDiagram from './FaceDiagram'
+import { categoryColor } from './treatmentColors'
+import { FIELD_RADIUS, FULL_FACE } from './faceGeometry'
 
 /**
  * DesignSystem — the visual reference for Rinnova, at /design.
@@ -38,18 +41,42 @@ const ACTION_TOKENS = [
   ['--magenta-soft-2', 'Action hover backgrounds'],
 ]
 
-// These four are not decoration: the colour IS the clinical category, on the
-// face map and on every card that references it.
+// These are not decoration: the colour IS the clinical category, on the face
+// map and on every card that references it. The first four are injectables,
+// drawn as a DOT (a point). The last two are non-injectables, drawn as a HALO
+// (a field) — see the point-vs-field comparison below.
 const TREATMENT_TOKENS = [
   ['--purple', 'Neurotoxin', 'xeomin', 'Botox, Xeomin, Dysport, Jeuveau, Daxxify'],
   ['--magenta', 'Radiesse', 'radiesse', 'Full-strength biostimulator'],
   ['--coral', 'Diluted Radiesse', 'radiesse-light', 'Hyperdilute'],
   ['--orange', 'HA filler', 'rha', 'RHA, Restylane, Juvederm, Belotero'],
+  ['--energy', 'Energy / ultrasound', 'energy', 'Ultherapy, RF, ultrasound — a field, not a point'],
+  ['--resurfacing', 'Resurfacing', 'resurfacing', 'Laser resurfacing, peels, microneedling — a field'],
 ]
 
 const OTHER_TOKENS = [
   ['--navy', 'Deep brand tone (rarely used directly)'],
   ['--face-line', 'Face illustration line art'],
+]
+
+// Illustrative marks for the point-vs-field comparison. Real coordinates from
+// faceCoordinates, not a record — this is a design reference, not anyone's data.
+const DEMO_DOTS = [
+  { id: 'd1', x: 114.9, y: 100.4, color: categoryColor('xeomin') }, // glabella
+  { id: 'd2', x: 74.6, y: 112.2, color: categoryColor('xeomin') },  // brow
+  { id: 'd3', x: 155.2, y: 112.2, color: categoryColor('xeomin') }, // brow (mirror)
+  { id: 'd4', x: 47.7, y: 173.7, color: categoryColor('radiesse') },// cheekbone
+  { id: 'd5', x: 182.1, y: 173.7, color: categoryColor('radiesse') },
+  { id: 'd6', x: 114.9, y: 220.8, color: categoryColor('rha') },    // lips
+]
+const DEMO_HALOS = [
+  { id: 'h1', x: 47.7, y: 173.7, r: FIELD_RADIUS, color: categoryColor('energy') },   // cheek
+  { id: 'h2', x: 182.1, y: 173.7, r: FIELD_RADIUS, color: categoryColor('energy') },
+  { id: 'h3', x: 60.9, y: 235.2, r: FIELD_RADIUS, color: categoryColor('resurfacing') }, // jaw
+  { id: 'h4', x: 170.3, y: 235.2, r: FIELD_RADIUS, color: categoryColor('resurfacing') },
+]
+const DEMO_FULL_FACE = [
+  { id: 'f1', x: FULL_FACE.x, y: FULL_FACE.y, r: FULL_FACE.radius, color: categoryColor('resurfacing') },
 ]
 
 const DISPLAY_SCALE = [
@@ -363,14 +390,48 @@ function DesignSystem() {
         </section>
 
         <section className="ds-section">
-          <h2 className="ds-h2">Treatment dots</h2>
+          <h2 className="ds-h2">Treatment marks</h2>
           <div className="ds-row">
-            {TREATMENT_TOKENS.map(([name, role, key]) => (
-              <span className="ds-dot-row" key={key}>
-                <span className="treatment-dot" style={{ background: `var(${name})` }} />
-                <span className="ds-type-meta">{role}</span>
-              </span>
-            ))}
+            {TREATMENT_TOKENS.map(([name, role, key]) => {
+              const field = key === 'energy' || key === 'resurfacing'
+              return (
+                <span className="ds-dot-row" key={key}>
+                  <span
+                    className={`treatment-dot${field ? ' legend-dot-field' : ''}`}
+                    style={{ background: `var(${name})`, color: `var(${name})` }}
+                  />
+                  <span className="ds-type-meta">{role}</span>
+                </span>
+              )
+            })}
+          </div>
+          <p className="ds-note">
+            A solid dot is a point (injectables). A ring is a field
+            (non-injectables) — the same idea as the halo on the face below.
+          </p>
+        </section>
+
+        <section className="ds-section">
+          <h2 className="ds-h2">Point vs field on the face</h2>
+          <p className="ds-note">
+            Injectables are placed at a spot, so they draw a dot. Energy and
+            resurfacing cover a zone we usually can&apos;t bound exactly, so they
+            draw a soft halo — &quot;broadly here&quot;, never a false precision.
+            The treatment type decides the mark; the region decides where.
+          </p>
+          <div className="ds-face-compare">
+            <div className="ds-face-cell">
+              <FaceDiagram dots={DEMO_DOTS} legend={null} />
+              <span className="ds-type-meta">Injectables — dots</span>
+            </div>
+            <div className="ds-face-cell">
+              <FaceDiagram halos={DEMO_HALOS} legend={null} />
+              <span className="ds-type-meta">Energy &amp; resurfacing — halos</span>
+            </div>
+          </div>
+          <div className="ds-face-cell ds-face-full">
+            <FaceDiagram halos={DEMO_FULL_FACE} legend={null} />
+            <span className="ds-type-meta">A full-face treatment — one large halo</span>
           </div>
         </section>
 

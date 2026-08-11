@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { computeAreaCadence } from './areaCadence'
 import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
+import { categoryColor } from './treatmentColors'
 import FaceDiagram from './FaceDiagram'
 import AreaDetailModal from './AreaDetailModal'
 
@@ -22,13 +23,6 @@ import AreaDetailModal from './AreaDetailModal'
  * Props:
  *   visits: visits with nested treatments + treatment_areas
  */
-
-const COLORS = {
-  xeomin: '#7B2CBF',
-  radiesse: '#D63384',
-  'radiesse-light': '#F06E89',
-  rha: '#FF8C42',
-}
 
 /**
  * How many times ONE area must be treated before the section appears.
@@ -120,7 +114,7 @@ function AreaCadenceSection({ visits = [] }) {
     // to read as visibly heavier without the map turning into a bar chart.
     const r = DOT_RADIUS * (0.62 + 0.38 * strength)
     const opacity = 0.4 + 0.6 * strength
-    const color = COLORS[area.colorKeys[0]] || '#888'
+    const color = categoryColor(area.colorKeys[0])
 
     dots.push({ id: area.key, x: area.x, y: area.y, r, opacity, color })
     // Skip the reflection for a midline point: mirrorX(114.9) is 114.9, so the
@@ -161,10 +155,10 @@ function AreaCadenceSection({ visits = [] }) {
       >
         {shown.map((area) => {
           // Tint to the area's dominant treatment colour, so the card and its
-          // dot on the face read as the same thing. Colour is set inline (it's
-          // data-driven, one of four), with a soft wash behind and a solid
-          // accent bar so the card is legible whichever category it is.
-          const color = COLORS[area.colorKeys[0]] || 'var(--magenta)'
+          // dot on the face read as the same thing. Colour is data-driven, set
+          // inline, with a solid accent bar so the card is legible whichever
+          // category it is.
+          const color = categoryColor(area.colorKeys[0])
           return (
             <button
               key={area.key}

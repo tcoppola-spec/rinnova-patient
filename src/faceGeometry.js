@@ -28,6 +28,17 @@ export const CLIP_X = 114.4
 // relative to the face.
 export const DOT_RADIUS = 6.7
 
+// Field-treatment halo radius (energy, resurfacing). Much larger than a dot —
+// it stands for a ZONE, not a point. Rendered as a soft radial that fades to
+// transparent, so this is the outer reach of the glow, not a hard edge.
+export const FIELD_RADIUS = 30
+
+// A full-face treatment (most resurfacing, Ultherapy) is drawn as one large
+// halo over the centre of the face rather than a mark per region. Centre sits
+// between the forehead (y≈83) and chin (y≈251); the radius reaches out to the
+// cheeks and up to the brow without spilling far past the outline.
+export const FULL_FACE = { x: MIRROR_AXIS, y: 168, radius: 92 }
+
 /** Reflect an x coordinate across the artwork's axis of symmetry. */
 export function mirrorX(x) {
   return 2 * MIRROR_AXIS - x

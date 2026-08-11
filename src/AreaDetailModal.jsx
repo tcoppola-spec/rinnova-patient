@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { formatMonths } from './renewals'
+import { categoryColor } from './treatmentColors'
 
 /**
  * AreaDetailModal
@@ -27,13 +28,6 @@ import { formatMonths } from './renewals'
  *             of its own — which also keeps it pure)
  *   onClose — dismiss the sheet
  */
-
-const COLORS = {
-  xeomin: '#7B2CBF',
-  radiesse: '#D63384',
-  'radiesse-light': '#F06E89',
-  rha: '#FF8C42',
-}
 
 function fmtLong(d) {
   return d.toLocaleDateString('en-US', {
@@ -138,7 +132,7 @@ function AreaDetailModal({ area, onClose }) {
                       <span key={j} className="area-product">
                         <span
                           className="area-product-dot"
-                          style={{ background: COLORS[p.colorKey] || 'var(--muted)' }}
+                          style={{ background: categoryColor(p.colorKey) }}
                           aria-hidden="true"
                         />
                         {p.name || 'Treatment'}

@@ -10,6 +10,12 @@
   --ink: #17172E;
   --cream: #FAF7F2;
 
+  /* Non-injectable treatment categories (energy / resurfacing). Distinct from
+     the four warm injectable tones so a laser never reads as filler. Keep in
+     step with src/treatmentColors.js — that file is the source of truth. */
+  --energy: #2CA6A4;      /* Ultherapy, RF, ultrasound — cool teal */
+  --resurfacing: #C6902B; /* laser resurfacing, peels, microneedling — amber */
+
   /* UI tones derived from brand */
   --body: #3A3A55;
   --muted: #8A8AA3;

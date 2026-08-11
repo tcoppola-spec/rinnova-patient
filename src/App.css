@@ -319,6 +319,18 @@
 .treatment-dot-radiesse { background: var(--magenta); }
 .treatment-dot-radiesse-light { background: var(--coral); }
 .treatment-dot-rha { background: var(--orange); }
+.treatment-dot-energy { background: var(--energy); }
+.treatment-dot-resurfacing { background: var(--resurfacing); }
+.treatment-dot-other { background: var(--muted); }
+
+/* A field treatment (energy, resurfacing) is a ZONE, not a point. In the legend
+   and treatment lists its swatch is a soft ring rather than a solid dot, so it
+   reads as "an area" at a glance — matching the halo on the face. */
+.legend-dot-field {
+  background: transparent !important;
+  border: 2px solid currentColor;
+  opacity: 0.55;
+}
 
 /* ============ ADD PROMPT (reusable "+ Add X" button) ============ */
 
@@ -3638,4 +3650,31 @@
   border-top: 1px solid var(--line);
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Point-vs-field comparison on the design page. Two faces side by side, each
+   capped narrow so both fit the phone column; the full-face example spans. */
+.ds-face-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ds-face-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.ds-face-cell .face-diagram-wrap {
+  width: 100%;
+  margin: 0;
+}
+
+.ds-face-full {
+  max-width: 200px;
+  margin: 0 auto;
 }
