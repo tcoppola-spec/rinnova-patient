@@ -33,9 +33,11 @@ export const TREATMENT_CATEGORIES = {
   // Cool teal for energy (Ultherapy, RF, ultrasound) — reads as the device /
   // cooling side of the practice, and is unmistakable against the warm four.
   energy: { color: '#2CA6A4', mark: 'field', label: 'Energy / ultrasound' },
-  // Warm amber for resurfacing (laser resurfacing, peels, microneedling).
-  // Distinct from the brighter orange of HA filler.
-  resurfacing: { color: '#C6902B', mark: 'field', label: 'Resurfacing' },
+  // Rose for resurfacing (laser resurfacing, peels, microneedling). Shares the
+  // warm-pink family with the injectables but only ever appears as a
+  // translucent halo, never a solid dot, so it stays distinct from Radiesse
+  // (magenta) and diluted Radiesse (coral).
+  resurfacing: { color: '#E0739F', mark: 'field', label: 'Resurfacing' },
 
   // Neutral catch-all for anything administered we can't categorise (a body
   // treatment while body is parked, an unrecognised service). Muted grey so it
