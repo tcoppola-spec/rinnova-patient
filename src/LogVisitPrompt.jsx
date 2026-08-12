@@ -50,9 +50,12 @@ function LogVisitPrompt({ onRefetch }) {
 function LogVisitFlow({ onClose, onRefetch }) {
   const [step, setStep] = useState('choose')
   const [text, setText] = useState('')
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null)
-  const [photoBase64, setPhotoBase64] = useState(null)
+  // A note can run several pages, and they are ONE visit. Each page is
+  // { id, file, previewUrl, base64, mediaType }; all pages go to the parser
+  // together. (Progress photos in the archive are still one-per-tile — this
+  // multi-page flow is only for reading a document.)
+  const [pages, setPages] = useState([])
+  const [readingPages, setReadingPages] = useState(false)
   const [parsed, setParsed] = useState(null)
   // Guided-Q&A answers for treatments the document gave no location for:
   // { [treatmentName]: { regions: [{ label, mirror }], notSure: bool } }
@@ -83,45 +86,76 @@ function LogVisitFlow({ onClose, onRefetch }) {
     }
   }
 
-  function handleFileSelect(e) {
-    const selected = e.target.files?.[0]
-    if (!selected) return
+  // Read one file into a page object (base64 for the parser + a preview URL).
+  function readPage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        // result is a data URL "data:image/jpeg;base64,…"; keep just the base64.
+        resolve({
+          id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          base64: String(reader.result).split(',')[1],
+          mediaType: file.type,
+        })
+      }
+      reader.onerror = () => reject(new Error('Could not read the image'))
+      reader.readAsDataURL(file)
+    })
+  }
 
-    if (selected.size > 5 * 1024 * 1024) {
-      setError('Photo is too large (max 5 MB for AI parsing)')
-      return
+  async function handleFileSelect(e) {
+    setError(null)
+    const selected = Array.from(e.target.files || [])
+    // Reset the input now, so re-picking the SAME file later still fires change.
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (selected.length === 0) return
+
+    for (const f of selected) {
+      if (!f.type.startsWith('image/')) {
+        setError('Please choose image files only')
+        return
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        setError('Each page must be under 5 MB')
+        return
+      }
     }
 
-    if (!selected.type.startsWith('image/')) {
-      setError('Please select an image file')
-      return
+    setReadingPages(true)
+    try {
+      const newPages = await Promise.all(selected.map(readPage))
+      // Append, so pages can be added one at a time (camera captures one shot
+      // at a time on phones) or several at once from the library.
+      setPages((prev) => [...prev, ...newPages])
+      setStep('photo-input')
+    } catch {
+      setError('Could not read one of the images. Please try again.')
+    } finally {
+      setReadingPages(false)
     }
+  }
 
-    setPhotoFile(selected)
-    setPhotoPreviewUrl(URL.createObjectURL(selected))
+  function addMorePages() {
+    setError(null)
+    if (fileInputRef.current) fileInputRef.current.click()
+  }
 
-    // Convert to base64 for AI parsing
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result
-      // result is a data URL like "data:image/jpeg;base64,/9j/4AAQ..."
-      // We need just the base64 part
-      const base64 = result.split(',')[1]
-      setPhotoBase64(base64)
-    }
-    reader.readAsDataURL(selected)
-
-    setStep('photo-input')
+  function removePage(id) {
+    setPages((prev) => {
+      const gone = prev.find((p) => p.id === id)
+      if (gone) URL.revokeObjectURL(gone.previewUrl)
+      const next = prev.filter((p) => p.id !== id)
+      if (next.length === 0) setStep('choose')
+      return next
+    })
   }
 
   function cancelPhoto() {
-    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl)
-    setPhotoFile(null)
-    setPhotoPreviewUrl(null)
-    setPhotoBase64(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+    pages.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+    setPages([])
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setStep('choose')
   }
 
@@ -161,8 +195,8 @@ function LogVisitFlow({ onClose, onRefetch }) {
 
   async function handleParsePhoto() {
     setError(null)
-    if (!photoBase64 || !photoFile) {
-      setError('No photo selected')
+    if (pages.length === 0) {
+      setError('Add at least one page')
       return
     }
     setStep('parsing')
@@ -171,8 +205,8 @@ function LogVisitFlow({ onClose, onRefetch }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: photoBase64,
-          image_media_type: photoFile.type,
+          // All pages of the note in one request — one document, one visit.
+          images: pages.map((p) => ({ data: p.base64, media_type: p.mediaType })),
         }),
       })
       const data = await response.json()
@@ -197,10 +231,8 @@ function LogVisitFlow({ onClose, onRefetch }) {
 
   function handleStartOver() {
     setText('')
-    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl)
-    setPhotoFile(null)
-    setPhotoPreviewUrl(null)
-    setPhotoBase64(null)
+    pages.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+    setPages([])
     setParsed(null)
     setAreaAnswers({})
     setError(null)
@@ -339,7 +371,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
             <div className="logvisit-choice-text">
               <div className="logvisit-choice-title">Take a photo</div>
               <div className="logvisit-choice-sub">
-                Of a printed receipt or note from your provider
+                A receipt or note from your provider — add every page
               </div>
             </div>
           </button>
@@ -363,6 +395,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
@@ -382,23 +415,47 @@ function LogVisitFlow({ onClose, onRefetch }) {
     )
   }
 
-  // Photo input step
-  if (step === 'photo-input' && photoPreviewUrl) {
+  // Photo input step — one or more pages of a document.
+  if (step === 'photo-input' && pages.length > 0) {
+    const multi = pages.length > 1
     return (
       <div className="logvisit-flow">
         <div className="logvisit-flow-head">
           <h3 className="logvisit-flow-title">Ready to parse</h3>
           <p className="logvisit-flow-sub">
-            AI will read this photo and organize it.
+            {multi
+              ? `AI will read all ${pages.length} pages as one visit.`
+              : 'AI will read this and organize it. Add more pages if your note runs long.'}
           </p>
         </div>
 
-        <div className="logvisit-photo-preview">
-          <img
-            src={photoPreviewUrl}
-            alt="Photo preview"
-            className="logvisit-photo-preview-img"
-          />
+        <div className="logvisit-pages">
+          {pages.map((p, i) => (
+            <div key={p.id} className="logvisit-page">
+              <img src={p.previewUrl} alt={`Page ${i + 1}`} className="logvisit-page-img" />
+              <span className="logvisit-page-num">{i + 1}</span>
+              <button
+                type="button"
+                className="logvisit-page-remove"
+                onClick={() => removePage(p.id)}
+                aria-label={`Remove page ${i + 1}`}
+              >
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="logvisit-page-add"
+            onClick={addMorePages}
+            disabled={readingPages}
+          >
+            <span className="logvisit-page-add-plus" aria-hidden="true">+</span>
+            {readingPages ? 'Adding…' : 'Add page'}
+          </button>
         </div>
 
         {error && <div className="form-error">{error}</div>}
@@ -408,15 +465,16 @@ function LogVisitFlow({ onClose, onRefetch }) {
             type="button"
             onClick={handleParsePhoto}
             className="form-save-btn"
+            disabled={readingPages}
           >
-            Parse with AI
+            {multi ? `Parse ${pages.length} pages with AI` : 'Parse with AI'}
           </button>
           <button
             type="button"
             onClick={cancelPhoto}
             className="form-cancel-btn"
           >
-            Different photo
+            Start over
           </button>
         </div>
       </div>

@@ -3678,3 +3678,98 @@
   max-width: 200px;
   margin: 0 auto;
 }
+
+/* Multi-page note capture (log-visit). A grid of page thumbnails plus an
+   "Add page" tile, so a 2+ page clinical note goes in as one visit. */
+.logvisit-pages {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.logvisit-page {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.logvisit-page-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Page number, bottom-left, so the order is unambiguous. */
+.logvisit-page-num {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(23, 23, 46, 0.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.logvisit-page-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(23, 23, 46, 0.72);
+  color: #fff;
+  cursor: pointer;
+}
+
+.logvisit-page-remove:hover {
+  background: var(--magenta);
+}
+
+/* The add-page tile matches a thumbnail's footprint. */
+.logvisit-page-add {
+  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px dashed var(--muted);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--body);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.logvisit-page-add:hover:not(:disabled) {
+  border-color: var(--magenta);
+  color: var(--magenta);
+}
+
+.logvisit-page-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.logvisit-page-add-plus {
+  font-size: 20px;
+  line-height: 1;
+}

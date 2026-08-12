@@ -164,26 +164,38 @@ export const handler = async (event) => {
     };
   }
 
-  const { text, image, image_media_type } = body;
+  const { text, image, image_media_type, images } = body;
+
+  // Normalise to a single list of pages. New clients send `images` (an array,
+  // for multi-page clinical notes); older ones send a single `image` +
+  // `image_media_type`. A note can run several pages and it is ONE visit, so
+  // every page goes into ONE request and the model is told to combine them.
+  let pages = [];
+  if (Array.isArray(images) && images.length > 0) {
+    pages = images
+      .filter((p) => p && p.data && p.media_type)
+      .map((p) => ({ data: p.data, media_type: p.media_type }));
+  } else if (image && image_media_type) {
+    pages = [{ data: image, media_type: image_media_type }];
+  }
 
   // Build the user message content based on input type
   let userContent;
 
-  if (image && image_media_type) {
-    // Photo input — multimodal request to Claude
+  if (pages.length > 0) {
+    // Multimodal request. Each page is its own image block; one text block at
+    // the end tells the model they are pages of a SINGLE document for ONE
+    // visit, so a 2-page note doesn't come back as two visits.
+    const instruction =
+      pages.length === 1
+        ? "Parse this treatment receipt/note photo into the Rinnova JSON schema."
+        : `These ${pages.length} images are consecutive pages of ONE document for ONE visit. Read them together and return a SINGLE Rinnova JSON object that combines everything across all pages — one visit, with all its treatments, areas and products merged. Do not return one object per page.`;
     userContent = [
-      {
+      ...pages.map((p) => ({
         type: "image",
-        source: {
-          type: "base64",
-          media_type: image_media_type,
-          data: image,
-        },
-      },
-      {
-        type: "text",
-        text: "Parse this treatment receipt/note photo into the Rinnova JSON schema.",
-      },
+        source: { type: "base64", media_type: p.media_type, data: p.data },
+      })),
+      { type: "text", text: instruction },
     ];
   } else if (text && typeof text === "string" && text.trim().length > 0) {
     // Text input
@@ -191,7 +203,7 @@ export const handler = async (event) => {
   } else {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Provide either 'text' or 'image' + 'image_media_type'" }),
+      body: JSON.stringify({ error: "Provide either 'text', 'image' + 'image_media_type', or an 'images' array" }),
     };
   }
 
