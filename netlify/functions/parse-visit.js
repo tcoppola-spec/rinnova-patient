@@ -132,8 +132,9 @@ color_key (a COLOR category, pick the closest):
 - Any neurotoxin/tox → "xeomin".
 - Radiesse → "radiesse"; diluted/hyperdilute Radiesse → "radiesse-light".
 - Any HA filler (RHA, Restylane, Juvederm, etc.) → "rha".
-- Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
-  RF microneedling) → "energy".
+- Energy / light / ultrasound / RF devices (Ultherapy, Sofwave, Thermage,
+  Morpheus8, RF microneedling, AND light-based treatments: LED / red light
+  therapy, low-level light therapy, phototherapy, photofacial) → "energy".
 - Resurfacing (any laser resurfacing, CO2, Fraxel, IPL/BBL, chemical peel,
   microneedling, dermaplaning, HydraFacial) → "resurfacing".
 - Anything else administered that fits none of the above (including body

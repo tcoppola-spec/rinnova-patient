@@ -30,9 +30,10 @@ export const TREATMENT_CATEGORIES = {
   rha: { color: '#FF8C42', mark: 'point', label: 'HA filler' }, // any HA filler
 
   // --- Non-injectables: a field, in new tones distinct from the injectables ---
-  // Cool teal for energy (Ultherapy, RF, ultrasound) — reads as the device /
-  // cooling side of the practice, and is unmistakable against the warm four.
-  energy: { color: '#2CA6A4', mark: 'field', label: 'Energy / ultrasound' },
+  // Cool teal for energy & light (Ultherapy, RF, ultrasound, LED / red-light
+  // therapy) — reads as the device side of the practice, unmistakable against
+  // the warm four.
+  energy: { color: '#2CA6A4', mark: 'field', label: 'Energy & light' },
   // Rose for resurfacing (laser resurfacing, peels, microneedling). Shares the
   // warm-pink family with the injectables but only ever appears as a
   // translucent halo, never a solid dot, so it stays distinct from Radiesse
@@ -42,11 +43,15 @@ export const TREATMENT_CATEGORIES = {
   // Neutral catch-all for anything administered we can't categorise (a body
   // treatment while body is parked, an unrecognised service). Muted grey so it
   // never masquerades as a category it isn't — silence over a wrong colour.
-  other: { color: '#8A8AA3', mark: 'point', label: 'Treatment' },
+  // A FIELD, not a point: a non-injectable administered treatment covers an
+  // area, so if it has a location it should read as a soft zone, never a
+  // misleading pinpoint dot. (Body 'other' treatments carry no location, so
+  // the mark type doesn't matter for them.)
+  other: { color: '#8A8AA3', mark: 'field', label: 'Treatment' },
 }
 
-// A blank/unknown category resolves here, not to a real one. Grey, point.
-const FALLBACK = { color: '#8A8AA3', mark: 'point', label: 'Treatment' }
+// A blank/unknown category resolves here, not to a real one. Grey, field.
+const FALLBACK = { color: '#8A8AA3', mark: 'field', label: 'Treatment' }
 
 export function categoryOf(key) {
   return TREATMENT_CATEGORIES[key] || FALLBACK
