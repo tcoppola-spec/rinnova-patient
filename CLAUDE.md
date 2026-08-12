@@ -537,8 +537,10 @@ Why this shape — these rules are deliberate, don't loosen them:
 - **Known limitation:** "One side" renders the dot on the illustration's left side regardless of which side it really was — left/right disambiguation (with its mirror-image ambiguity) was deliberately cut from V1.
 - **Provenance is deliberately deferred:** Q&A-supplied areas are stored identically to note-parsed ones (visits are all `pending_review` anyway). If provider verification ever lands, revisit whether patient-recalled locations need a source marker.
 
-### Multimodal note
-Claude Sonnet 4.5 handles images up to ~5MB. The frontend enforces a 5MB cap and rejects larger files. We don't compress; we reject.
+### Multimodal note — images AND PDFs, one visit per upload
+The log-visit flow accepts **photos and PDFs** (`accept="image/*,application/pdf"`), and any number of them, because a note can run several pages and it is ONE visit. All files go into ONE parse request as separate content blocks (images → `image` blocks, PDFs → `document` blocks — Anthropic reads a PDF natively, every page, text + images), and a trailing instruction tells the model to return a single combined visit, never one object per page/file. **Roberta's clinical notes arrive as PDFs** — this is why a multi-page PDF works as one file rather than a screenshot per page. Backend input fields, newest-first: `files[]` (mixed images/PDFs, current), `images[]` (images only, earlier), `image`+`image_media_type` (original single). All still handled.
+
+**⚠️ Request-size ceiling — NOT just a per-file cap.** Netlify caps a synchronous function request at ~6 MB, and base64 inflates bytes ~4/3. So `LogVisitPrompt` enforces a **TOTAL** budget across all pages (`MAX_TOTAL_BYTES = 4 MB` of originals ≈ 5.5 MB encoded), not a per-file limit — two large photos could otherwise blow the limit with an opaque failure. Over budget → a clear message; we **reject rather than compress** (locked upload rule). A text PDF note is tiny, so this never bites the Roberta use case. Verified end-to-end: a 2-page PDF returns one visit with treatments merged across both pages.
 
 ---
 
