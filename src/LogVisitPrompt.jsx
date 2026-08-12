@@ -2,6 +2,19 @@ import { useState, useRef, useEffect } from 'react'
 import { saveParsedVisit } from './saveVisit'
 import AreaQuestions from './AreaQuestions'
 
+// Accepted upload types for a document (note/receipt): images and PDFs. Roberta's
+// notes arrive as PDFs — Anthropic reads them natively, all pages at once.
+const ACCEPT = 'image/*,application/pdf'
+const isAllowedType = (t) => t.startsWith('image/') || t === 'application/pdf'
+
+// The parse request carries every page as base64 in one JSON body, and Netlify
+// caps a function request at ~6 MB. base64 inflates bytes by ~4/3, so the raw
+// total must stay well under that. 4 MB of originals ≈ 5.5 MB encoded — a safe
+// margin, and far more than a text PDF or a few screenshots ever need. We
+// reject over this rather than silently compress (the locked upload rule).
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024
+const fmtMB = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+
 /**
  * LogVisitPrompt
  *
@@ -91,16 +104,21 @@ function LogVisitFlow({ onClose, onRefetch }) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => {
-        // result is a data URL "data:image/jpeg;base64,…"; keep just the base64.
+        // result is a data URL "data:…;base64,…"; keep just the base64 part.
         resolve({
           id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
           file,
-          previewUrl: URL.createObjectURL(file),
+          name: file.name,
+          size: file.size,
+          isPdf: file.type === 'application/pdf',
+          // A PDF can't render in <img>; the tile shows a document icon instead,
+          // so only images need an object URL.
+          previewUrl: file.type === 'application/pdf' ? null : URL.createObjectURL(file),
           base64: String(reader.result).split(',')[1],
           mediaType: file.type,
         })
       }
-      reader.onerror = () => reject(new Error('Could not read the image'))
+      reader.onerror = () => reject(new Error('Could not read the file'))
       reader.readAsDataURL(file)
     })
   }
@@ -113,25 +131,33 @@ function LogVisitFlow({ onClose, onRefetch }) {
     if (selected.length === 0) return
 
     for (const f of selected) {
-      if (!f.type.startsWith('image/')) {
-        setError('Please choose image files only')
+      if (!isAllowedType(f.type)) {
+        setError('Please choose photos or PDF files')
         return
       }
-      if (f.size > 5 * 1024 * 1024) {
-        setError('Each page must be under 5 MB')
-        return
-      }
+    }
+
+    // Enforce the request-size ceiling across everything already added plus the
+    // new files, so a multi-page note can't quietly exceed Netlify's limit.
+    const existing = pages.reduce((sum, p) => sum + (p.size || 0), 0)
+    const incoming = selected.reduce((sum, f) => sum + f.size, 0)
+    if (existing + incoming > MAX_TOTAL_BYTES) {
+      setError(
+        `That's ${fmtMB(existing + incoming)} total — the limit is ${fmtMB(MAX_TOTAL_BYTES)}. ` +
+          'Try fewer pages, or export the PDF at a smaller size.'
+      )
+      return
     }
 
     setReadingPages(true)
     try {
       const newPages = await Promise.all(selected.map(readPage))
-      // Append, so pages can be added one at a time (camera captures one shot
-      // at a time on phones) or several at once from the library.
+      // Append, so pages can be added one at a time (a phone camera shoots one
+      // page at a time) or several at once from the library.
       setPages((prev) => [...prev, ...newPages])
       setStep('photo-input')
     } catch {
-      setError('Could not read one of the images. Please try again.')
+      setError('Could not read one of the files. Please try again.')
     } finally {
       setReadingPages(false)
     }
@@ -145,7 +171,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
   function removePage(id) {
     setPages((prev) => {
       const gone = prev.find((p) => p.id === id)
-      if (gone) URL.revokeObjectURL(gone.previewUrl)
+      if (gone?.previewUrl) URL.revokeObjectURL(gone.previewUrl)
       const next = prev.filter((p) => p.id !== id)
       if (next.length === 0) setStep('choose')
       return next
@@ -153,7 +179,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
   }
 
   function cancelPhoto() {
-    pages.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+    pages.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
     setPages([])
     if (fileInputRef.current) fileInputRef.current.value = ''
     setStep('choose')
@@ -205,8 +231,8 @@ function LogVisitFlow({ onClose, onRefetch }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // All pages of the note in one request — one document, one visit.
-          images: pages.map((p) => ({ data: p.base64, media_type: p.mediaType })),
+          // Every file (images and/or PDFs) in one request — one visit.
+          files: pages.map((p) => ({ data: p.base64, media_type: p.mediaType })),
         }),
       })
       const data = await response.json()
@@ -231,7 +257,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
 
   function handleStartOver() {
     setText('')
-    pages.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+    pages.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
     setPages([])
     setParsed(null)
     setAreaAnswers({})
@@ -369,9 +395,9 @@ function LogVisitFlow({ onClose, onRefetch }) {
           >
             <div className="logvisit-choice-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 8h3.5l1.5-2h8l1.5 2H21v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><circle cx="12" cy="13.5" r="3.5" stroke="currentColor" strokeWidth="1.4"/></svg></div>
             <div className="logvisit-choice-text">
-              <div className="logvisit-choice-title">Take a photo</div>
+              <div className="logvisit-choice-title">Photo or PDF</div>
               <div className="logvisit-choice-sub">
-                A receipt or note from your provider — add every page
+                A receipt or note from your provider — photos or a PDF, every page
               </div>
             </div>
           </button>
@@ -394,7 +420,7 @@ function LogVisitFlow({ onClose, onRefetch }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={ACCEPT}
           multiple
           onChange={handleFileSelect}
           style={{ display: 'none' }}
@@ -424,15 +450,29 @@ function LogVisitFlow({ onClose, onRefetch }) {
           <h3 className="logvisit-flow-title">Ready to parse</h3>
           <p className="logvisit-flow-sub">
             {multi
-              ? `AI will read all ${pages.length} pages as one visit.`
-              : 'AI will read this and organize it. Add more pages if your note runs long.'}
+              ? `AI will read all ${pages.length} files as one visit.`
+              : pages[0].isPdf
+                ? 'AI will read every page of this PDF as one visit.'
+                : 'AI will read this and organize it. Add more pages if your note runs long.'}
           </p>
         </div>
 
         <div className="logvisit-pages">
           {pages.map((p, i) => (
             <div key={p.id} className="logvisit-page">
-              <img src={p.previewUrl} alt={`Page ${i + 1}`} className="logvisit-page-img" />
+              {p.isPdf ? (
+                // A PDF can't preview in <img>; show a document tile with its
+                // name so the patient can still tell pages apart.
+                <div className="logvisit-page-pdf">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 2h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                    <path d="M14 2v4h4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="logvisit-page-pdf-name">{p.name}</span>
+                </div>
+              ) : (
+                <img src={p.previewUrl} alt={`Page ${i + 1}`} className="logvisit-page-img" />
+              )}
               <span className="logvisit-page-num">{i + 1}</span>
               <button
                 type="button"

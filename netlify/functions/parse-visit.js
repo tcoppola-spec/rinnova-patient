@@ -164,39 +164,49 @@ export const handler = async (event) => {
     };
   }
 
-  const { text, image, image_media_type, images } = body;
+  const { text, image, image_media_type, images, files } = body;
 
-  // Normalise to a single list of pages. New clients send `images` (an array,
-  // for multi-page clinical notes); older ones send a single `image` +
-  // `image_media_type`. A note can run several pages and it is ONE visit, so
-  // every page goes into ONE request and the model is told to combine them.
+  // Normalise every document input into one list of { data, media_type }. A
+  // note can run several pages and it is ONE visit, so all of them go into ONE
+  // request and the model is told to combine them.
+  //   files  — the current client: a mix of images AND PDFs.
+  //   images — earlier client: images only.
+  //   image + image_media_type — the original single-image path.
+  // Provider notes (Roberta's) arrive as PDFs; Anthropic reads a PDF natively
+  // (all pages, text + images) from a "document" block, so a whole multi-page
+  // note is one file, not one screenshot per page.
   let pages = [];
-  if (Array.isArray(images) && images.length > 0) {
-    pages = images
-      .filter((p) => p && p.data && p.media_type)
-      .map((p) => ({ data: p.data, media_type: p.media_type }));
-  } else if (image && image_media_type) {
-    pages = [{ data: image, media_type: image_media_type }];
-  }
+  const source = Array.isArray(files) && files.length > 0
+    ? files
+    : Array.isArray(images) && images.length > 0
+      ? images
+      : image && image_media_type
+        ? [{ data: image, media_type: image_media_type }]
+        : [];
+  pages = source.filter((p) => p && p.data && p.media_type);
+
+  const isPdf = (mt) => mt === "application/pdf";
+  const toBlock = (p) =>
+    isPdf(p.media_type)
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: p.data } }
+      : { type: "image", source: { type: "base64", media_type: p.media_type, data: p.data } };
 
   // Build the user message content based on input type
   let userContent;
 
   if (pages.length > 0) {
-    // Multimodal request. Each page is its own image block; one text block at
-    // the end tells the model they are pages of a SINGLE document for ONE
-    // visit, so a 2-page note doesn't come back as two visits.
-    const instruction =
-      pages.length === 1
-        ? "Parse this treatment receipt/note photo into the Rinnova JSON schema."
-        : `These ${pages.length} images are consecutive pages of ONE document for ONE visit. Read them together and return a SINGLE Rinnova JSON object that combines everything across all pages — one visit, with all its treatments, areas and products merged. Do not return one object per page.`;
-    userContent = [
-      ...pages.map((p) => ({
-        type: "image",
-        source: { type: "base64", media_type: p.media_type, data: p.data },
-      })),
-      { type: "text", text: instruction },
-    ];
+    // One text block after the documents tells the model to return a SINGLE
+    // visit — so neither a 2-file upload nor a multi-page PDF comes back as
+    // several visits.
+    let instruction;
+    if (pages.length > 1) {
+      instruction = `These ${pages.length} files are one visit. They may be separate pages or a mix of images and PDFs; read them all together and return a SINGLE Rinnova JSON object combining every treatment, area and product across them. Do not return one object per file.`;
+    } else if (pages.some((p) => isPdf(p.media_type))) {
+      instruction = `This document may span several pages. Read ALL pages and return a SINGLE Rinnova JSON object for the one visit, combining everything across the pages. Do not return one object per page.`;
+    } else {
+      instruction = "Parse this treatment receipt/note photo into the Rinnova JSON schema.";
+    }
+    userContent = [...pages.map(toBlock), { type: "text", text: instruction }];
   } else if (text && typeof text === "string" && text.trim().length > 0) {
     // Text input
     userContent = text.trim();
