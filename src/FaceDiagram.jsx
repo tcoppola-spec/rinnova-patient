@@ -6,6 +6,7 @@ import {
   DOT_RADIUS,
   FIELD_RADIUS,
   FULL_FACE,
+  FULL_FACE_NAMES,
   mirrorX,
 } from './faceGeometry'
 import { categoryColor, categoryMark } from './treatmentColors'
@@ -43,16 +44,6 @@ import { categoryColor, categoryMark } from './treatmentColors'
  *   legend: optional node; pass null to suppress the auto legend
  */
 
-// A region name that means "the whole face" rather than a point. Field
-// treatments (resurfacing, Ultherapy) are often applied everywhere; this draws
-// one big halo instead of scattering marks. Matched case-insensitively.
-//
-// Bare "face" is deliberately NOT here: it resolves to null in faceCoordinates
-// (a generic "Face" area was historically a fabrication signal — see the old
-// receipt bug), so treating it as full-face here would draw a halo while
-// saveVisit reports the area as unplaced. Only the explicit whole-face names,
-// all of which resolve, trigger the big halo.
-const FULL_FACE_NAMES = new Set(['full face', 'whole face', 'entire face'])
 
 /**
  * The face illustration, straight from scripts/new-face.svg.

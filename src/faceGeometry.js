@@ -33,11 +33,21 @@ export const DOT_RADIUS = 6.7
 // transparent, so this is the outer reach of the glow, not a hard edge.
 export const FIELD_RADIUS = 30
 
-// A full-face treatment (most resurfacing, Ultherapy) is drawn as one large
-// halo over the centre of the face rather than a mark per region. Centre sits
-// between the forehead (y≈83) and chin (y≈251); the radius reaches out to the
-// cheeks and up to the brow without spilling far past the outline.
+// A full-face treatment (most resurfacing, Ultherapy, LED) is drawn as one
+// large halo over the centre of the face rather than a mark per region. Centre
+// sits between the forehead (y≈83) and chin (y≈251); the radius reaches out to
+// the cheeks and up to the brow without spilling far past the outline.
 export const FULL_FACE = { x: MIRROR_AXIS, y: 168, radius: 92 }
+
+// Region names that mean "the whole face". Used by FaceDiagram (draw one big
+// halo) and saveVisit (place it, don't call it unplaced).
+//
+// ⚠️ Bare "face" is included ON PURPOSE, and it's safe only because BOTH callers
+// gate this on the treatment being a FIELD treatment (energy / resurfacing /
+// other). For an injectable (a point), "face" still resolves to nothing — the
+// guard against a fabricated generic "Face" dot on a receipt, which was a real
+// bug. A laser or LED "to the face", though, genuinely means the whole face.
+export const FULL_FACE_NAMES = new Set(['full face', 'whole face', 'entire face', 'face'])
 
 /** Reflect an x coordinate across the artwork's axis of symmetry. */
 export function mirrorX(x) {

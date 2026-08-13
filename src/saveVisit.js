@@ -25,7 +25,8 @@
 
 import { supabase } from './supabaseClient'
 import { getCoordinates, assertPlacement } from './faceCoordinates'
-import { MIRROR_AXIS } from './faceGeometry'
+import { MIRROR_AXIS, FULL_FACE, FULL_FACE_NAMES } from './faceGeometry'
+import { categoryMark } from './treatmentColors'
 
 /**
  * Deterministic fan-out for the duplicate-dot bug.
@@ -95,8 +96,27 @@ export async function saveParsedVisit(parsed) {
   const payloadTreatments = treatments
     .filter((t) => t?.name)
     .map((t) => {
+      const treatmentIsField = categoryMark(t.color_key) === 'field'
+
       const tAreas = (areasByTreatment[t.name] || []).map((a) => {
         let mirror = a.mirror === true
+
+        // A whole-face FIELD treatment (laser, LED, peel, Ultherapy) is one big
+        // halo, drawn by name in FaceDiagram. Place it at the face centre so it
+        // is never reported "unplaced". Gated on the treatment being a field:
+        // for an injectable, a bare "face" still falls through to the
+        // no-fabrication path below and gets no mark.
+        const fullFaceName = (a.friendly_name || a.clinical_name || '').trim().toLowerCase()
+        if (treatmentIsField && FULL_FACE_NAMES.has(fullFaceName)) {
+          return {
+            friendly_name: a.friendly_name,
+            clinical_name: a.clinical_name ?? null,
+            dose: a.dose ?? null,
+            mirror: false,
+            x: FULL_FACE.x,
+            y: FULL_FACE.y,
+          }
+        }
 
         // Place from the CLINICAL name when we have one, and only fall back to
         // the friendly name. Everyday speech is coarser than anatomy: "buccal"
