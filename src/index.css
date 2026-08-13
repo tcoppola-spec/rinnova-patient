@@ -14,6 +14,7 @@
      the four warm injectable tones so a laser never reads as filler. Keep in
      step with src/treatmentColors.js — that file is the source of truth. */
   --energy: #2CA6A4;      /* Ultherapy, RF, ultrasound — cool teal */
+  --light: #E5325F;       /* LED / red-light therapy — magenta-red */
   --resurfacing: #E0739F; /* laser resurfacing, peels, microneedling — rose */
 
   /* UI tones derived from brand */

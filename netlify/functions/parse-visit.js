@@ -112,8 +112,9 @@ TREATMENTS vs PRODUCTS — put each line item in the right place:
   injectables (neurotoxins: Botox, Xeomin, Dysport, Jeuveau, Daxxify; fillers:
   Radiesse, RHA, Restylane, Juvederm; biostimulators: Sculptra), AND
   non-injected in-office procedures done to the FACE: energy/ultrasound devices
-  (Ultherapy, Sofwave, Thermage, RF microneedling, Morpheus8) and resurfacing
-  (laser resurfacing, CO2, Fraxel, IPL/BBL, chemical peels, microneedling,
+  (Ultherapy, Sofwave, Thermage, RF microneedling, Morpheus8), light therapy
+  (LED / red light, phototherapy, photofacial), and resurfacing (laser
+  resurfacing, CO2, Fraxel, IPL/BBL, chemical peels, microneedling,
   dermaplaning, HydraFacial).
 - "products" = things the patient takes HOME: serums, creams, cleansers,
   supplements, skincare, at-home devices. These are NOT administered in office
@@ -132,9 +133,10 @@ color_key (a COLOR category, pick the closest):
 - Any neurotoxin/tox → "xeomin".
 - Radiesse → "radiesse"; diluted/hyperdilute Radiesse → "radiesse-light".
 - Any HA filler (RHA, Restylane, Juvederm, etc.) → "rha".
-- Energy / light / ultrasound / RF devices (Ultherapy, Sofwave, Thermage,
-  Morpheus8, RF microneedling, AND light-based treatments: LED / red light
-  therapy, low-level light therapy, phototherapy, photofacial) → "energy".
+- Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
+  RF microneedling) → "energy".
+- LED / light therapy (LED, red light therapy, low-level light therapy,
+  phototherapy, photofacial) → "light".
 - Resurfacing (any laser resurfacing, CO2, Fraxel, IPL/BBL, chemical peel,
   microneedling, dermaplaning, HydraFacial) → "resurfacing".
 - Anything else administered that fits none of the above (including body

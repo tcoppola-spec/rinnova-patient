@@ -30,10 +30,13 @@ export const TREATMENT_CATEGORIES = {
   rha: { color: '#FF8C42', mark: 'point', label: 'HA filler' }, // any HA filler
 
   // --- Non-injectables: a field, in new tones distinct from the injectables ---
-  // Cool teal for energy & light (Ultherapy, RF, ultrasound, LED / red-light
-  // therapy) — reads as the device side of the practice, unmistakable against
-  // the warm four.
-  energy: { color: '#2CA6A4', mark: 'field', label: 'Energy & light' },
+  // Cool teal for energy devices (Ultherapy, RF, ultrasound) — reads as the
+  // tightening / device side of the practice, unmistakable against the warm
+  // four.
+  energy: { color: '#2CA6A4', mark: 'field', label: 'Energy / ultrasound' },
+  // LED / red-light therapy gets its own magenta-red — it literally IS red
+  // light, so the halo reads as what it is. A field like the rest.
+  light: { color: '#E5325F', mark: 'field', label: 'LED / light therapy' },
   // Rose for resurfacing (laser resurfacing, peels, microneedling). Shares the
   // warm-pink family with the injectables but only ever appears as a
   // translucent halo, never a solid dot, so it stays distinct from Radiesse

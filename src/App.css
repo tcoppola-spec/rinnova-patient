@@ -320,6 +320,7 @@
 .treatment-dot-radiesse-light { background: var(--coral); }
 .treatment-dot-rha { background: var(--orange); }
 .treatment-dot-energy { background: var(--energy); }
+.treatment-dot-light { background: var(--light); }
 .treatment-dot-resurfacing { background: var(--resurfacing); }
 .treatment-dot-other { background: var(--muted); }
 

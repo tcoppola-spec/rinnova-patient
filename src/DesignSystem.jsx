@@ -50,7 +50,8 @@ const TREATMENT_TOKENS = [
   ['--magenta', 'Radiesse', 'radiesse', 'Full-strength biostimulator'],
   ['--coral', 'Diluted Radiesse', 'radiesse-light', 'Hyperdilute'],
   ['--orange', 'HA filler', 'rha', 'RHA, Restylane, Juvederm, Belotero'],
-  ['--energy', 'Energy & light', 'energy', 'Ultherapy, RF, ultrasound, LED / red light — a field, not a point'],
+  ['--energy', 'Energy / ultrasound', 'energy', 'Ultherapy, RF, ultrasound — a field, not a point'],
+  ['--light', 'LED / light therapy', 'light', 'LED, red light, phototherapy — a field'],
   ['--resurfacing', 'Resurfacing', 'resurfacing', 'Laser resurfacing, peels, microneedling — a field'],
 ]
 
