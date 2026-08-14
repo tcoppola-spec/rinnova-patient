@@ -3802,3 +3802,24 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Possible-duplicate warning on the log-visit save step. A quiet caution, not
+   an alarm — the patient decides whether to proceed. */
+.logvisit-dup {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--magenta-soft);
+}
+
+.logvisit-dup-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.logvisit-dup-text strong {
+  font-weight: 600;
+}

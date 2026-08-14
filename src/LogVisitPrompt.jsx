@@ -15,6 +15,20 @@ const isAllowedType = (t) => t.startsWith('image/') || t === 'application/pdf'
 const MAX_TOTAL_BYTES = 4 * 1024 * 1024
 const fmtMB = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 
+// Today as YYYY-MM-DD in local time — the format visit_date is stored in.
+// en-CA renders exactly YYYY-MM-DD.
+const todayISO = () => new Date().toLocaleDateString('en-CA')
+
+// "August 11, 2026" from a YYYY-MM-DD string, without timezone drift.
+function fmtVisitDate(d) {
+  if (!d) return 'that day'
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 /**
  * LogVisitPrompt
  *
@@ -26,7 +40,7 @@ const fmtMB = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
  *   onRefetch — refetch fn from usePatientData; called after a successful save
  *               so the timeline picks up the new visit.
  */
-function LogVisitPrompt({ onRefetch }) {
+function LogVisitPrompt({ onRefetch, visits = [] }) {
   const [expanded, setExpanded] = useState(false)
 
   if (!expanded) {
@@ -47,7 +61,7 @@ function LogVisitPrompt({ onRefetch }) {
     )
   }
 
-  return <LogVisitFlow onClose={() => setExpanded(false)} onRefetch={onRefetch} />
+  return <LogVisitFlow onClose={() => setExpanded(false)} onRefetch={onRefetch} visits={visits} />
 }
 
 /**
@@ -60,9 +74,12 @@ function LogVisitPrompt({ onRefetch }) {
  *   - 'parsing' — loading state
  *   - 'result' — review the parsed visit, then save it
  */
-function LogVisitFlow({ onClose, onRefetch }) {
+function LogVisitFlow({ onClose, onRefetch, visits = [] }) {
   const [step, setStep] = useState('choose')
   const [text, setText] = useState('')
+  // When a visit already exists on this date, holds it so we can warn before
+  // saving a possible duplicate (patient decides — proceed or cancel).
+  const [pendingDup, setPendingDup] = useState(null)
   // A note can run several pages, and they are ONE visit. Each page is
   // { id, file, previewUrl, base64, mediaType }; all pages go to the parser
   // together. (Progress photos in the archive are still one-per-tile — this
@@ -327,7 +344,21 @@ function LogVisitFlow({ onClose, onRefetch }) {
     return merged
   }
 
-  async function handleSave() {
+  async function handleSave(force = false) {
+    // Duplicate guard: if a visit already exists on this date, warn once and let
+    // the patient decide. A soft check — same date is the signal — because two
+    // real visits on one day are rare, and re-uploading the same note is not.
+    // The parser leaves the date null when the document didn't state one; that
+    // saves as today (see saveVisit), so we compare against today in that case.
+    if (!force) {
+      const effectiveDate = parsed?.visit?.visit_date || todayISO()
+      const existing = (visits || []).find((v) => v.visit_date === effectiveDate)
+      if (existing) {
+        setPendingDup(existing)
+        return
+      }
+    }
+    setPendingDup(null)
     setSaveError(null)
     setSaving(true)
     try {
@@ -596,24 +627,55 @@ function LogVisitFlow({ onClose, onRefetch }) {
         )}
 
         {saveError && <div className="form-error">{saveError}</div>}
-        <div className="form-actions" style={{ marginTop: 20 }}>
-          <button
-            type="button"
-            onClick={handleStartOver}
-            className="form-cancel-btn"
-            disabled={saving}
-          >
-            Start over
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="form-save-btn"
-            disabled={saving}
-          >
-            {saving ? 'Saving…' : 'Save to my record'}
-          </button>
-        </div>
+
+        {pendingDup ? (
+          // Possible duplicate: a visit already exists on this date. Warn, don't
+          // block — the patient decides.
+          <div className="logvisit-dup">
+            <p className="logvisit-dup-text">
+              You already have a visit logged on{' '}
+              <strong>{fmtVisitDate(pendingDup.visit_date)}</strong>
+              {pendingDup.body_regions ? ` (${pendingDup.body_regions})` : ''}. This
+              might be the same one.
+            </p>
+            <div className="form-actions">
+              <button
+                type="button"
+                onClick={() => setPendingDup(null)}
+                className="form-cancel-btn"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave(true)}
+                className="form-save-btn"
+                disabled={saving}
+              >
+                {saving ? 'Saving…' : 'Save anyway'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="form-actions" style={{ marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={handleStartOver}
+              className="form-cancel-btn"
+              disabled={saving}
+            >
+              Start over
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              className="form-save-btn"
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save to my record'}
+            </button>
+          </div>
+        )}
       </div>
     )
   }
