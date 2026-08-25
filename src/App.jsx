@@ -179,7 +179,12 @@ function App() {
           providerPhone={patient.primary_provider?.phone || patient.provider_phone}
         />
 
-        <LogVisitPrompt onRefetch={refetch} visits={visits} />
+        <LogVisitPrompt
+          onRefetch={refetch}
+          visits={visits}
+          patientName={patient.first_name}
+          providerEmail={patient.primary_provider?.email || ''}
+        />
 
         <VisitsTimeline
           visits={visits}

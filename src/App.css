@@ -3823,3 +3823,16 @@
 .logvisit-dup-text strong {
   font-weight: 600;
 }
+
+/* Quiet fallback link on the log-visit choose step: "ask your provider for your
+   record". A gentle text link, not a third button — it's the escape hatch for
+   someone who has nothing to log yet. */
+.logvisit-request {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--magenta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

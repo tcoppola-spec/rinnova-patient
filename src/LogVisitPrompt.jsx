@@ -40,7 +40,7 @@ function fmtVisitDate(d) {
  *   onRefetch — refetch fn from usePatientData; called after a successful save
  *               so the timeline picks up the new visit.
  */
-function LogVisitPrompt({ onRefetch, visits = [] }) {
+function LogVisitPrompt({ onRefetch, visits = [], patientName = '', providerEmail = '' }) {
   const [expanded, setExpanded] = useState(false)
 
   if (!expanded) {
@@ -61,7 +61,34 @@ function LogVisitPrompt({ onRefetch, visits = [] }) {
     )
   }
 
-  return <LogVisitFlow onClose={() => setExpanded(false)} onRefetch={onRefetch} visits={visits} />
+  return (
+    <LogVisitFlow
+      onClose={() => setExpanded(false)}
+      onRefetch={onRefetch}
+      visits={visits}
+      patientName={patientName}
+      providerEmail={providerEmail}
+    />
+  )
+}
+
+/**
+ * Build a mailto: link asking the provider for a treatment record. Opens the
+ * patient's own mail app with subject + body prefilled; they fill or confirm the
+ * recipient. A zero-backend fallback for the "I don't have anything to log yet"
+ * moment. Reliable on phones (where testers are); on desktop it needs a
+ * configured mail client, which is an acceptable limit for a fallback.
+ */
+function recordRequestHref(patientName, providerEmail) {
+  const subject = 'Request for my treatment record'
+  const body =
+    'Hi,\n\n' +
+    'Could you please send me a copy of my treatment record from my most ' +
+    'recent visit, including the products used, amounts, and treatment areas? ' +
+    'A clinical note or an itemized receipt works perfectly.\n\n' +
+    'Thank you!' +
+    (patientName ? `\n${patientName}` : '')
+  return `mailto:${providerEmail || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
 /**
@@ -74,7 +101,7 @@ function LogVisitPrompt({ onRefetch, visits = [] }) {
  *   - 'parsing' — loading state
  *   - 'result' — review the parsed visit, then save it
  */
-function LogVisitFlow({ onClose, onRefetch, visits = [] }) {
+function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', providerEmail = '' }) {
   const [step, setStep] = useState('choose')
   const [text, setText] = useState('')
   // When a visit already exists on this date, holds it so we can warn before
@@ -447,6 +474,15 @@ function LogVisitFlow({ onClose, onRefetch, visits = [] }) {
             </div>
           </button>
         </div>
+
+        {/* For the "I don't have anything to log yet" moment: a quiet fallback
+            that opens the patient's mail app with a record request prefilled. */}
+        <a
+          href={recordRequestHref(patientName, providerEmail)}
+          className="logvisit-request"
+        >
+          Don&apos;t have it yet? Ask your provider for your record
+        </a>
 
         <input
           ref={fileInputRef}
