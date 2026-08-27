@@ -11,7 +11,7 @@
  * Uses sharp (a dev dependency only — it never ships in the app bundle).
  */
 import sharp from 'sharp'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -45,4 +45,26 @@ for (const { file, size, source } of targets) {
     .png()
     .toFile(join(outDir, file))
   console.log(`wrote public/${file} (${size}x${size})`)
+}
+
+// The iOS native app icon (Capacitor). Xcode's AppIcon asset is a single
+// 1024x1024 square, and it MUST be fully opaque — the App Store rejects an
+// icon that carries an alpha channel — so we .flatten() to drop alpha. The
+// gradient already fills the whole square, so flattening changes nothing
+// visible; it only removes the transparency sharp would otherwise write. This
+// replaces Capacitor's placeholder icon (white with blue shapes). Guarded so
+// the script still runs in a checkout that hasn't had `npx cap add ios` yet.
+const iosIconPath = join(
+  here, '..', 'ios', 'App', 'App',
+  'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png'
+)
+if (existsSync(dirname(iosIconPath))) {
+  await sharp(appIcon, { density: 384 })
+    .resize(1024, 1024)
+    .flatten({ background: '#7B2CBF' })
+    .png()
+    .toFile(iosIconPath)
+  console.log('wrote ios AppIcon-512@2x.png (1024x1024, opaque)')
+} else {
+  console.log('skipped ios AppIcon — no ios/ project (run `npx cap add ios` first)')
 }

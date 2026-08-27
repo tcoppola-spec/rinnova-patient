@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 
 /**
  * InfoPages — Privacy, Terms and Help, sharing one lazy chunk.
@@ -219,17 +220,19 @@ export function Help() {
         visit never deletes its photos.
       </p>
 
-      <h2 className="info-h2">Keeping Rinnova on your home screen</h2>
-      <p className="info-p">
-        On iPhone, open Rinnova in Safari, tap Share, then{' '}
-        <strong>Add to Home Screen</strong>. On Android and desktop Chrome, use
-        the <strong>Install</strong> button on the home page.
-      </p>
-
       <h2 className="info-h2">Getting updates</h2>
       <p className="info-p">
-        When a new version is ready you will see a bar at the bottom saying so.
-        Tap <strong>Refresh</strong>. That is all you need to do.
+        {Capacitor.isNativePlatform() ? (
+          <>
+            Rinnova updates through the App Store, like your other apps. Turn on
+            automatic updates and you never have to think about it.
+          </>
+        ) : (
+          <>
+            When a new version is ready you will see a bar at the bottom saying
+            so. Tap <strong>Refresh</strong>. That is all you need to do.
+          </>
+        )}
       </p>
 
       <h2 className="info-h2">The sign-in code did not arrive</h2>

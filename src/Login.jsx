@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import InstallPrompt from './InstallPrompt'
 
 /**
  * Login — passwordless sign-in via email OTP code.
@@ -31,10 +30,54 @@ import InstallPrompt from './InstallPrompt'
  * On successful verify we navigate to '/app' ourselves — App isn't mounted on
  * the /login route, so its auth listener can't do the redirect for us.
  */
+// Once a code is sent we remember it here, so that leaving the app to fetch the
+// code from email — which on iOS can EVICT the WebView from memory and cold-
+// reload it on return — restores the "enter your code" screen instead of
+// dumping the patient back at step one. Back at step one they'd tap "resend",
+// and a few of those trip Supabase's ~4-per-hour cap and lock sign-in (exactly
+// what happened in the native app). React state can't survive a reload;
+// localStorage can. TTL matches the code's own 1-hour validity — a day-old
+// pending flag shouldn't force the code screen.
+const PENDING_KEY = 'rinnova.login.pending'
+const PENDING_TTL_MS = 60 * 60 * 1000
+
+function readPendingEmail() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY)
+    if (!raw) return ''
+    const { email, ts } = JSON.parse(raw)
+    if (!email || !ts || Date.now() - ts > PENDING_TTL_MS) {
+      localStorage.removeItem(PENDING_KEY)
+      return ''
+    }
+    return email
+  } catch {
+    return ''
+  }
+}
+
+function writePendingEmail(email) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ email, ts: Date.now() }))
+  } catch {
+    /* private mode / storage disabled — the flow still works, just won't restore */
+  }
+}
+
+function clearPendingEmail() {
+  try {
+    localStorage.removeItem(PENDING_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 function Login() {
   const navigate = useNavigate()
-  const [step, setStep] = useState('email') // 'email' | 'code'
-  const [email, setEmail] = useState('')
+  // Lazy initialisers run once, on mount: if a fresh code is pending, resume on
+  // the code screen with the same address rather than starting over.
+  const [step, setStep] = useState(() => (readPendingEmail() ? 'code' : 'email')) // 'email' | 'code'
+  const [email, setEmail] = useState(() => readPendingEmail())
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('idle') // 'idle' | 'sending' | 'verifying'
   const [error, setError] = useState('')
@@ -58,6 +101,8 @@ function Login() {
       setError(friendlySendError(error))
       return false
     }
+    // A code is now out; remember it so a mid-flow app eviction resumes here.
+    writePendingEmail(email.trim())
     return true
   }
 
@@ -101,12 +146,16 @@ function Login() {
       setError(friendlyVerifyError(error))
       return
     }
+    // Signed in — the pending code is spent, so don't resume the code screen.
+    clearPendingEmail()
     // Session is now stored; App picks it up on '/app'. ("/" is the public
     // landing page and would just bounce us here again.)
     navigate('/app')
   }
 
   function useDifferentEmail() {
+    // Deliberately starting over — drop the pending code so we don't resume it.
+    clearPendingEmail()
     setStep('email')
     setCode('')
     setError('')
@@ -187,15 +236,6 @@ function Login() {
           </form>
         )}
       </div>
-
-      {/* Also offered BEFORE sign-in. The install card originally lived only
-          inside App, i.e. behind auth — which put it everywhere except the one
-          screen a new patient actually starts on. Someone invited to Rinnova
-          should be able to install it as they arrive, not discover the option
-          later. Renders nothing when already installed or dismissed. */}
-      <div style={styles.installSlot}>
-        <InstallPrompt />
-      </div>
     </div>
   )
 }
@@ -266,10 +306,6 @@ const styles = {
     minHeight: '100vh',
     background: 'var(--page)',
     display: 'flex',
-    // Column so the install card stacks UNDER the sign-in card rather than
-    // beside it. alignItems still centres horizontally, justifyContent
-    // vertically, so the sign-in card sits where it always did.
-    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
@@ -277,11 +313,6 @@ const styles = {
     color: 'var(--body)',
   },
   card: {
-    width: '100%',
-    maxWidth: '380px',
-  },
-  // Matches the sign-in card's column so the two read as one stack.
-  installSlot: {
     width: '100%',
     maxWidth: '380px',
   },

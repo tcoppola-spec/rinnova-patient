@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from './supabaseClient'
 import FaceDiagram from './FaceDiagram'
-import InstallPrompt from './InstallPrompt'
 import RequestAccess from './RequestAccess'
 
 /**
@@ -124,9 +123,12 @@ function Landing() {
 
         {/* Above the features on purpose: someone who already knows what
             Rinnova is should not have to scroll past the pitch to get in. The
-            features are there to persuade anyone who does not. */}
+            features are there to persuade anyone who does not.
+            No "add to home screen" here: Rinnova is a native App Store app now,
+            and a PWA-install pitch alongside it only confuses which one to get.
+            When the App Store listing is live, an "App Store" button belongs
+            here. */}
         <div className="landing-actions">
-          <InstallPrompt variant="landing" />
           <Link to="/login" className="landing-signin">
             Sign in with your browser
           </Link>
