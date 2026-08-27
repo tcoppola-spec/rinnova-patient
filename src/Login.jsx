@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import { apiUrl } from './apiBase'
 
 /**
  * Login — passwordless sign-in via email OTP code.
@@ -40,6 +41,19 @@ import { supabase } from './supabaseClient'
 // pending flag shouldn't force the code screen.
 const PENDING_KEY = 'rinnova.login.pending'
 const PENDING_TTL_MS = 60 * 60 * 1000
+
+// The one demo address Apple's App Review uses to get past our invite-only,
+// emailed-code sign-in (a reviewer can't receive the code). Typing THIS email
+// routes the code to the reviewer-signin function instead of the normal OTP,
+// so no real inbox is involved. The secret code lives only in Netlify env +
+// the App Review notes — this address is just the routing key. See
+// netlify/functions/reviewer-signin.js. Harmless in the bundle: without the
+// server-side code, this email does nothing.
+const REVIEWER_EMAIL = 'appreview@rinnova.io'
+
+function isReviewerEmail(value) {
+  return value.trim().toLowerCase() === REVIEWER_EMAIL
+}
 
 function readPendingEmail() {
   try {
@@ -112,6 +126,13 @@ function Login() {
       setError('Enter your email address.')
       return
     }
+    // Reviewer: no real code to send (no inbox) — go straight to code entry,
+    // where the secret review code is validated server-side.
+    if (isReviewerEmail(email)) {
+      setError('')
+      setStep('code')
+      return
+    }
     const ok = await sendCode()
     if (ok) setStep('code')
   }
@@ -135,6 +156,36 @@ function Login() {
       setError('Enter the code from your email.')
       return
     }
+
+    // Reviewer path: exchange the review code for a session server-side (the
+    // function validates the code against a Netlify secret) instead of a normal
+    // OTP verify. Everything downstream is an ordinary Supabase session.
+    if (isReviewerEmail(email)) {
+      setStatus('verifying')
+      try {
+        const res = await fetch(apiUrl('/.netlify/functions/reviewer-signin'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), code: token }),
+        })
+        if (!res.ok) throw new Error('reviewer sign-in rejected')
+        const { access_token, refresh_token } = await res.json()
+        const { error: sessErr } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        })
+        if (sessErr) throw sessErr
+      } catch {
+        setStatus('idle')
+        setError('That code isn’t right. Double-check it and try again.')
+        return
+      }
+      setStatus('idle')
+      clearPendingEmail()
+      navigate('/app')
+      return
+    }
+
     setStatus('verifying')
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim(),

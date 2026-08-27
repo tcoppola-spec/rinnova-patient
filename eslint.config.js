@@ -26,4 +26,10 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Netlify Functions run on Node, not in the browser — they use `process`,
+    // Buffer, etc. Give just that directory the Node globals.
+    files: ['netlify/functions/**/*.js'],
+    languageOptions: { globals: { ...globals.node } },
+  },
 ])
