@@ -23,7 +23,12 @@
 }
 
 .page {
-  padding: 16px 20px 60px;
+  /* Respect the notch/status bar and home indicator. In a browser the safe-area
+     insets are 0, so this is identical to 16px/60px; in the installed PWA and
+     the native iOS app (both full-screen WebViews) it keeps the top utility bar
+     out from under the status-bar clock and lifts the footer off the home bar. */
+  padding: max(16px, env(safe-area-inset-top)) 20px
+           calc(60px + env(safe-area-inset-bottom));
 }
 
 .utility-bar {

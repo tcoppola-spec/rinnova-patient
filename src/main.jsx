@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import './index.css'
 import App from './App.jsx'
 import Landing from './Landing.jsx'
@@ -86,7 +87,11 @@ createRoot(document.getElementById('root')).render(
  *
  * Registered after load so it never competes with the first paint.
  */
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Native (Capacitor) serves the bundled assets from the app itself, so a
+// service worker would sit between the WebView and local files and can serve
+// stale assets across TestFlight updates — the exact "my update didn't apply"
+// bug it prevents on the web. Web-only.
+if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((err) => {
       // Installability is a nice-to-have; the app works fine without it.

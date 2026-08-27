@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from './supabaseClient'
 import FaceDiagram from './FaceDiagram'
 import InstallPrompt from './InstallPrompt'
@@ -72,6 +73,14 @@ function Landing() {
   const [year] = useState(() => new Date().getFullYear())
 
   useEffect(() => {
+    // The native app loads from capacitor://localhost/ — i.e. this route. But an
+    // installed app should never show the "download the app" marketing page; it
+    // goes straight to the record, which itself redirects to /login when there's
+    // no session. Do this before the session check so marketing never flashes.
+    if (Capacitor.isNativePlatform()) {
+      navigate('/app', { replace: true })
+      return
+    }
     let cancelled = false
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return

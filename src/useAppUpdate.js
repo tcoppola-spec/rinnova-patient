@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 
 /**
  * useAppUpdate — "is the app I am running older than the one being served?"
@@ -32,6 +33,10 @@ export function useAppUpdate() {
   useEffect(() => {
     // Dev serves no version.json, and the service worker is production-only.
     if (!import.meta.env.PROD) return
+    // Native app: updates ship through TestFlight / the App Store, not a page
+    // reload. The bundled build id will never match the live version.json, so
+    // this check would show a "Refresh" banner that can never resolve.
+    if (Capacitor.isNativePlatform()) return
 
     let cancelled = false
 

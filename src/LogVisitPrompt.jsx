@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { saveParsedVisit } from './saveVisit'
 import AreaQuestions from './AreaQuestions'
+import { apiUrl } from './apiBase'
 
 // Accepted upload types for a document (note/receipt): images and PDFs. Roberta's
 // notes arrive as PDFs — Anthropic reads them natively, all pages at once.
@@ -238,7 +239,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
     }
     setStep('parsing')
     try {
-      const response = await fetch('/.netlify/functions/parse-visit', {
+      const response = await fetch(apiUrl('/.netlify/functions/parse-visit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmed }),
@@ -271,7 +272,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
     }
     setStep('parsing')
     try {
-      const response = await fetch('/.netlify/functions/parse-visit', {
+      const response = await fetch(apiUrl('/.netlify/functions/parse-visit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

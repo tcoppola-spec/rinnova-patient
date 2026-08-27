@@ -5,7 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // dist: the web build. ios: the native Xcode project, which contains a COPY
+  // of the built bundle under App/App/public — linting minified output is noise.
+  // .netlify: local Netlify dev cache.
+  globalIgnores(['dist', 'ios', '.netlify']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

@@ -149,7 +149,18 @@ color_key (a COLOR category, pick the closest):
 
 Return ONLY the JSON object. No prose. No markdown fences. Just JSON.`;
 
-export const handler = async (event) => {
+// The native iOS app (Capacitor) loads from capacitor://localhost, so its call
+// to this function is cross-origin and the WebView enforces CORS. On the web the
+// call is same-origin and these headers are simply ignored. This endpoint is
+// already public and unauthenticated (any browser can POST to it), so a wildcard
+// origin widens nothing; no credentials are sent, so "*" is safe here.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+const parseHandler = async (event) => {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -260,4 +271,14 @@ export const handler = async (event) => {
       }),
     };
   }
+};
+
+// Public wrapper: answer the CORS preflight, and stamp CORS headers onto every
+// response from the parser above (so the native app can read them).
+export const handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: CORS_HEADERS, body: "" };
+  }
+  const res = await parseHandler(event);
+  return { ...res, headers: { ...(res.headers || {}), ...CORS_HEADERS } };
 };

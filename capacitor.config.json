@@ -1,0 +1,8 @@
+{
+  "appId": "io.rinnova.app",
+  "appName": "Rinnova",
+  "webDir": "dist",
+  "ios": {
+    "backgroundColor": "#faf7f2"
+  }
+}
