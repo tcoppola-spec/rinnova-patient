@@ -253,13 +253,18 @@ function Login() {
             <input
               id="invite"
               type="text"
-              autoCapitalize="characters"
+              // NOT autoCapitalize="characters": forcing the iOS keyboard into
+              // caps-lock made some letters (a tester hit "I") drop or fail to
+              // register in this controlled input. The code is matched
+              // case-insensitively in the DB (db/access_codes.sql), so a
+              // normal keyboard and any casing both work.
+              autoCapitalize="none"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="From your invitation"
+              placeholder="e.g. rinnova-pilot"
               style={styles.input}
             />
             <p style={styles.hint}>
