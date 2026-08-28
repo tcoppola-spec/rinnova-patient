@@ -92,6 +92,7 @@ function Login() {
   // the code screen with the same address rather than starting over.
   const [step, setStep] = useState(() => (readPendingEmail() ? 'code' : 'email')) // 'email' | 'code'
   const [email, setEmail] = useState(() => readPendingEmail())
+  const [inviteCode, setInviteCode] = useState('')
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('idle') // 'idle' | 'sending' | 'verifying'
   const [error, setError] = useState('')
@@ -106,9 +107,17 @@ function Login() {
     setError('')
     setResendNote('')
     setStatus('sending')
+    // A shared invite code (the friends & family pilot) lets a new email create
+    // its own record without being hand-added to the allowlist. It rides in as
+    // user metadata, which the enrollment trigger reads on account creation
+    // (db/access_codes.sql). It's ignored for an already-existing account, so a
+    // returning tester correctly leaves it blank.
+    const options = { shouldCreateUser: true }
+    const trimmedInvite = inviteCode.trim()
+    if (trimmedInvite) options.data = { access_code: trimmedInvite }
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: true },
+      options,
     })
     setStatus('idle')
     if (error) {
@@ -240,6 +249,23 @@ function Login() {
               style={styles.input}
             />
 
+            <label htmlFor="invite" style={styles.label}>Invite code</label>
+            <input
+              id="invite"
+              type="text"
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="From your invitation"
+              style={styles.input}
+            />
+            <p style={styles.hint}>
+              New to Rinnova? Enter your invite code. Signing back in? Leave it blank.
+            </p>
+
             {error && <p style={styles.error}>{error}</p>}
 
             <button type="submit" disabled={busy} style={buttonStyle(busy)}>
@@ -300,10 +326,10 @@ function friendlySendError(error) {
   if (msg.includes('email') && msg.includes('invalid')) {
     return 'That email doesn’t look right. Check it and try again.'
   }
-  // Enrollment gate (db/gated_enrollment.sql): a non-allowlisted signup makes
-  // the trigger raise, which Supabase surfaces as a signup/database failure.
-  // Show INVITE-ONLY copy that reveals nothing about whether this specific
-  // email is on the list — never echo the raw trigger message.
+  // Enrollment gate (db/access_codes.sql): a signup with neither an allowlisted
+  // email nor a valid invite code makes the trigger raise, which Supabase
+  // surfaces as a signup/database failure. Show INVITE-ONLY copy that reveals
+  // nothing about which of email/code was wrong — never echo the raw message.
   if (
     error?.status === 500 ||
     msg.includes('database error') ||
@@ -311,7 +337,7 @@ function friendlySendError(error) {
     msg.includes('enrollment') ||
     msg.includes('unexpected')
   ) {
-    return 'Rinnova is invite-only right now. If you were invited, double-check the email you used — otherwise reach out to the person who invited you.'
+    return 'Rinnova is invite-only right now. Double-check the invite code you entered — or reach out to whoever invited you.'
   }
   // Never surface the raw message: keep the neutral default.
   return 'Could not send the code. Please try again.'
@@ -379,6 +405,12 @@ const styles = {
     lineHeight: 1.5,
     color: 'var(--body)',
     margin: '0 0 24px',
+  },
+  hint: {
+    fontSize: '12px',
+    lineHeight: 1.45,
+    color: 'var(--muted)',
+    margin: '-8px 0 18px',
   },
   label: {
     display: 'block',

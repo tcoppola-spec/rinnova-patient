@@ -70,5 +70,11 @@
 	<string>Rinnova uses the camera so you can photograph a treatment note or receipt to add a visit.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Rinnova uses your photo library so you can add treatment notes, receipts, and progress photos to your record.</string>
+	<!-- Rinnova only uses standard HTTPS (encryption exempt under US export
+	     rules), so App Store Connect never needs to ask about export compliance.
+	     Declaring this here answers the "Missing Compliance" prompt for every
+	     future upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

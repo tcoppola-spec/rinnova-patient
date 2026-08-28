@@ -3564,6 +3564,25 @@
   color: var(--muted);
 }
 
+/* Feedback button — a quiet magenta pill for the pilot. On-brand (magenta is
+   the only action colour), tappable, but not loud enough to fight the footer. */
+.footer-feedback {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--magenta);
+  background: var(--magenta-soft);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.footer-feedback:hover {
+  background: var(--magenta-soft-2);
+}
+
 /* ============ INFO PAGES (privacy / terms / help) ============ */
 
 .info {
