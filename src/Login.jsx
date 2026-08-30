@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from './supabaseClient'
 import { apiUrl } from './apiBase'
 
@@ -41,6 +42,17 @@ import { apiUrl } from './apiBase'
 // pending flag shouldn't force the code screen.
 const PENDING_KEY = 'rinnova.login.pending'
 const PENDING_TTL_MS = 60 * 60 * 1000
+
+// On the NATIVE app there is no invite-code field. TestFlight (and later the App
+// Store) already control who can install, so that IS the gate — making testers
+// also type an invite code just collides in their heads with TestFlight's own
+// "Redeem Code" field and blocks them (a real f&f failure). So on native we hide
+// the field and attach the pilot enrollment code automatically. The WEB build
+// has no install gate, so it keeps the visible field to guard open signup.
+// Rotating the pilot code means updating this constant and cutting a new build —
+// acceptable for the f&f pilot; revisit if codes need to rotate often.
+const isNativeApp = Capacitor.isNativePlatform()
+const NATIVE_ACCESS_CODE = 'RINNOVA-PILOT'
 
 // The one demo address Apple's App Review uses to get past our invite-only,
 // emailed-code sign-in (a reviewer can't receive the code). Typing THIS email
@@ -111,10 +123,12 @@ function Login() {
     // its own record without being hand-added to the allowlist. It rides in as
     // user metadata, which the enrollment trigger reads on account creation
     // (db/access_codes.sql). It's ignored for an already-existing account, so a
-    // returning tester correctly leaves it blank.
+    // returning tester correctly leaves it blank. On native the code is attached
+    // automatically (no field — see NATIVE_ACCESS_CODE); on web it comes from
+    // the visible invite-code field.
     const options = { shouldCreateUser: true }
-    const trimmedInvite = inviteCode.trim()
-    if (trimmedInvite) options.data = { access_code: trimmedInvite }
+    const invite = isNativeApp ? NATIVE_ACCESS_CODE : inviteCode.trim()
+    if (invite) options.data = { access_code: invite }
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options,
@@ -249,27 +263,31 @@ function Login() {
               style={styles.input}
             />
 
-            <label htmlFor="invite" style={styles.label}>Invite code</label>
-            <input
-              id="invite"
-              type="text"
-              // NOT autoCapitalize="characters": forcing the iOS keyboard into
-              // caps-lock made some letters (a tester hit "I") drop or fail to
-              // register in this controlled input. The code is matched
-              // case-insensitively in the DB (db/access_codes.sql), so a
-              // normal keyboard and any casing both work.
-              autoCapitalize="none"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="e.g. rinnova-pilot"
-              style={styles.input}
-            />
-            <p style={styles.hint}>
-              New to Rinnova? Enter your invite code. Signing back in? Leave it blank.
-            </p>
+            {!isNativeApp && (
+              <>
+                <label htmlFor="invite" style={styles.label}>Invite code</label>
+                <input
+                  id="invite"
+                  type="text"
+                  // NOT autoCapitalize="characters": forcing the iOS keyboard into
+                  // caps-lock made some letters (a tester hit "I") drop or fail to
+                  // register in this controlled input. The code is matched
+                  // case-insensitively in the DB (db/access_codes.sql), so a
+                  // normal keyboard and any casing both work.
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="e.g. rinnova-pilot"
+                  style={styles.input}
+                />
+                <p style={styles.hint}>
+                  New to Rinnova? Enter your invite code. Signing back in? Leave it blank.
+                </p>
+              </>
+            )}
 
             {error && <p style={styles.error}>{error}</p>}
 
