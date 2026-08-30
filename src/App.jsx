@@ -13,10 +13,18 @@ import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
 import Onboarding from './Onboarding'
+import Consent from './Consent'
 import NameCapture from './NameCapture'
 import Toast from './Toast'
 import UpdateBanner from './UpdateBanner'
 import './App.css'
+
+// The consent version recorded when a patient agrees (db/add_consent.sql). Bump
+// this only when the consent COPY in Consent.jsx materially changes — the stored
+// value is the record of which wording they agreed to. (Re-prompting existing
+// patients on a version bump is intentionally not built yet; the gate below is
+// simply "have they ever accepted?")
+const CONSENT_VERSION = '2026-08-30'
 
 function App() {
   const navigate = useNavigate()
@@ -27,6 +35,7 @@ function App() {
   // Lets the patient straight through the moment they finish, without waiting
   // on the RPC round-trip — and keeps them through if that write fails.
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [consentDismissed, setConsentDismissed] = useState(false)
   const [nameDismissed, setNameDismissed] = useState(false)
 
   // Brief confirmation pill for actions whose result isn't visible where the
@@ -62,6 +71,24 @@ function App() {
         e?.message || e
       )
     }
+  }
+
+  /**
+   * Records first-run consent via the accept_consent RPC (narrow SECURITY
+   * DEFINER function — patients has no UPDATE policy; see db/add_consent.sql).
+   *
+   * Deliberately the OPPOSITE discipline from onboarding: consent must actually
+   * be recorded, so this throws on failure instead of failing open. Consent.jsx
+   * catches the throw and shows a retry, and we only dismiss the gate AFTER a
+   * successful write — a patient never proceeds with their consent unrecorded.
+   */
+  async function acceptConsent() {
+    const { error } = await supabase.rpc('accept_consent', {
+      p_version: CONSENT_VERSION,
+    })
+    if (error) throw error
+    setConsentDismissed(true)
+    await refetch() // pick up consent_accepted_at on the patient row
   }
 
   /**
@@ -148,6 +175,15 @@ function App() {
   // bottom bar. Onboarding pins itself to the visible viewport instead.
   if (!patient.onboarding_completed && !onboardingDismissed) {
     return <Onboarding onDone={completeOnboarding} />
+  }
+
+  // First-run consent, after onboarding (so they've seen what Rinnova is) and
+  // before they name themselves or use it. Gated on the patient's own recorded
+  // acceptance so it follows the account and can't be bypassed by a reinstall.
+  // REQUIRED — unlike the gates around it, there is no skip and it only clears
+  // once the acceptance is recorded (acceptConsent throws on failure).
+  if (!patient.consent_accepted_at && !consentDismissed) {
+    return <Consent onAccept={acceptConsent} />
   }
 
   // After onboarding, ask nameless testers what to call them. Sits here (after

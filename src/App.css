@@ -2694,6 +2694,118 @@
   text-underline-offset: 3px;
 }
 
+/* ============ CONSENT (first-run acknowledgment) ============ */
+
+/* Scrollable, not fixed-centered: the copy can be taller than a short screen,
+   so the container scrolls and the card uses margin:auto to center only when it
+   fits (flex centering + overflow would otherwise clip the top). */
+.consent {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  padding: 32px 24px;
+  background: var(--page);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.consent-card {
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+}
+
+.consent-title {
+  font-family: var(--f-display);
+  font-size: 27px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.consent-lead {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--body);
+  text-align: center;
+  margin: 0 0 22px;
+}
+
+.consent-points {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.consent-points li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--body);
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.consent-points li:last-child {
+  border-bottom: none;
+}
+
+.consent-points strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.consent-link {
+  color: var(--magenta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink);
+  cursor: pointer;
+  margin-bottom: 18px;
+}
+
+.consent-check input {
+  margin-top: 1px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--magenta);
+}
+
+.consent-error {
+  font-size: 13px;
+  color: var(--magenta);
+  margin: 0 0 14px;
+}
+
+.consent-continue {
+  width: 100%;
+  padding: 15px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--gradient-brand);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.consent-continue:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ============ AREA CADENCE (how often you treat each area) ============ */
 
 /* Horizontal cards, not a stacked list. Overflow is declared on BOTH axes on
