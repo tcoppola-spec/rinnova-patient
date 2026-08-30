@@ -105,9 +105,11 @@ Sign-in is passwordless via an **email OTP code**, not a magic link. Flow (see `
 | Template | Fires for | Was edited? |
 |---|---|---|
 | **Magic Link** | a **returning** user | ✅ edited early — this is why Tracy's codes always worked |
-| **Confirm signup** | a **first-time** user | ❌ missed until the first f&f signup hit it |
+| **Confirm signup** | a **first-time** user | ✅ fixed Aug 30 2026 (regressed/never applied in the pilot project — see below) |
 
 Because Tracy's account already existed when OTP was set up, every test took the Magic Link path and the gap stayed invisible until a brand-new address signed up and received "Confirm your email address" — a link, no code — while the app sat on the "enter your code" screen. **Fix both templates; keep their bodies identical** so the two paths are indistinguishable to the patient.
+
+**⚠️ This bit a real f&f tester AGAIN on Aug 30 2026 — the pilot Supabase project's "Confirm signup" template was still on Supabase's default (a `{{ .ConfirmationURL }}` link, no code), despite this note.** A brand-new tester (via the `RINNOVA-PILOT` invite code) entered her email, got a *link* email, tapped it, and landed in the web app (app.rinnova.io) in Safari instead of the native app; her *second* request (account now existed → Magic Link template) delivered the code and worked. Fix applied: the branded OTP template (the one with `{{ .Token }}` in the pink code box) was pasted into **Confirm signup** so both templates are byte-identical. **The lesson: this doc recording the fix is NOT proof the live dashboard has it** — the templates live in the Supabase dashboard, not the repo, so verify the actual "Confirm signup" template contains `{{ .Token }}` whenever new-user sign-in misbehaves. If a first-time tester is sent to the web app instead of getting a code, this is the cause.
 
 **Why the copy can't just branch instead.** `Login` promises "we'll email you a code" unconditionally, and that is correct: `signInWithOtp` deliberately returns the *same* response for a new and an existing address, so the client cannot know which email is being sent. That's a feature — it's what stops the screen leaking whether an account exists, the same discipline as the neutral invite-only failure copy. Consistency therefore has to live in the templates, not in conditional UI.
 
