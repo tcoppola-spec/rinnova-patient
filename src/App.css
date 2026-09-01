@@ -2806,6 +2806,76 @@
   cursor: default;
 }
 
+/* ============ DELETE ACCOUNT (in-app, Apple-required) ============ */
+
+.delete-account {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.delete-account-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 6px;
+}
+
+.delete-account-confirm {
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 18px;
+  background: var(--magenta-soft);
+  border-radius: 14px;
+}
+
+.delete-account-warning {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--body);
+  margin: 0 0 14px;
+}
+
+.delete-account-error {
+  font-size: 13px;
+  color: var(--magenta);
+  margin: 0 0 12px;
+}
+
+.delete-account-go {
+  width: 100%;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--magenta);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.delete-account-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.delete-account-cancel {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ============ AREA CADENCE (how often you treat each area) ============ */
 
 /* Horizontal cards, not a stacked list. Overflow is declared on BOTH axes on

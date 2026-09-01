@@ -17,6 +17,7 @@ import Consent from './Consent'
 import NameCapture from './NameCapture'
 import Toast from './Toast'
 import UpdateBanner from './UpdateBanner'
+import DeleteAccount from './DeleteAccount'
 import './App.css'
 
 // The consent version recorded when a patient agrees (db/add_consent.sql). Bump
@@ -245,6 +246,11 @@ function App() {
         <ProductsSection products={products} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />
+
+        {/* Quiet, at the bottom: in-app account deletion (Apple requires it for
+            any app with sign-up). Destructive, so it's a plain link that expands
+            to a clear confirmation rather than a standing button. */}
+        <DeleteAccount />
 
         <PageFooter />
       </div>
