@@ -74,6 +74,8 @@ function ManualVisitEntry({ onBuilt, onBack }) {
 
   // The spot currently being filled in (set by tapping the face).
   const [active, setActive] = useState(null) // { regionLabel, mirror }
+  // A preset awaiting a product choice (which tox brand?) before it fills in.
+  const [pendingPreset, setPendingPreset] = useState(null)
   const [categoryKey, setCategoryKey] = useState('')
   const [productName, setProductName] = useState('')
   const [otherName, setOtherName] = useState('')
@@ -98,6 +100,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     const r = nearestRegion(x, y)
     if (!r) return
     setError('')
+    setPendingPreset(null) // tapping the face dismisses a half-started preset
     // Keep any product/amount already chosen — a tap only (re)places the spot.
     setActive({ regionLabel: r.label, mirror: !r.midline })
   }
@@ -133,17 +136,27 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     setPlacements((prev) => prev.filter((_, idx) => idx !== i))
   }
 
+  // Tapping a preset doesn't place anything yet — it asks which product first
+  // (a Nefertiti lift can be Botox, Dysport, Xeomin…). The preset only decides
+  // the category and the regions.
   function applyPreset(preset) {
     setError('')
     setActive(null)
-    const added = preset.regions.map((label) => ({
-      categoryKey: preset.key,
-      productName: preset.product,
+    setPendingPreset(preset)
+  }
+
+  // Product chosen for the pending preset → place all its regions.
+  function addPresetWithProduct(product) {
+    if (!pendingPreset) return
+    const added = pendingPreset.regions.map((label) => ({
+      categoryKey: pendingPreset.key,
+      productName: product,
       regionLabel: label,
       mirror: !isMidline(label),
       amount: '',
     }))
     setPlacements((prev) => [...prev, ...added])
+    setPendingPreset(null)
   }
 
   // Build the marks for the face: point categories → dots, field categories →
@@ -244,6 +257,30 @@ function ManualVisitEntry({ onBuilt, onBack }) {
           </button>
         ))}
       </div>
+
+      {/* A preset was tapped — pick which product before it fills in. */}
+      {pendingPreset && (
+        <div className="manual-builder">
+          <div className="manual-section-label">{pendingPreset.label} — which product?</div>
+          <div className="qa-chips">
+            {(PRODUCT_MENU.find((c) => c.key === pendingPreset.key)?.products || []).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="qa-chip"
+                onClick={() => addPresetWithProduct(p)}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="form-actions" style={{ marginTop: 14 }}>
+            <button type="button" className="form-cancel-btn" onClick={() => setPendingPreset(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* The face — tap to place */}
       <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
