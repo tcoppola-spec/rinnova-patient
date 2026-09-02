@@ -27,7 +27,7 @@ import { PRODUCT_MENU, PRESETS, doseConfigFor } from './manualEntry'
  *
  * Props:
  *   onBuilt(parsed) — the assembled parsed object, on "Review & save"
- *   onBack()        — return to the log-visit choice screen
+ *   onCancel()      — close the whole log-a-visit flow (discarding entry)
  */
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -85,7 +85,7 @@ function sumDoses(doses) {
   return unit ? `${total} ${unit}` : String(total)
 }
 
-function ManualVisitEntry({ onBuilt, onBack }) {
+function ManualVisitEntry({ onBuilt, onCancel }) {
   const [date, setDate] = useState(todayISO())
   // Each placement is ONE product at ONE region, with its own dose.
   const [placements, setPlacements] = useState([]) // {categoryKey, productName, regionLabel, mirror, dose}
@@ -499,8 +499,8 @@ function ManualVisitEntry({ onBuilt, onBack }) {
       )}
 
       <div className="form-actions" style={{ marginTop: 16 }}>
-        <button type="button" onClick={onBack} className="form-cancel-btn">
-          Back
+        <button type="button" onClick={onCancel} className="form-cancel-btn">
+          Cancel
         </button>
         <button
           type="button"

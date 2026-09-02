@@ -561,7 +561,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
   if (step === 'manual') {
     return (
       <ManualVisitEntry
-        onBack={() => { setError(null); setStep('choose') }}
+        onCancel={onClose}
         onBuilt={(built) => {
           setParsed(built)
           setAreaAnswers({})
