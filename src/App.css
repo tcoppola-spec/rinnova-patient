@@ -2746,19 +2746,6 @@
   color: inherit;
 }
 
-.manual-fullface-btn {
-  display: block;
-  margin: -6px auto 8px;
-  background: none;
-  border: none;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--magenta);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .manual-spot-head {
   display: flex;
   flex-direction: column;

@@ -327,8 +327,19 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
         />
       </label>
 
-      {/* One-tap common treatments */}
+      {/* One-tap common treatments + the whole-face shortcut (for lasers, peels,
+          Ultherapy done over the whole face). */}
       <div className="manual-presets">
+        <button
+          type="button"
+          className="manual-preset"
+          onClick={() => {
+            setPendingPreset(null)
+            setActive({ regionLabel: 'Full face', mirror: false })
+          }}
+        >
+          Whole face
+        </button>
         {PRESETS.map((p) => (
           <button key={p.label} type="button" className="manual-preset" onClick={() => applyPreset(p)}>
             {p.label}
@@ -368,19 +379,6 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
         </p>
         <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
       </div>
-
-      {/* Whole-face shortcut — for lasers, peels, Ultherapy done over the whole
-          face, so you don't have to hunt for the exact centre to tap. */}
-      <button
-        type="button"
-        className="manual-fullface-btn"
-        onClick={() => {
-          setPendingPreset(null)
-          setActive({ regionLabel: 'Full face', mirror: false })
-        }}
-      >
-        Whole-face treatment (laser, peel, Ultherapy…)
-      </button>
 
       {/* Entry panel for the tapped spot */}
       {active && (
