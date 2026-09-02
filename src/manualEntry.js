@@ -29,7 +29,10 @@ export const PRODUCT_MENU = [
     products: ['Juvéderm', 'Restylane', 'RHA', 'Revanesse Versa', 'Belotero', 'Skinvive'],
   },
   { key: 'radiesse', label: 'Radiesse', products: ['Radiesse'] },
-  { key: 'radiesse-light', label: 'Diluted Radiesse', products: ['Diluted Radiesse'] },
+  { key: 'biostimulator', label: 'Biostimulator (Sculptra)', products: ['Sculptra', 'Bellafill'] },
+  { key: 'kybella', label: 'Fat dissolver (Kybella)', products: ['Kybella'] },
+  { key: 'prp', label: 'PRP / PRF', products: ['PRP', 'PRF'] },
+  { key: 'threads', label: 'PDO threads', products: ['PDO thread lift'] },
   {
     key: 'energy',
     label: 'Energy / ultrasound',
@@ -66,10 +69,14 @@ export const PRESETS = [
 // never force a guessed number).
 const TOX_AMOUNTS = ['', '10 units', '20 units', '30 units', '40 units', '50+ units']
 const FILLER_AMOUNTS = ['', '½ syringe', '1 syringe', '1½ syringes', '2 syringes', '3+ syringes']
+const VIAL_AMOUNTS = ['', '1 vial', '2 vials', '3+ vials']
+const THREAD_AMOUNTS = ['', '2 threads', '4 threads', '6+ threads']
 const SESSION_AMOUNTS = ['', '1 session']
 
 export function amountOptionsFor(key) {
   if (key === 'xeomin') return TOX_AMOUNTS
   if (key === 'rha' || key === 'radiesse' || key === 'radiesse-light') return FILLER_AMOUNTS
+  if (key === 'biostimulator' || key === 'kybella') return VIAL_AMOUNTS
+  if (key === 'threads') return THREAD_AMOUNTS
   return SESSION_AMOUNTS
 }

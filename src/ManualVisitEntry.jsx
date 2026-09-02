@@ -78,6 +78,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
   const [productName, setProductName] = useState('')
   const [otherName, setOtherName] = useState('')
   const [amount, setAmount] = useState('')
+  const [diluted, setDiluted] = useState(false)
   const [error, setError] = useState('')
 
   const category = PRODUCT_MENU.find((c) => c.key === categoryKey) || null
@@ -89,6 +90,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     setProductName('')
     setOtherName('')
     setAmount('')
+    setDiluted(false)
     setError('')
   }
 
@@ -104,11 +106,21 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     if (!active) return
     if (!categoryKey) return setError('Pick what was used.')
     if (!effectiveProduct) return setError('Pick or name the product.')
+    // Dilution: for Radiesse it's a distinct clinical thing with its own colour
+    // (hyperdilute is used to biostimulate, not volumise), so it switches to the
+    // diluted-Radiesse category. For anything else, diluted is a note on the
+    // same product — same colour, just recorded in the name.
+    let finalCategory = categoryKey
+    let finalProduct = effectiveProduct
+    if (diluted) {
+      if (categoryKey === 'radiesse') finalCategory = 'radiesse-light'
+      finalProduct = `${effectiveProduct} (diluted)`
+    }
     setPlacements((prev) => [
       ...prev,
       {
-        categoryKey,
-        productName: effectiveProduct,
+        categoryKey: finalCategory,
+        productName: finalProduct,
         regionLabel: active.regionLabel,
         mirror: active.mirror,
         amount,
@@ -279,6 +291,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
                   setProductName('')
                   setOtherName('')
                   setAmount('')
+                  setDiluted(false)
                 }}
               >
                 {c.label}
@@ -311,6 +324,20 @@ function ManualVisitEntry({ onBuilt, onBack }) {
               placeholder="What was it called?"
               className="manual-other-input"
             />
+          )}
+
+          {/* Dilution — only for injectables (you don't dilute a laser). For
+              Radiesse it maps to the diluted-Radiesse colour; for others it's
+              recorded as a note on the same product. */}
+          {categoryKey && categoryMark(categoryKey) === 'point' && (
+            <label className="manual-diluted">
+              <input
+                type="checkbox"
+                checked={diluted}
+                onChange={(e) => setDiluted(e.target.checked)}
+              />
+              <span>Diluted / hyperdilute</span>
+            </label>
           )}
 
           {categoryKey && amountOptions.length > 0 && (

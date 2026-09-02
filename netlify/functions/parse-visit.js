@@ -57,7 +57,7 @@ OUTPUT FORMAT (valid JSON, no markdown, no prose):
       "summary": "One-line description of what this product IS (general knowledge is fine here)",
       "total_dose": "Total amount WITH units, ONLY if literally stated; else null",
       "lot_number": "Lot number if stated; else null",
-      "color_key": "xeomin | radiesse | radiesse-light | rha"
+      "color_key": "xeomin | radiesse | radiesse-light | rha | biostimulator | kybella | prp | threads | energy | light | resurfacing | other"
     }
   ],
   "treatment_areas": [
@@ -132,7 +132,13 @@ TREATMENTS vs PRODUCTS — put each line item in the right place:
 color_key (a COLOR category, pick the closest):
 - Any neurotoxin/tox → "xeomin".
 - Radiesse → "radiesse"; diluted/hyperdilute Radiesse → "radiesse-light".
-- Any HA filler (RHA, Restylane, Juvederm, etc.) → "rha".
+- Any HA filler, incl. skin boosters (RHA, Restylane, Juvederm, Belotero,
+  Skinvive, Profhilo, etc.) → "rha".
+- PLLA biostimulators (Sculptra, Bellafill) → "biostimulator". (Radiesse is a
+  biostimulator too but keeps its own "radiesse"/"radiesse-light".)
+- Fat dissolver / deoxycholic acid (Kybella) → "kybella".
+- PRP / PRF / platelet-rich plasma or fibrin → "prp".
+- PDO / thread lift / any absorbable-thread lift → "threads".
 - Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
   RF microneedling) → "energy".
 - LED / light therapy (LED, red light therapy, low-level light therapy,

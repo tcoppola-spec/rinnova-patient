@@ -29,6 +29,14 @@ export const TREATMENT_CATEGORIES = {
   'radiesse-light': { color: '#F06E89', mark: 'point', label: 'Diluted Radiesse' },
   rha: { color: '#FF8C42', mark: 'point', label: 'HA filler' }, // any HA filler
 
+  // Newer injectables — each its own colour (the colour IS the clinical
+  // category). Cool tones on purpose, so none can be mistaken for one of the
+  // four warm injectables above. All 'point' — they're injected at a spot.
+  biostimulator: { color: '#3E63A8', mark: 'point', label: 'Biostimulator' }, // Sculptra / PLLA — indigo
+  kybella: { color: '#4E9A3D', mark: 'point', label: 'Fat dissolver' }, // Kybella — green
+  prp: { color: '#C79A2E', mark: 'point', label: 'PRP / PRF' }, // regenerative — gold
+  threads: { color: '#566270', mark: 'point', label: 'Threads' }, // PDO threads — slate
+
   // --- Non-injectables: a field, in new tones distinct from the injectables ---
   // Cool teal for energy devices (Ultherapy, RF, ultrasound) — reads as the
   // tightening / device side of the practice, unmistakable against the warm

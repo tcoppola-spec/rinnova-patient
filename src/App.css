@@ -328,6 +328,10 @@
 .treatment-dot-light { background: var(--light); }
 .treatment-dot-resurfacing { background: var(--resurfacing); }
 .treatment-dot-other { background: var(--muted); }
+.treatment-dot-biostimulator { background: var(--biostimulator); }
+.treatment-dot-kybella { background: var(--kybella); }
+.treatment-dot-prp { background: var(--prp); }
+.treatment-dot-threads { background: var(--threads); }
 
 /* A field treatment (energy, resurfacing) is a ZONE, not a point. In the legend
    and treatment lists its swatch is a soft ring rather than a solid dot, so it
@@ -2680,6 +2684,22 @@
 
 .manual-spot-sides {
   margin-bottom: 6px;
+}
+
+.manual-diluted {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.manual-diluted input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--magenta);
 }
 
 .qa-chips {

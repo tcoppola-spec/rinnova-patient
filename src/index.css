@@ -17,6 +17,13 @@
   --light: #E5325F;       /* LED / red-light therapy — magenta-red */
   --resurfacing: #E0739F; /* laser resurfacing, peels, microneedling — rose */
 
+  /* Newer injectables — cool tones, distinct from the four warm injectables.
+     Keep in step with src/treatmentColors.js (the source of truth). */
+  --biostimulator: #3E63A8; /* Sculptra / PLLA — indigo */
+  --kybella: #4E9A3D;       /* fat dissolver — green */
+  --prp: #C79A2E;           /* PRP / PRF — gold */
+  --threads: #566270;       /* PDO threads — slate */
+
   /* UI tones derived from brand */
   --body: #3A3A55;
   --muted: #8A8AA3;
