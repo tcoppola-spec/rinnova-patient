@@ -1693,6 +1693,12 @@
   border: 1px solid var(--line);
 }
 
+/* Face map at the top of the review, so the visit can be checked visually
+   before saving. */
+.parsed-visit-face {
+  margin: -4px 0 14px;
+}
+
 .parsed-visit-meta {
   display: flex;
   flex-direction: column;

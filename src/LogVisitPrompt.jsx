@@ -3,6 +3,8 @@ import { saveParsedVisit } from './saveVisit'
 import { supabase } from './supabaseClient'
 import AreaQuestions from './AreaQuestions'
 import ManualVisitEntry from './ManualVisitEntry'
+import FaceDiagram from './FaceDiagram'
+import { getCoordinates } from './faceCoordinates'
 import { apiUrl } from './apiBase'
 
 // Accepted upload types for a document (note/receipt): images and PDFs. Roberta's
@@ -833,8 +835,38 @@ function ParsedVisitPreview({ parsed }) {
     areasByTreatment[t].push(area)
   }
 
+  // Build a face map for the review, resolving each area's coordinate so the
+  // user can SEE the whole thing before saving. FaceDiagram does the rest (point
+  // vs field, mirror, full-face, skipping unplaced). This is a preview: it omits
+  // the duplicate fan-out that saveVisit applies, so two products at the exact
+  // same region can overlap here — harmless for a review, and the saved map
+  // separates them.
+  const faceTreatments = (treatments || []).map((t, idx) => ({
+    id: `${t.name}-${idx}`,
+    name: t.name,
+    color_key: t.color_key,
+    treatment_areas: (areasByTreatment[t.name] || []).map((a, j) => {
+      const coord = getCoordinates(a.clinical_name) || getCoordinates(a.friendly_name)
+      return {
+        id: `${t.name}-${idx}-${j}`,
+        friendly_name: a.friendly_name,
+        clinical_name: a.clinical_name,
+        mirror: a.mirror,
+        x: coord ? coord.x : null,
+        y: coord ? coord.y : null,
+      }
+    }),
+  }))
+  const hasMarks = faceTreatments.some((t) => (t.treatment_areas || []).some((a) => a.x != null))
+
   return (
     <div className="parsed-visit">
+      {hasMarks && (
+        <div className="parsed-visit-face">
+          <FaceDiagram treatments={faceTreatments} />
+        </div>
+      )}
+
       <div className="parsed-visit-meta">
         {visit?.visit_date && (
           <div className="parsed-meta-row">
