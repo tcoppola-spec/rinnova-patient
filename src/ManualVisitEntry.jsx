@@ -99,6 +99,7 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
   const [amountValue, setAmountValue] = useState('') // the number, as text
   const [amountUnit, setAmountUnit] = useState('')
   const [diluted, setDiluted] = useState(false)
+  const [editingIndex, setEditingIndex] = useState(null) // which placement we're editing
   const [error, setError] = useState('')
 
   const category = PRODUCT_MENU.find((c) => c.key === categoryKey) || null
@@ -113,6 +114,7 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
     setAmountValue('')
     setAmountUnit('')
     setDiluted(false)
+    setEditingIndex(null)
     setError('')
   }
 
@@ -152,21 +154,59 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
       if (categoryKey === 'radiesse') finalCategory = 'radiesse-light'
       finalProduct = `${effectiveProduct} (diluted)`
     }
-    setPlacements((prev) => [
-      ...prev,
-      {
-        categoryKey: finalCategory,
-        productName: finalProduct,
-        regionLabel: active.regionLabel,
-        mirror: active.mirror,
-        dose: currentDose(),
-      },
-    ])
+    const entry = {
+      categoryKey: finalCategory,
+      productName: finalProduct,
+      regionLabel: active.regionLabel,
+      mirror: active.mirror,
+      dose: currentDose(),
+    }
+    setPlacements((prev) =>
+      editingIndex != null
+        ? prev.map((p, idx) => (idx === editingIndex ? entry : p))
+        : [...prev, entry]
+    )
     resetBuilder()
   }
 
   function removePlacement(i) {
     setPlacements((prev) => prev.filter((_, idx) => idx !== i))
+    if (editingIndex === i) resetBuilder()
+  }
+
+  // Tap a placed spot to edit it — reopens the panel pre-filled so you can add a
+  // dose (presets place spots without one) or fix the product / side.
+  function editPlacement(i) {
+    const p = placements[i]
+    if (!p) return
+    setError('')
+    setPendingPreset(null)
+    let cat = p.categoryKey
+    let prod = p.productName
+    let dil = false
+    if (cat === 'radiesse-light') {
+      cat = 'radiesse'
+      dil = true
+    }
+    if (prod.endsWith(' (diluted)')) {
+      prod = prod.slice(0, -' (diluted)'.length)
+      dil = true
+    }
+    setActive({ regionLabel: p.regionLabel, mirror: p.mirror })
+    setCategoryKey(cat)
+    setDiluted(dil)
+    if (cat === 'other') {
+      setOtherName(prod)
+      setProductName('')
+    } else {
+      setProductName(prod)
+      setOtherName('')
+    }
+    const cfg = doseConfigFor(cat)
+    const m = (p.dose || '').match(/^([\d.]+)\s*(.*)$/)
+    setAmountUnit(m && m[2] ? m[2] : cfg ? cfg.units[0] : '')
+    setAmountValue(m ? m[1] : '')
+    setEditingIndex(i)
   }
 
   // A preset only decides the category + regions; the product is chosen next.
@@ -478,38 +518,41 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
               Cancel
             </button>
             <button type="button" className="form-save-btn" onClick={addPlacement}>
-              Add this spot
+              {editingIndex != null ? 'Save spot' : 'Add this spot'}
             </button>
           </div>
         </div>
       )}
 
-      {/* What's been placed so far */}
+      {/* What's been placed so far — tap one to edit / add an amount */}
       {placements.length > 0 && (
-        <ul className="manual-list">
-          {placements.map((p, i) => (
-            <li key={i} className="manual-list-item">
-              <div className="manual-list-text">
-                <span className="manual-list-name">{p.productName}</span>
-                <span className="manual-list-areas">
-                  {p.regionLabel}
-                  {!isMidline(p.regionLabel) ? (p.mirror ? ' · both sides' : ' · one side') : ''}
-                  {p.dose ? ` · ${p.dose}` : ''}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="manual-list-remove"
-                onClick={() => removePlacement(i)}
-                aria-label={`Remove ${p.productName} at ${p.regionLabel}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="manual-list-hint">Tap a treatment to add an amount or edit it.</p>
+          <ul className="manual-list">
+            {placements.map((p, i) => (
+              <li key={i} className={`manual-list-item${editingIndex === i ? ' is-editing' : ''}`}>
+                <button type="button" className="manual-list-edit" onClick={() => editPlacement(i)}>
+                  <span className="manual-list-name">{p.productName}</span>
+                  <span className="manual-list-areas">
+                    {p.regionLabel}
+                    {!isMidline(p.regionLabel) ? (p.mirror ? ' · both sides' : ' · one side') : ''}
+                    {p.dose ? ` · ${p.dose}` : ''}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="manual-list-remove"
+                  onClick={() => removePlacement(i)}
+                  aria-label={`Remove ${p.productName} at ${p.regionLabel}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <div className="form-actions" style={{ marginTop: 16 }}>
