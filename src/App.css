@@ -2685,16 +2685,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 5px;
   text-align: center;
   font-size: 13px;
   color: var(--body);
   margin: 0 0 8px;
 }
 
+/* Same colour as the text (inherits from the hint), just a touch closer. */
 .manual-tap-icon {
   flex-shrink: 0;
-  color: var(--magenta);
+  color: inherit;
 }
 
 .manual-spot-head {
