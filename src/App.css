@@ -809,7 +809,9 @@
   font-family: var(--f-body);
   font-size: 9px;
   letter-spacing: 0.02em;
-  color: var(--face-line); /* exact same tan as the face line art (#D9CEBA) */
+  /* Same tan family as the face line (#D9CEBA), a few shades darker so it's
+     legible on the beige — the exact face tone is too low-contrast as text. */
+  color: #9C8A62;
   pointer-events: none;
 }
 
