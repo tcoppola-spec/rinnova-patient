@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { saveParsedVisit } from './saveVisit'
+import { supabase } from './supabaseClient'
 import AreaQuestions from './AreaQuestions'
 import { apiUrl } from './apiBase'
 
@@ -389,6 +390,11 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
     setPendingDup(null)
     setSaveError(null)
     setSaving(true)
+    // Snapshot existing visit ids so a failed request can be told apart from a
+    // "response lost after the save committed". On native (WKWebView) an atomic
+    // RPC can commit while its reply is dropped — surfacing as "TypeError: Load
+    // failed" for a visit that actually saved. See the catch below.
+    const priorVisitIds = new Set((visits || []).map((v) => v.id))
     try {
       const { usedToday, unplaced, savedProducts, mappedCount, hasTreatments } =
         await saveParsedVisit(mergeAreaAnswers(parsed))
@@ -429,7 +435,30 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
         }
       }
     } catch (e) {
-      setSaveError(e.message || 'Could not save your visit. Please try again.')
+      // Before showing an error, check whether the visit landed anyway. The save
+      // is atomic, so a NEW visit id means it committed and only the response was
+      // lost in transit — treat that as success, not a scary false failure that
+      // would tempt the patient to re-save and create a duplicate.
+      let committed = false
+      try {
+        const { data: fresh } = await supabase.from('visits').select('id')
+        committed = (fresh || []).some((v) => !priorVisitIds.has(v.id))
+      } catch {
+        /* couldn't verify — fall through to showing the error */
+      }
+      if (committed) {
+        setSavedNote('')
+        setSaved(true)
+        if (onRefetch) {
+          try {
+            await onRefetch()
+          } catch (err) {
+            console.warn('[LogVisit] refetch after recovered save failed:', err)
+          }
+        }
+      } else {
+        setSaveError(e.message || 'Could not save your visit. Please try again.')
+      }
     } finally {
       setSaving(false)
     }
