@@ -214,9 +214,9 @@ function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend
           </g>
         ))}
 
-        {/* Watermark, bottom-left. Baked into the SVG so it stays put if the
-            diagram is screenshotted. */}
-        <text className="face-watermark" x="3" y={VIEWBOX.height - 5}>
+        {/* Watermark, bottom-left corner. Baked into the SVG so it stays put if
+            the diagram is screenshotted. */}
+        <text className="face-watermark" x="1" y={VIEWBOX.height - 3}>
           app.rinnova.io
         </text>
       </svg>

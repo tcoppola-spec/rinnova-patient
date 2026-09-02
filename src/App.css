@@ -799,12 +799,12 @@
   stroke: none;
 }
 
-/* Subtle watermark on every diagram, bottom-left. */
+/* Subtle watermark on every diagram, bottom-left — same tan as the face line. */
 .face-watermark {
   font-family: var(--f-body);
   font-size: 9px;
-  fill: var(--muted);
-  opacity: 0.55;
+  fill: var(--face-line);
+  opacity: 0.9;
 }
 
 .face-diagram-svg .area-dot circle {
