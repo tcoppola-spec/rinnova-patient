@@ -42,6 +42,10 @@ import { categoryColor, categoryMark } from './treatmentColors'
  *   dots:  optional pre-built point marks [{id,x,y,color,r?,opacity?}]
  *   halos: optional pre-built field marks (same shape); defaults to none
  *   legend: optional node; pass null to suppress the auto legend
+ *   onPointTap: optional (x, y) => void in viewBox coords. When provided the SVG
+ *     becomes tappable (used by manual entry — tap the face, snap to a region).
+ *     Coordinates are converted through the SVG's own CTM, so they're exact
+ *     regardless of how the image is scaled or letterboxed on screen.
  */
 
 
@@ -74,10 +78,24 @@ function FaceArt() {
   )
 }
 
-function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend }) {
+function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend, onPointTap }) {
   // useId can contain ':', which is not valid inside a url(#...) reference.
   const uid = useId().replace(/:/g, '')
   const clipId = `face-half-${uid}`
+
+  // Convert a screen tap into the SVG's own coordinate space via its CTM, so it
+  // maps correctly no matter how the image is scaled/letterboxed. Off unless a
+  // caller wants taps (manual entry).
+  function handleSvgTap(e) {
+    const svg = e.currentTarget
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return
+    const pt = svg.createSVGPoint()
+    pt.x = e.clientX
+    pt.y = e.clientY
+    const p = pt.matrixTransform(ctm.inverse())
+    onPointTap(p.x, p.y)
+  }
 
   // A caller can supply its own marks (AreaCadenceSection weights dots by how
   // often an area is treated). Keeping the build here rather than forking the
@@ -134,6 +152,8 @@ function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend
         xmlns="http://www.w3.org/2000/svg"
         aria-label="Face diagram showing treatment areas"
         role="img"
+        onClick={onPointTap ? handleSvgTap : undefined}
+        style={onPointTap ? { cursor: 'crosshair' } : undefined}
       >
         <defs>
           <clipPath id={clipId}>

@@ -2647,6 +2647,35 @@
   cursor: pointer;
 }
 
+.manual-tap-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0 16px;
+}
+
+.manual-spot-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.manual-spot-area {
+  font-family: var(--f-display);
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.manual-spot-retap {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.manual-spot-sides {
+  margin-bottom: 6px;
+}
+
 .qa-chips {
   display: flex;
   flex-wrap: wrap;

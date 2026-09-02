@@ -1,28 +1,60 @@
 import { useState } from 'react'
+import FaceDiagram from './FaceDiagram'
 import { FACE_REGIONS } from './faceRegions'
+import { getCoordinates } from './faceCoordinates'
+import { MIRROR_AXIS } from './faceGeometry'
+import { categoryColor, categoryMark } from './treatmentColors'
 import { PRODUCT_MENU, PRESETS, amountOptionsFor } from './manualEntry'
 
 /**
- * ManualVisitEntry — build a visit by tapping, no receipt and (almost) no typing.
+ * ManualVisitEntry — build a visit by tapping the FACE, no receipt.
  *
- * The pilot's real-world need: hand the phone to the injector, or have them call
- * out what they did, and log it in seconds. So every choice is a tap — category,
- * product, area, amount — and common treatments are one-tap presets (Nefertiti
- * lift, lip flip…). The only typed field is the name under "Something else".
+ * The flow the pilot asked for, and the way an injector actually thinks: the
+ * diagram opens, you tap WHERE the treatment went, then pick WHAT and how much.
+ * Hand the phone to the injector and it's a few taps.
  *
- * It doesn't save anything itself. It assembles the SAME `parsed` object the AI
- * parser produces and hands it up via onBuilt, so it flows into the existing
- * review → save → success path unchanged (coordinates, fan-out, the bilateral
- * invariant — all reused). Region labels come from FACE_REGIONS, so every pick
- * resolves to a real face coordinate.
+ * INTEGRITY: Rinnova never puts a dot at an arbitrary coordinate (a dot in the
+ * wrong place falsifies the record). So a tap doesn't drop a freeform dot — it
+ * SNAPS to the nearest curated region (FACE_REGIONS) and shows its name to
+ * confirm. Free tapping, but it always lands on real anatomy. Mirroring is
+ * handled in the snap so a tap on either cheek finds the same region.
+ *
+ * It assembles the SAME `parsed` object the AI parser produces and hands it up
+ * via onBuilt, so it flows into the existing review → save → success path with
+ * all the coordinate / fan-out / bilateral logic reused. No DB changes.
  *
  * Props:
- *   onBuilt(parsed) — called with the assembled parsed object on "Review & save"
+ *   onBuilt(parsed) — the assembled parsed object, on "Review & save"
  *   onBack()        — return to the log-visit choice screen
  */
 
-const MIDLINE = Object.fromEntries(FACE_REGIONS.map((r) => [r.label, r.midline]))
 const todayISO = () => new Date().toISOString().slice(0, 10)
+
+// Every region with its resolved coordinate + midline flag, computed once.
+const REGION_COORDS = FACE_REGIONS.map((r) => ({
+  label: r.label,
+  midline: r.midline,
+  coord: getCoordinates(r.label),
+})).filter((r) => r.coord)
+
+// Nearest curated region to a tapped point. Off-axis regions are stored on the
+// left; a tap on the right side is matched by also testing the mirror, so either
+// cheek snaps to the same region.
+function nearestRegion(x, y) {
+  let best = null
+  let bestD = Infinity
+  for (const r of REGION_COORDS) {
+    const { x: cx, y: cy } = r.coord
+    const dLeft = (cx - x) ** 2 + (cy - y) ** 2
+    const dRight = (2 * MIRROR_AXIS - cx - x) ** 2 + (cy - y) ** 2
+    const d = Math.min(dLeft, dRight)
+    if (d < bestD) {
+      bestD = d
+      best = r
+    }
+  }
+  return best
+}
 
 function summary(labels) {
   const lower = labels.map((l) => l.toLowerCase())
@@ -33,15 +65,18 @@ function summary(labels) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+const isMidline = (label) => REGION_COORDS.find((r) => r.label === label)?.midline
+
 function ManualVisitEntry({ onBuilt, onBack }) {
   const [date, setDate] = useState(todayISO())
-  const [treatments, setTreatments] = useState([]) // { categoryKey, productName, regions:[{label,mirror}], amount }
+  // Each placement is ONE product at ONE region.
+  const [placements, setPlacements] = useState([]) // {categoryKey, productName, regionLabel, mirror, amount}
 
-  // Builder (the one being assembled right now)
+  // The spot currently being filled in (set by tapping the face).
+  const [active, setActive] = useState(null) // { regionLabel, mirror }
   const [categoryKey, setCategoryKey] = useState('')
   const [productName, setProductName] = useState('')
   const [otherName, setOtherName] = useState('')
-  const [regions, setRegions] = useState([]) // [{ label, mirror }]
   const [amount, setAmount] = useState('')
   const [error, setError] = useState('')
 
@@ -49,81 +84,90 @@ function ManualVisitEntry({ onBuilt, onBack }) {
   const effectiveProduct = categoryKey === 'other' ? otherName.trim() : productName
 
   function resetBuilder() {
+    setActive(null)
     setCategoryKey('')
     setProductName('')
     setOtherName('')
-    setRegions([])
     setAmount('')
-  }
-
-  function pickCategory(key) {
     setError('')
-    setCategoryKey(key)
-    setProductName('')
-    setOtherName('')
-    setAmount('')
   }
 
-  function applyPreset(preset) {
+  function handleTap(x, y) {
+    const r = nearestRegion(x, y)
+    if (!r) return
     setError('')
-    setCategoryKey(preset.key)
-    setProductName(preset.product)
-    setOtherName('')
-    setAmount('')
-    setRegions(
-      preset.regions.map((label) => ({ label, mirror: !MIDLINE[label] }))
-    )
+    // Keep any product/amount already chosen — a tap only (re)places the spot.
+    setActive({ regionLabel: r.label, mirror: !r.midline })
   }
 
-  const isRegionOn = (label) => regions.some((r) => r.label === label)
-
-  function toggleRegion(label) {
-    setError('')
-    setRegions((prev) =>
-      prev.some((r) => r.label === label)
-        ? prev.filter((r) => r.label !== label)
-        : [...prev, { label, mirror: !MIDLINE[label] }]
-    )
-  }
-
-  function setMirror(label, mirror) {
-    setRegions((prev) => prev.map((r) => (r.label === label ? { ...r, mirror } : r)))
-  }
-
-  function addTreatment() {
+  function addPlacement() {
+    if (!active) return
     if (!categoryKey) return setError('Pick what was used.')
     if (!effectiveProduct) return setError('Pick or name the product.')
-    if (regions.length === 0) return setError('Tap at least one area.')
-    setTreatments((prev) => [
+    setPlacements((prev) => [
       ...prev,
-      { categoryKey, productName: effectiveProduct, regions, amount },
+      {
+        categoryKey,
+        productName: effectiveProduct,
+        regionLabel: active.regionLabel,
+        mirror: active.mirror,
+        amount,
+      },
     ])
     resetBuilder()
   }
 
-  function removeTreatment(i) {
-    setTreatments((prev) => prev.filter((_, idx) => idx !== i))
+  function removePlacement(i) {
+    setPlacements((prev) => prev.filter((_, idx) => idx !== i))
+  }
+
+  function applyPreset(preset) {
+    setError('')
+    setActive(null)
+    const added = preset.regions.map((label) => ({
+      categoryKey: preset.key,
+      productName: preset.product,
+      regionLabel: label,
+      mirror: !isMidline(label),
+      amount: '',
+    }))
+    setPlacements((prev) => [...prev, ...added])
+  }
+
+  // Build the marks for the face: point categories → dots, field categories →
+  // halos. The active spot shows a magenta preview dot so the snap is visible.
+  const dots = []
+  const halos = []
+  placements.forEach((p, i) => {
+    const c = getCoordinates(p.regionLabel)
+    if (!c) return
+    const color = categoryColor(p.categoryKey)
+    const bucket = categoryMark(p.categoryKey) === 'field' ? halos : dots
+    bucket.push({ id: `p${i}`, x: c.x, y: c.y, color })
+    if (p.mirror) bucket.push({ id: `p${i}m`, x: 2 * MIRROR_AXIS - c.x, y: c.y, color })
+  })
+  if (active) {
+    const c = getCoordinates(active.regionLabel)
+    if (c) {
+      dots.push({ id: 'active', x: c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
+      if (active.mirror) {
+        dots.push({ id: 'active-m', x: 2 * MIRROR_AXIS - c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
+      }
+    }
   }
 
   function reviewAndSave() {
     // Fold same-named products into one treatment (combining areas) so the save
     // pipeline, which groups areas by treatment name, never doubles a dot.
     const byName = {}
-    for (const t of treatments) {
-      if (!byName[t.productName]) {
-        byName[t.productName] = {
-          name: t.productName,
-          color_key: t.categoryKey,
-          amount: t.amount,
-          regions: [],
-        }
+    for (const p of placements) {
+      if (!byName[p.productName]) {
+        byName[p.productName] = { name: p.productName, color_key: p.categoryKey, amount: p.amount, regions: [] }
       }
-      for (const r of t.regions) {
-        if (!byName[t.productName].regions.some((x) => x.label === r.label)) {
-          byName[t.productName].regions.push(r)
-        }
+      if (!byName[p.productName].regions.some((r) => r.label === p.regionLabel)) {
+        byName[p.productName].regions.push({ label: p.regionLabel, mirror: p.mirror })
       }
-      if (!byName[t.productName].amount && t.amount) byName[t.productName].amount = t.amount
+      if (!byName[p.productName].amount && p.amount) byName[p.productName].amount = p.amount
     }
     const merged = Object.values(byName)
 
@@ -157,19 +201,19 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     })
   }
 
-  const offAxisSelected = regions.filter((r) => !MIDLINE[r.label])
   const amountOptions = categoryKey ? amountOptionsFor(categoryKey) : []
+  const activeOffAxis = active && !isMidline(active.regionLabel)
 
   return (
     <div className="logvisit-flow">
       <div className="logvisit-flow-head">
         <h3 className="logvisit-flow-title">Add your visit</h3>
         <p className="logvisit-flow-sub">
-          Tap in what was done — hand the phone to your injector if that's easier.
+          Tap the face where treatment went, then pick the product. Hand the phone
+          to your injector if that's easier.
         </p>
       </div>
 
-      {/* Date */}
       <label className="manual-date">
         <span className="manual-label">Date</span>
         <input
@@ -180,23 +224,146 @@ function ManualVisitEntry({ onBuilt, onBack }) {
         />
       </label>
 
-      {/* Treatments added so far */}
-      {treatments.length > 0 && (
+      {/* One-tap common treatments */}
+      <div className="manual-presets">
+        {PRESETS.map((p) => (
+          <button key={p.label} type="button" className="manual-preset" onClick={() => applyPreset(p)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* The face — tap to place */}
+      <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
+      <p className="manual-tap-hint">
+        {active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went'}
+      </p>
+
+      {/* Entry panel for the tapped spot */}
+      {active && (
+        <div className="manual-builder">
+          <div className="manual-spot-head">
+            <span className="manual-spot-area">{active.regionLabel}</span>
+            <span className="manual-spot-retap">Tap the face again to move this spot</span>
+          </div>
+
+          {activeOffAxis && (
+            <div className="qa-side-toggle manual-spot-sides" role="group" aria-label="sides">
+              <button
+                type="button"
+                className={`qa-side-option${active.mirror ? ' is-active' : ''}`}
+                onClick={() => setActive((a) => ({ ...a, mirror: true }))}
+              >
+                Both sides
+              </button>
+              <button
+                type="button"
+                className={`qa-side-option${!active.mirror ? ' is-active' : ''}`}
+                onClick={() => setActive((a) => ({ ...a, mirror: false }))}
+              >
+                One side
+              </button>
+            </div>
+          )}
+
+          <div className="manual-section-label">What was used?</div>
+          <div className="manual-cats">
+            {PRODUCT_MENU.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                className={`manual-cat${categoryKey === c.key ? ' is-selected' : ''}`}
+                onClick={() => {
+                  setError('')
+                  setCategoryKey(c.key)
+                  setProductName('')
+                  setOtherName('')
+                  setAmount('')
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {category && category.products.length > 0 && (
+            <div className="manual-chiprow">
+              {category.products.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`qa-chip${productName === p ? ' is-selected' : ''}`}
+                  onClick={() => {
+                    setError('')
+                    setProductName(p)
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+          {categoryKey === 'other' && (
+            <input
+              type="text"
+              value={otherName}
+              onChange={(e) => setOtherName(e.target.value)}
+              placeholder="What was it called?"
+              className="manual-other-input"
+            />
+          )}
+
+          {categoryKey && amountOptions.length > 0 && (
+            <>
+              <div className="manual-section-label">
+                How much? <span className="manual-optional">(optional)</span>
+              </div>
+              <div className="manual-chiprow">
+                {amountOptions.map((opt) => (
+                  <button
+                    key={opt || 'none'}
+                    type="button"
+                    className={`qa-chip${amount === opt ? ' is-selected' : ''}`}
+                    onClick={() => setAmount(opt)}
+                  >
+                    {opt === '' ? 'Skip' : opt}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {error && <div className="form-error">{error}</div>}
+
+          <div className="form-actions" style={{ marginTop: 16 }}>
+            <button type="button" className="form-cancel-btn" onClick={resetBuilder}>
+              Cancel
+            </button>
+            <button type="button" className="form-save-btn" onClick={addPlacement}>
+              Add this spot
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* What's been placed so far */}
+      {placements.length > 0 && (
         <ul className="manual-list">
-          {treatments.map((t, i) => (
+          {placements.map((p, i) => (
             <li key={i} className="manual-list-item">
               <div className="manual-list-text">
-                <span className="manual-list-name">{t.productName}</span>
+                <span className="manual-list-name">{p.productName}</span>
                 <span className="manual-list-areas">
-                  {t.regions.map((r) => r.label).join(', ')}
-                  {t.amount ? ` · ${t.amount}` : ''}
+                  {p.regionLabel}
+                  {!isMidline(p.regionLabel) ? (p.mirror ? ' · both sides' : ' · one side') : ''}
+                  {p.amount ? ` · ${p.amount}` : ''}
                 </span>
               </div>
               <button
                 type="button"
                 className="manual-list-remove"
-                onClick={() => removeTreatment(i)}
-                aria-label={`Remove ${t.productName}`}
+                onClick={() => removePlacement(i)}
+                aria-label={`Remove ${p.productName} at ${p.regionLabel}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -207,140 +374,6 @@ function ManualVisitEntry({ onBuilt, onBack }) {
         </ul>
       )}
 
-      {/* Builder */}
-      <div className="manual-builder">
-        <div className="manual-section-label">
-          {treatments.length ? 'Add another' : 'What did you get?'}
-        </div>
-
-        {/* One-tap presets */}
-        <div className="manual-presets">
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              className="manual-preset"
-              onClick={() => applyPreset(p)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Category tiles */}
-        <div className="manual-cats">
-          {PRODUCT_MENU.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className={`manual-cat${categoryKey === c.key ? ' is-selected' : ''}`}
-              onClick={() => pickCategory(c.key)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Product picker (or a name field for "Something else") */}
-        {category && category.products.length > 0 && (
-          <div className="manual-chiprow">
-            {category.products.map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={`qa-chip${productName === p ? ' is-selected' : ''}`}
-                onClick={() => {
-                  setError('')
-                  setProductName(p)
-                }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        )}
-        {categoryKey === 'other' && (
-          <input
-            type="text"
-            value={otherName}
-            onChange={(e) => setOtherName(e.target.value)}
-            placeholder="What was it called?"
-            className="manual-other-input"
-          />
-        )}
-
-        {/* Where */}
-        {categoryKey && (
-          <>
-            <div className="manual-section-label">Where?</div>
-            <div className="qa-chips">
-              {FACE_REGIONS.map((r) => (
-                <button
-                  key={r.label}
-                  type="button"
-                  className={`qa-chip${isRegionOn(r.label) ? ' is-selected' : ''}`}
-                  onClick={() => toggleRegion(r.label)}
-                  aria-pressed={isRegionOn(r.label)}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-
-            {offAxisSelected.length > 0 && (
-              <div className="qa-sides">
-                {offAxisSelected.map((r) => (
-                  <div key={r.label} className="qa-side-row">
-                    <span className="qa-side-label">{r.label}</span>
-                    <div className="qa-side-toggle" role="group" aria-label={`${r.label} sides`}>
-                      <button
-                        type="button"
-                        className={`qa-side-option${r.mirror ? ' is-active' : ''}`}
-                        onClick={() => setMirror(r.label, true)}
-                      >
-                        Both sides
-                      </button>
-                      <button
-                        type="button"
-                        className={`qa-side-option${!r.mirror ? ' is-active' : ''}`}
-                        onClick={() => setMirror(r.label, false)}
-                      >
-                        One side
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* How much (optional) */}
-        {categoryKey && amountOptions.length > 0 && (
-          <>
-            <div className="manual-section-label">How much? <span className="manual-optional">(optional)</span></div>
-            <div className="manual-chiprow">
-              {amountOptions.map((opt) => (
-                <button
-                  key={opt || 'none'}
-                  type="button"
-                  className={`qa-chip${amount === opt ? ' is-selected' : ''}`}
-                  onClick={() => setAmount(opt)}
-                >
-                  {opt === '' ? 'Skip' : opt}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {error && <div className="form-error">{error}</div>}
-
-        <button type="button" className="manual-add-btn" onClick={addTreatment}>
-          Add to visit
-        </button>
-      </div>
-
       <div className="form-actions" style={{ marginTop: 16 }}>
         <button type="button" onClick={onBack} className="form-cancel-btn">
           Back
@@ -349,7 +382,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
           type="button"
           onClick={reviewAndSave}
           className="form-save-btn"
-          disabled={treatments.length === 0}
+          disabled={placements.length === 0}
         >
           Review &amp; save
         </button>
