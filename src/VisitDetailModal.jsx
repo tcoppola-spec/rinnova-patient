@@ -173,19 +173,16 @@ function VisitDetailModal({ visit, photos = [], onClose, onDeleted, onRefetch, o
             onToast={onToast}
           />
 
-          <footer className="modal-footer">
-            {costFormatted ? (
+          {/* Cost shows only when it's been added. When empty, nothing here —
+              cost is added from the visit list, not this read-only view. */}
+          {costFormatted && (
+            <footer className="modal-footer">
               <div className="modal-cost-row">
                 <span className="modal-cost-label">Total cost</span>
                 <span className="modal-cost-value">{costFormatted}</span>
               </div>
-            ) : (
-              <div className="modal-cost-row modal-cost-row-empty">
-                <span className="modal-cost-label">Total cost</span>
-                <span className="modal-cost-empty">Not yet added</span>
-              </div>
-            )}
-          </footer>
+            </footer>
+          )}
 
           <div className="lightbox-actions">
             {!confirmingDelete ? (
