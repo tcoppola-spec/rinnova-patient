@@ -779,6 +779,7 @@
 /* ============ FACE DIAGRAM ============ */
 
 .face-diagram-wrap {
+  position: relative;
   margin: 16px 0 24px;
   background: linear-gradient(to bottom, #FBF4E8, #F5EAD4);
   border-radius: 16px;
@@ -799,12 +800,17 @@
   stroke: none;
 }
 
-/* Subtle watermark on every diagram, bottom-left — same tan as the face line. */
+/* Watermark on every diagram, bottom-left of the beige panel. A darker taupe
+   than the face line so it's legible on the beige, tucked near the panel edge. */
 .face-watermark {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
   font-family: var(--f-body);
   font-size: 9px;
-  fill: var(--face-line);
-  opacity: 0.9;
+  letter-spacing: 0.02em;
+  color: #8F8060;
+  pointer-events: none;
 }
 
 .face-diagram-svg .area-dot circle {
@@ -1040,6 +1046,19 @@
   padding: 4px 18px 14px;
   background: transparent;
   border: none;
+}
+
+/* Provider · Cost links, side by side. */
+.visit-meta-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.visit-meta-sep {
+  color: var(--line);
+  font-size: 12.5px;
 }
 
 .cost-link {

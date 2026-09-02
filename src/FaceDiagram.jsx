@@ -214,12 +214,11 @@ function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend
           </g>
         ))}
 
-        {/* Watermark, bottom-left corner. Baked into the SVG so it stays put if
-            the diagram is screenshotted. */}
-        <text className="face-watermark" x="1" y={VIEWBOX.height - 3}>
-          app.rinnova.io
-        </text>
       </svg>
+
+      {/* Watermark, bottom-left of the beige panel (not the SVG) so it sits near
+          the panel edge, well clear of the face. */}
+      <div className="face-watermark">app.rinnova.io</div>
 
       {/* Color legend below the face. A caller supplying its own dots supplies
           its own legend too (or none) — the treatment list wouldn't describe
