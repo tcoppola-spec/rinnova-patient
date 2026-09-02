@@ -100,6 +100,12 @@ const COORDINATES = {
   'bunny lines': { x: 101.5, y: 159.3 },
   'nose bridge': { x: 114.9, y: 140 },
   'nose tip': { x: 114.9, y: 196 },
+  // Base of the nose / columella — the "under the nose" spot (e.g. a lip-flip or
+  // depressor-septi tox point). Midline, below the tip (196) and above the
+  // philtrum (213), so it reads as its own place, not "nose".
+  'under the nose': { x: 114.9, y: 203 },
+  'under nose': { x: 114.9, y: 203 },
+  'base of nose': { x: 114.9, y: 203 },
 
   // --- Cheeks ---
   'cheekbones': { x: 47.7, y: 173.7 },

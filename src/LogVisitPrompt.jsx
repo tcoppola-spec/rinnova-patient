@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { saveParsedVisit } from './saveVisit'
 import { supabase } from './supabaseClient'
 import AreaQuestions from './AreaQuestions'
+import ManualVisitEntry from './ManualVisitEntry'
 import { apiUrl } from './apiBase'
 
 // Accepted upload types for a document (note/receipt): images and PDFs. Roberta's
@@ -503,6 +504,20 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
               </div>
             </div>
           </button>
+
+          <button
+            type="button"
+            onClick={() => { setError(null); setStep('manual') }}
+            className="logvisit-choice"
+          >
+            <div className="logvisit-choice-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg></div>
+            <div className="logvisit-choice-text">
+              <div className="logvisit-choice-title">Add it myself</div>
+              <div className="logvisit-choice-sub">
+                Tap in what you had done — hand the phone to your injector
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* For the "I don't have anything to log yet" moment: a quiet fallback
@@ -535,6 +550,23 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
           </button>
         </div>
       </div>
+    )
+  }
+
+  // Manual entry step — build the visit by tapping (no receipt). It produces the
+  // same `parsed` shape and then hands off to the shared result → save → success
+  // path, so coordinates, the duplicate warning and the saved screen all reuse.
+  if (step === 'manual') {
+    return (
+      <ManualVisitEntry
+        onBack={() => { setError(null); setStep('choose') }}
+        onBuilt={(built) => {
+          setParsed(built)
+          setAreaAnswers({})
+          setSaveError(null)
+          setStep('result')
+        }}
+      />
     )
   }
 

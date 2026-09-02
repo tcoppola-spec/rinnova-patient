@@ -36,11 +36,13 @@ export const FACE_REGIONS = [
   { label: 'Temples', midline: false },
   { label: 'Cheeks', midline: false },
   { label: 'Nose', midline: true },
+  { label: 'Under the nose', midline: true },
   { label: 'Smile lines', midline: false },
   { label: 'Lips', midline: true },
   { label: 'Around the mouth', midline: false },
   { label: 'Marionette lines', midline: false },
   { label: 'Chin', midline: true },
+  { label: 'Masseter', midline: false },
   { label: 'Jawline', midline: false },
   { label: 'Neck', midline: true },
   // For field treatments (laser, Ultherapy, peels) done everywhere. Resolves to

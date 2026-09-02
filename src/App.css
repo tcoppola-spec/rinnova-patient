@@ -2467,6 +2467,186 @@
   color: var(--muted);
 }
 
+/* ============ MANUAL VISIT ENTRY (tap-to-build) ============ */
+
+.manual-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.manual-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manual-date-input {
+  font-family: inherit;
+  font-size: 16px; /* >=16px so iOS doesn't zoom on focus */
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+.manual-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.manual-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--magenta-soft);
+  border-radius: 12px;
+}
+
+.manual-list-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.manual-list-name {
+  font-family: var(--f-display);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.manual-list-areas {
+  font-size: 12px;
+  color: var(--body);
+}
+
+.manual-list-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.manual-builder {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background: var(--card);
+}
+
+.manual-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 14px 0 10px;
+}
+
+.manual-builder > .manual-section-label:first-child {
+  margin-top: 0;
+}
+
+.manual-optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.manual-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.manual-preset {
+  padding: 8px 13px;
+  border: 1px solid var(--magenta);
+  border-radius: 999px;
+  background: var(--magenta-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--magenta);
+  cursor: pointer;
+}
+
+.manual-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manual-cat {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.manual-cat:hover {
+  border-color: var(--magenta);
+}
+
+/* Category selected = ink (dark), so it reads as a different level from the
+   magenta product/region chips selected below it. */
+.manual-cat.is-selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 500;
+}
+
+.manual-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.manual-other-input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 16px; /* >=16px so iOS doesn't zoom on focus */
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.manual-add-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--magenta);
+  background: var(--magenta-soft);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
 .qa-chips {
   display: flex;
   flex-wrap: wrap;
