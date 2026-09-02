@@ -64,19 +64,28 @@ export const PRESETS = [
   { label: 'Forehead & 11s', key: 'xeomin', product: 'Botox', regions: ['Forehead', 'Between the brows'] },
 ]
 
-// Amount presets. Injectables carry a real unit patients recognise; everything
-// else is a session. '' means "don't record an amount" (dose stays null — we
-// never force a guessed number).
-const TOX_AMOUNTS = ['', '10 units', '20 units', '30 units', '40 units', '50+ units']
-const FILLER_AMOUNTS = ['', '½ syringe', '1 syringe', '1½ syringes', '2 syringes', '3+ syringes']
-const VIAL_AMOUNTS = ['', '1 vial', '2 vials', '3+ vials']
-const THREAD_AMOUNTS = ['', '2 threads', '4 threads', '6+ threads']
-const SESSION_AMOUNTS = ['', '1 session']
-
-export function amountOptionsFor(key) {
-  if (key === 'xeomin') return TOX_AMOUNTS
-  if (key === 'rha' || key === 'radiesse' || key === 'radiesse-light') return FILLER_AMOUNTS
-  if (key === 'biostimulator' || key === 'kybella') return VIAL_AMOUNTS
-  if (key === 'threads') return THREAD_AMOUNTS
-  return SESSION_AMOUNTS
+// Dose is a NUMBER + a UNIT, not a fixed pick, because real dosing is specific
+// (0.1 cc here, 0.4 cc there; 10 units; 2.7 cc total). Each category carries its
+// unit(s) and a few quick-fill values; the amount is entered per spot so a visit
+// can hold the per-area breakdown AND roll up to a total, the way clinical notes
+// read. Fillers offer both cc and syringe because injectors use both.
+//   units:  choices for the unit selector (first is the default)
+//   quick:  common numeric values, tap to fill (still editable)
+// Returns null for treatments that aren't dosed as a number (lasers, peels).
+export function doseConfigFor(key) {
+  switch (key) {
+    case 'xeomin':
+      return { units: ['units'], quick: ['10', '20', '30', '40', '50'] }
+    case 'rha':
+    case 'radiesse':
+    case 'radiesse-light':
+      return { units: ['cc', 'syringe'], quick: ['0.5', '1', '1.5', '2'] }
+    case 'biostimulator':
+    case 'kybella':
+      return { units: ['vial', 'cc'], quick: ['1', '2', '3'] }
+    case 'threads':
+      return { units: ['threads'], quick: ['2', '4', '6'] }
+    default:
+      return null // energy / resurfacing / light / other aren't dosed numerically
+  }
 }

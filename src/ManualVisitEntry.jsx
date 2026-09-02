@@ -4,20 +4,22 @@ import { FACE_REGIONS } from './faceRegions'
 import { getCoordinates } from './faceCoordinates'
 import { MIRROR_AXIS } from './faceGeometry'
 import { categoryColor, categoryMark } from './treatmentColors'
-import { PRODUCT_MENU, PRESETS, amountOptionsFor } from './manualEntry'
+import { PRODUCT_MENU, PRESETS, doseConfigFor } from './manualEntry'
 
 /**
  * ManualVisitEntry — build a visit by tapping the FACE, no receipt.
  *
- * The flow the pilot asked for, and the way an injector actually thinks: the
- * diagram opens, you tap WHERE the treatment went, then pick WHAT and how much.
+ * The flow the pilot asked for, and the way an injector thinks: the diagram
+ * opens, you tap WHERE the treatment went, then pick WHAT, how much, and add it.
  * Hand the phone to the injector and it's a few taps.
  *
- * INTEGRITY: Rinnova never puts a dot at an arbitrary coordinate (a dot in the
- * wrong place falsifies the record). So a tap doesn't drop a freeform dot — it
- * SNAPS to the nearest curated region (FACE_REGIONS) and shows its name to
- * confirm. Free tapping, but it always lands on real anatomy. Mirroring is
- * handled in the snap so a tap on either cheek finds the same region.
+ * INTEGRITY: Rinnova never puts a dot at an arbitrary coordinate. A tap SNAPS to
+ * the nearest curated region (FACE_REGIONS) and shows its name to confirm — free
+ * tapping that always lands on real anatomy. Mirroring is handled in the snap so
+ * a tap on either cheek finds the same region.
+ *
+ * DOSE is a number + unit per spot (0.4 cc, 10 units), so a visit can carry the
+ * per-area breakdown and a rolled-up total — the way clinical notes read.
  *
  * It assembles the SAME `parsed` object the AI parser produces and hands it up
  * via onBuilt, so it flows into the existing review → save → success path with
@@ -30,7 +32,6 @@ import { PRODUCT_MENU, PRESETS, amountOptionsFor } from './manualEntry'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-// Every region with its resolved coordinate + midline flag, computed once.
 const REGION_COORDS = FACE_REGIONS.map((r) => ({
   label: r.label,
   midline: r.midline,
@@ -38,8 +39,8 @@ const REGION_COORDS = FACE_REGIONS.map((r) => ({
 })).filter((r) => r.coord)
 
 // Nearest curated region to a tapped point. Off-axis regions are stored on the
-// left; a tap on the right side is matched by also testing the mirror, so either
-// cheek snaps to the same region.
+// left; a tap on the right is matched via the mirror, so either side snaps to
+// the same region.
 function nearestRegion(x, y) {
   let best = null
   let bestD = Infinity
@@ -67,33 +68,63 @@ function summary(labels) {
 
 const isMidline = (label) => REGION_COORDS.find((r) => r.label === label)?.midline
 
+// Roll per-spot doses up to a visit total, but only when they clearly add up:
+// all numeric and the same unit. Otherwise leave the total blank rather than
+// guess (e.g. mixing "cc" and "syringe").
+function sumDoses(doses) {
+  const parts = doses
+    .filter((d) => d && String(d).trim())
+    .map((d) => {
+      const m = String(d).trim().match(/^([\d.]+)\s*(.*)$/)
+      return m ? { n: parseFloat(m[1]), unit: (m[2] || '').trim().toLowerCase() } : null
+    })
+  if (parts.length === 0 || parts.some((p) => !p || Number.isNaN(p.n))) return null
+  const unit = parts[0].unit
+  if (parts.some((p) => p.unit !== unit)) return null
+  const total = +parts.reduce((s, p) => s + p.n, 0).toFixed(2)
+  return unit ? `${total} ${unit}` : String(total)
+}
+
 function ManualVisitEntry({ onBuilt, onBack }) {
   const [date, setDate] = useState(todayISO())
-  // Each placement is ONE product at ONE region.
-  const [placements, setPlacements] = useState([]) // {categoryKey, productName, regionLabel, mirror, amount}
+  // Each placement is ONE product at ONE region, with its own dose.
+  const [placements, setPlacements] = useState([]) // {categoryKey, productName, regionLabel, mirror, dose}
 
-  // The spot currently being filled in (set by tapping the face).
-  const [active, setActive] = useState(null) // { regionLabel, mirror }
-  // A preset awaiting a product choice (which tox brand?) before it fills in.
-  const [pendingPreset, setPendingPreset] = useState(null)
+  const [active, setActive] = useState(null) // { regionLabel, mirror } — the tapped spot
+  const [pendingPreset, setPendingPreset] = useState(null) // preset awaiting a product
+
   const [categoryKey, setCategoryKey] = useState('')
   const [productName, setProductName] = useState('')
   const [otherName, setOtherName] = useState('')
-  const [amount, setAmount] = useState('')
+  const [amountValue, setAmountValue] = useState('') // the number, as text
+  const [amountUnit, setAmountUnit] = useState('')
   const [diluted, setDiluted] = useState(false)
   const [error, setError] = useState('')
 
   const category = PRODUCT_MENU.find((c) => c.key === categoryKey) || null
   const effectiveProduct = categoryKey === 'other' ? otherName.trim() : productName
+  const doseConfig = categoryKey ? doseConfigFor(categoryKey) : null
 
   function resetBuilder() {
     setActive(null)
     setCategoryKey('')
     setProductName('')
     setOtherName('')
-    setAmount('')
+    setAmountValue('')
+    setAmountUnit('')
     setDiluted(false)
     setError('')
+  }
+
+  function pickCategory(key) {
+    setError('')
+    setCategoryKey(key)
+    setProductName('')
+    setOtherName('')
+    setDiluted(false)
+    setAmountValue('')
+    const cfg = doseConfigFor(key)
+    setAmountUnit(cfg ? cfg.units[0] : '')
   }
 
   function handleTap(x, y) {
@@ -101,18 +132,20 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     if (!r) return
     setError('')
     setPendingPreset(null) // tapping the face dismisses a half-started preset
-    // Keep any product/amount already chosen — a tap only (re)places the spot.
     setActive({ regionLabel: r.label, mirror: !r.midline })
+  }
+
+  function currentDose() {
+    const val = amountValue.trim()
+    return val ? `${val} ${amountUnit}`.trim() : ''
   }
 
   function addPlacement() {
     if (!active) return
     if (!categoryKey) return setError('Pick what was used.')
     if (!effectiveProduct) return setError('Pick or name the product.')
-    // Dilution: for Radiesse it's a distinct clinical thing with its own colour
-    // (hyperdilute is used to biostimulate, not volumise), so it switches to the
-    // diluted-Radiesse category. For anything else, diluted is a note on the
-    // same product — same colour, just recorded in the name.
+    // Dilution: for Radiesse it's a distinct clinical thing with its own colour;
+    // for anything else it's a note on the same product (same colour).
     let finalCategory = categoryKey
     let finalProduct = effectiveProduct
     if (diluted) {
@@ -126,7 +159,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
         productName: finalProduct,
         regionLabel: active.regionLabel,
         mirror: active.mirror,
-        amount,
+        dose: currentDose(),
       },
     ])
     resetBuilder()
@@ -136,16 +169,13 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     setPlacements((prev) => prev.filter((_, idx) => idx !== i))
   }
 
-  // Tapping a preset doesn't place anything yet — it asks which product first
-  // (a Nefertiti lift can be Botox, Dysport, Xeomin…). The preset only decides
-  // the category and the regions.
+  // A preset only decides the category + regions; the product is chosen next.
   function applyPreset(preset) {
     setError('')
     setActive(null)
     setPendingPreset(preset)
   }
 
-  // Product chosen for the pending preset → place all its regions.
   function addPresetWithProduct(product) {
     if (!pendingPreset) return
     const added = pendingPreset.regions.map((label) => ({
@@ -153,14 +183,14 @@ function ManualVisitEntry({ onBuilt, onBack }) {
       productName: product,
       regionLabel: label,
       mirror: !isMidline(label),
-      amount: '',
+      dose: '',
     }))
     setPlacements((prev) => [...prev, ...added])
     setPendingPreset(null)
   }
 
-  // Build the marks for the face: point categories → dots, field categories →
-  // halos. The active spot shows a magenta preview dot so the snap is visible.
+  // Marks for the face: point categories → dots, field → halos. The active spot
+  // shows a magenta preview dot so the snap is visible.
   const dots = []
   const halos = []
   placements.forEach((p, i) => {
@@ -182,17 +212,17 @@ function ManualVisitEntry({ onBuilt, onBack }) {
   }
 
   function reviewAndSave() {
-    // Fold same-named products into one treatment (combining areas) so the save
-    // pipeline, which groups areas by treatment name, never doubles a dot.
+    // Fold same-named products into one treatment (combining areas + doses) so
+    // the save pipeline, which groups areas by treatment name, never doubles a
+    // dot. Each area keeps its own dose; the treatment total rolls them up.
     const byName = {}
     for (const p of placements) {
       if (!byName[p.productName]) {
-        byName[p.productName] = { name: p.productName, color_key: p.categoryKey, amount: p.amount, regions: [] }
+        byName[p.productName] = { name: p.productName, color_key: p.categoryKey, regions: [] }
       }
       if (!byName[p.productName].regions.some((r) => r.label === p.regionLabel)) {
-        byName[p.productName].regions.push({ label: p.regionLabel, mirror: p.mirror })
+        byName[p.productName].regions.push({ label: p.regionLabel, mirror: p.mirror, dose: p.dose || '' })
       }
-      if (!byName[p.productName].amount && p.amount) byName[p.productName].amount = p.amount
     }
     const merged = Object.values(byName)
 
@@ -201,7 +231,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
         treatment_name: t.name,
         friendly_name: r.label,
         clinical_name: null,
-        dose: null,
+        dose: r.dose || null,
         mirror: r.mirror === true,
       }))
     )
@@ -217,7 +247,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
       treatments: merged.map((t) => ({
         name: t.name,
         summary: null,
-        total_dose: t.amount || null,
+        total_dose: sumDoses(t.regions.map((r) => r.dose)),
         lot_number: null,
         color_key: t.color_key,
       })),
@@ -226,8 +256,10 @@ function ManualVisitEntry({ onBuilt, onBack }) {
     })
   }
 
-  const amountOptions = categoryKey ? amountOptionsFor(categoryKey) : []
   const activeOffAxis = active && !isMidline(active.regionLabel)
+  const presetProducts = pendingPreset
+    ? PRODUCT_MENU.find((c) => c.key === pendingPreset.key)?.products || []
+    : []
 
   return (
     <div className="logvisit-flow">
@@ -263,13 +295,8 @@ function ManualVisitEntry({ onBuilt, onBack }) {
         <div className="manual-builder">
           <div className="manual-section-label">{pendingPreset.label} — which product?</div>
           <div className="qa-chips">
-            {(PRODUCT_MENU.find((c) => c.key === pendingPreset.key)?.products || []).map((p) => (
-              <button
-                key={p}
-                type="button"
-                className="qa-chip"
-                onClick={() => addPresetWithProduct(p)}
-              >
+            {presetProducts.map((p) => (
+              <button key={p} type="button" className="qa-chip" onClick={() => addPresetWithProduct(p)}>
                 {p}
               </button>
             ))}
@@ -320,19 +347,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
               <div className="manual-section-label">What was used?</div>
               <div className="qa-chips">
                 {PRODUCT_MENU.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className="qa-chip"
-                    onClick={() => {
-                      setError('')
-                      setCategoryKey(c.key)
-                      setProductName('')
-                      setOtherName('')
-                      setAmount('')
-                      setDiluted(false)
-                    }}
-                  >
+                  <button key={c.key} type="button" className="qa-chip" onClick={() => pickCategory(c.key)}>
                     {c.label}
                   </button>
                 ))}
@@ -344,17 +359,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
                   ONE action colour (magenta) across the whole panel. */}
               <div className="manual-chosen">
                 <span className="manual-chosen-label">{category?.label}</span>
-                <button
-                  type="button"
-                  className="manual-change"
-                  onClick={() => {
-                    setCategoryKey('')
-                    setProductName('')
-                    setOtherName('')
-                    setAmount('')
-                    setDiluted(false)
-                  }}
-                >
+                <button type="button" className="manual-change" onClick={resetBuilder}>
                   Change
                 </button>
               </div>
@@ -389,9 +394,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
                 />
               )}
 
-              {/* Dilution — only for injectables (you don't dilute a laser). For
-                  Radiesse it maps to the diluted-Radiesse colour; for others it's
-                  recorded as a note on the same product. */}
+              {/* Dilution — injectables only (you don't dilute a laser). */}
               {categoryMark(categoryKey) === 'point' && (
                 <label className="manual-diluted">
                   <input
@@ -403,23 +406,52 @@ function ManualVisitEntry({ onBuilt, onBack }) {
                 </label>
               )}
 
-              {amountOptions.length > 0 && (
+              {/* Dose — a real number + unit (0.4 cc, 10 units). Per spot, so a
+                  visit keeps the breakdown and rolls up to a total. */}
+              {doseConfig && (
                 <>
                   <div className="manual-section-label">
                     How much? <span className="manual-optional">(optional)</span>
                   </div>
-                  <div className="qa-chips">
-                    {amountOptions.map((opt) => (
-                      <button
-                        key={opt || 'none'}
-                        type="button"
-                        className={`qa-chip${amount === opt ? ' is-selected' : ''}`}
-                        onClick={() => setAmount(opt)}
-                      >
-                        {opt === '' ? 'Skip' : opt}
-                      </button>
-                    ))}
+                  {doseConfig.units.length > 1 && (
+                    <div className="qa-side-toggle manual-unit-toggle" role="group" aria-label="unit">
+                      {doseConfig.units.map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          className={`qa-side-option${amountUnit === u ? ' is-active' : ''}`}
+                          onClick={() => setAmountUnit(u)}
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="manual-dose-row">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={amountValue}
+                      onChange={(e) => setAmountValue(e.target.value.replace(/[^\d.]/g, ''))}
+                      placeholder={`e.g. ${doseConfig.quick[0] || '1'}`}
+                      className="manual-dose-input"
+                    />
+                    <span className="manual-dose-unit">{amountUnit}</span>
                   </div>
+                  {doseConfig.quick.length > 0 && (
+                    <div className="qa-chips manual-dose-quick">
+                      {doseConfig.quick.map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          className={`qa-chip${amountValue === q ? ' is-selected' : ''}`}
+                          onClick={() => setAmountValue(q)}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </>
@@ -448,7 +480,7 @@ function ManualVisitEntry({ onBuilt, onBack }) {
                 <span className="manual-list-areas">
                   {p.regionLabel}
                   {!isMidline(p.regionLabel) ? (p.mirror ? ' · both sides' : ' · one side') : ''}
-                  {p.amount ? ` · ${p.amount}` : ''}
+                  {p.dose ? ` · ${p.dose}` : ''}
                 </span>
               </div>
               <button

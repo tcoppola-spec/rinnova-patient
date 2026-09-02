@@ -2731,6 +2731,39 @@
   padding: 4px;
 }
 
+.manual-unit-toggle {
+  margin-bottom: 10px;
+}
+
+.manual-dose-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manual-dose-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 16px; /* >=16px so iOS doesn't zoom on focus */
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.manual-dose-unit {
+  font-size: 14px;
+  color: var(--muted);
+  min-width: 42px;
+}
+
+.manual-dose-quick {
+  margin-top: 10px;
+}
+
 .qa-chips {
   display: flex;
   flex-wrap: wrap;
