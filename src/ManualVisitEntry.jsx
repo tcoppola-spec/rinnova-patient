@@ -278,85 +278,113 @@ function ManualVisitEntry({ onBuilt, onBack }) {
             </div>
           )}
 
-          <div className="manual-section-label">What was used?</div>
-          <div className="manual-cats">
-            {PRODUCT_MENU.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                className={`manual-cat${categoryKey === c.key ? ' is-selected' : ''}`}
-                onClick={() => {
-                  setError('')
-                  setCategoryKey(c.key)
-                  setProductName('')
-                  setOtherName('')
-                  setAmount('')
-                  setDiluted(false)
-                }}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-
-          {category && category.products.length > 0 && (
-            <div className="manual-chiprow">
-              {category.products.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`qa-chip${productName === p ? ' is-selected' : ''}`}
-                  onClick={() => {
-                    setError('')
-                    setProductName(p)
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
-          {categoryKey === 'other' && (
-            <input
-              type="text"
-              value={otherName}
-              onChange={(e) => setOtherName(e.target.value)}
-              placeholder="What was it called?"
-              className="manual-other-input"
-            />
-          )}
-
-          {/* Dilution — only for injectables (you don't dilute a laser). For
-              Radiesse it maps to the diluted-Radiesse colour; for others it's
-              recorded as a note on the same product. */}
-          {categoryKey && categoryMark(categoryKey) === 'point' && (
-            <label className="manual-diluted">
-              <input
-                type="checkbox"
-                checked={diluted}
-                onChange={(e) => setDiluted(e.target.checked)}
-              />
-              <span>Diluted / hyperdilute</span>
-            </label>
-          )}
-
-          {categoryKey && amountOptions.length > 0 && (
+          {!categoryKey ? (
             <>
-              <div className="manual-section-label">
-                How much? <span className="manual-optional">(optional)</span>
-              </div>
-              <div className="manual-chiprow">
-                {amountOptions.map((opt) => (
+              <div className="manual-section-label">What was used?</div>
+              <div className="qa-chips">
+                {PRODUCT_MENU.map((c) => (
                   <button
-                    key={opt || 'none'}
+                    key={c.key}
                     type="button"
-                    className={`qa-chip${amount === opt ? ' is-selected' : ''}`}
-                    onClick={() => setAmount(opt)}
+                    className="qa-chip"
+                    onClick={() => {
+                      setError('')
+                      setCategoryKey(c.key)
+                      setProductName('')
+                      setOtherName('')
+                      setAmount('')
+                      setDiluted(false)
+                    }}
                   >
-                    {opt === '' ? 'Skip' : opt}
+                    {c.label}
                   </button>
                 ))}
               </div>
+            </>
+          ) : (
+            <>
+              {/* Chosen type collapses to a labelled line — no wall of tiles, and
+                  ONE action colour (magenta) across the whole panel. */}
+              <div className="manual-chosen">
+                <span className="manual-chosen-label">{category?.label}</span>
+                <button
+                  type="button"
+                  className="manual-change"
+                  onClick={() => {
+                    setCategoryKey('')
+                    setProductName('')
+                    setOtherName('')
+                    setAmount('')
+                    setDiluted(false)
+                  }}
+                >
+                  Change
+                </button>
+              </div>
+
+              {category && category.products.length > 0 && (
+                <>
+                  <div className="manual-section-label">Which product?</div>
+                  <div className="qa-chips">
+                    {category.products.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`qa-chip${productName === p ? ' is-selected' : ''}`}
+                        onClick={() => {
+                          setError('')
+                          setProductName(p)
+                        }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {categoryKey === 'other' && (
+                <input
+                  type="text"
+                  value={otherName}
+                  onChange={(e) => setOtherName(e.target.value)}
+                  placeholder="What was it called?"
+                  className="manual-other-input"
+                />
+              )}
+
+              {/* Dilution — only for injectables (you don't dilute a laser). For
+                  Radiesse it maps to the diluted-Radiesse colour; for others it's
+                  recorded as a note on the same product. */}
+              {categoryMark(categoryKey) === 'point' && (
+                <label className="manual-diluted">
+                  <input
+                    type="checkbox"
+                    checked={diluted}
+                    onChange={(e) => setDiluted(e.target.checked)}
+                  />
+                  <span>Diluted / hyperdilute</span>
+                </label>
+              )}
+
+              {amountOptions.length > 0 && (
+                <>
+                  <div className="manual-section-label">
+                    How much? <span className="manual-optional">(optional)</span>
+                  </div>
+                  <div className="qa-chips">
+                    {amountOptions.map((opt) => (
+                      <button
+                        key={opt || 'none'}
+                        type="button"
+                        className={`qa-chip${amount === opt ? ' is-selected' : ''}`}
+                        onClick={() => setAmount(opt)}
+                      >
+                        {opt === '' ? 'Skip' : opt}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
 

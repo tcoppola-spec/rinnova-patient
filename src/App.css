@@ -2702,6 +2702,35 @@
   accent-color: var(--magenta);
 }
 
+/* The chosen treatment type, collapsed to a labelled line once picked. */
+.manual-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--magenta-soft);
+  border-radius: 10px;
+}
+
+.manual-chosen-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.manual-change {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--magenta);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 4px;
+}
+
 .qa-chips {
   display: flex;
   flex-wrap: wrap;
