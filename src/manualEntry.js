@@ -72,19 +72,24 @@ export const PRESETS = [
 //   units:  choices for the unit selector (first is the default)
 //   quick:  common numeric values, tap to fill (still editable)
 // Returns null for treatments that aren't dosed as a number (lasers, peels).
+// `quick` is keyed by unit so the fast-fill values make sense for whichever unit
+// is selected (10/20/30 for tox units; 0.1/0.5/1 when the same tox is charted in
+// cc). Tox is usually units, but real notes DO record it in cc (dilute/microtox,
+// and Roberta's own notes), so tox offers both — Rinnova captures what the record
+// says rather than forcing a convention.
 export function doseConfigFor(key) {
   switch (key) {
     case 'xeomin':
-      return { units: ['units'], quick: ['10', '20', '30', '40', '50'] }
+      return { units: ['units', 'cc'], quick: { units: ['10', '20', '30', '40'], cc: ['0.1', '0.5', '1'] } }
     case 'rha':
     case 'radiesse':
     case 'radiesse-light':
-      return { units: ['cc', 'syringe'], quick: ['0.5', '1', '1.5', '2'] }
+      return { units: ['cc', 'syringe'], quick: { cc: ['0.5', '1', '2'], syringe: ['0.5', '1', '2'] } }
     case 'biostimulator':
     case 'kybella':
-      return { units: ['vial', 'cc'], quick: ['1', '2', '3'] }
+      return { units: ['vial', 'cc'], quick: { vial: ['1', '2', '3'], cc: ['1', '2', '4'] } }
     case 'threads':
-      return { units: ['threads'], quick: ['2', '4', '6'] }
+      return { units: ['threads'], quick: { threads: ['2', '4', '6'] } }
     default:
       return null // energy / resurfacing / light / other aren't dosed numerically
   }

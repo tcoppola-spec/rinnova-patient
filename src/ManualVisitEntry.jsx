@@ -260,6 +260,9 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
   const presetProducts = pendingPreset
     ? PRODUCT_MENU.find((c) => c.key === pendingPreset.key)?.products || []
     : []
+  // Quick-fill values for the currently selected unit (10/20 for units, 0.1/0.5
+  // for cc, etc.).
+  const doseQuick = doseConfig ? doseConfig.quick[amountUnit] || [] : []
 
   return (
     <div className="logvisit-flow">
@@ -420,7 +423,10 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
                           key={u}
                           type="button"
                           className={`qa-side-option${amountUnit === u ? ' is-active' : ''}`}
-                          onClick={() => setAmountUnit(u)}
+                          onClick={() => {
+                            setAmountUnit(u)
+                            setAmountValue('') // a value for one unit doesn't carry to another
+                          }}
                         >
                           {u}
                         </button>
@@ -433,14 +439,14 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
                       inputMode="decimal"
                       value={amountValue}
                       onChange={(e) => setAmountValue(e.target.value.replace(/[^\d.]/g, ''))}
-                      placeholder={`e.g. ${doseConfig.quick[0] || '1'}`}
+                      placeholder={`e.g. ${doseQuick[0] || '1'}`}
                       className="manual-dose-input"
                     />
                     <span className="manual-dose-unit">{amountUnit}</span>
                   </div>
-                  {doseConfig.quick.length > 0 && (
+                  {doseQuick.length > 0 && (
                     <div className="qa-chips manual-dose-quick">
-                      {doseConfig.quick.map((q) => (
+                      {doseQuick.map((q) => (
                         <button
                           key={q}
                           type="button"
