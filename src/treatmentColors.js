@@ -33,7 +33,7 @@ export const TREATMENT_CATEGORIES = {
   // category). Cool tones on purpose, so none can be mistaken for one of the
   // four warm injectables above. All 'point' — they're injected at a spot.
   biostimulator: { color: '#3E63A8', mark: 'point', label: 'Biostimulator' }, // Sculptra / PLLA — indigo
-  kybella: { color: '#4E9A3D', mark: 'point', label: 'Fat dissolver' }, // Kybella — green
+  kybella: { color: '#1668D9', mark: 'point', label: 'Fat dissolver' }, // Kybella — strong blue
   prp: { color: '#C79A2E', mark: 'point', label: 'PRP / PRF' }, // regenerative — gold
   threads: { color: '#566270', mark: 'point', label: 'Threads' }, // PDO threads — slate
 

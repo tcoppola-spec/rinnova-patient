@@ -20,7 +20,7 @@
   /* Newer injectables — cool tones, distinct from the four warm injectables.
      Keep in step with src/treatmentColors.js (the source of truth). */
   --biostimulator: #3E63A8; /* Sculptra / PLLA — indigo */
-  --kybella: #4E9A3D;       /* fat dissolver — green */
+  --kybella: #1668D9;       /* fat dissolver — strong blue */
   --prp: #C79A2E;           /* PRP / PRF — gold */
   --threads: #566270;       /* PDO threads — slate */
 
