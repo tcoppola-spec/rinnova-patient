@@ -2739,6 +2739,8 @@
    gradient itself, and the inner face wrap goes transparent so there's no
    beige-on-beige. Taller than the face alone, with the instruction inside. */
 .manual-face {
+  position: relative; /* so the watermark anchors to the beige panel, not the
+                         inner wrap — same corner as elsewhere */
   background: linear-gradient(to bottom, #FBF4E8, #F5EAD4);
   border-radius: 16px;
   margin: 14px 0 20px;
@@ -2746,6 +2748,7 @@
 }
 
 .manual-face .face-diagram-wrap {
+  position: static; /* let the watermark escape to .manual-face */
   background: none;
   margin: 0;
   padding: 0;
