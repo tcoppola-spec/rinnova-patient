@@ -247,9 +247,20 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
   if (active) {
     const c = getCoordinates(active.regionLabel)
     if (c) {
-      dots.push({ id: 'active', x: c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
-      if (active.mirror) {
-        dots.push({ id: 'active-m', x: 2 * MIRROR_AXIS - c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
+      // Whole face — or any field treatment once its category is picked — is a
+      // blur/halo, never a dot. Preview it that way so it reads correctly.
+      const previewIsField =
+        active.regionLabel === 'Full face' ||
+        (categoryKey && categoryMark(categoryKey) === 'field')
+      if (previewIsField) {
+        const r = active.regionLabel === 'Full face' ? FULL_FACE.radius : undefined
+        halos.push({ id: 'active', x: c.x, y: c.y, color: '#D63384', r })
+        if (active.mirror) halos.push({ id: 'active-m', x: 2 * MIRROR_AXIS - c.x, y: c.y, color: '#D63384', r })
+      } else {
+        dots.push({ id: 'active', x: c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
+        if (active.mirror) {
+          dots.push({ id: 'active-m', x: 2 * MIRROR_AXIS - c.x, y: c.y, color: '#D63384', r: 6, opacity: 0.55 })
+        }
       }
     }
   }
