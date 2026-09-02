@@ -1252,13 +1252,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 6px;
-  color: var(--muted);
+  border-radius: 8px;
+  color: var(--body);
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.15s ease, color 0.15s ease;

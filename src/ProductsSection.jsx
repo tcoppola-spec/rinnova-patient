@@ -180,8 +180,11 @@ function ProductRow({ product, onRefetch }) {
             className="product-trash-btn"
             aria-label="Delete product"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M3 4h8M5 4V2.5h4V4M5.5 6.5v4M8.5 6.5v4M4 4l.5 8h5l.5-8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M10 4h4a1 1 0 0 1 1 1v2H9V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
         ) : (
