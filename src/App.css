@@ -2657,11 +2657,36 @@
   cursor: pointer;
 }
 
+/* The beige panel holds the instruction + the face. It carries the warm
+   gradient itself, and the inner face wrap goes transparent so there's no
+   beige-on-beige. Taller than the face alone, with the instruction inside. */
+.manual-face {
+  background: linear-gradient(to bottom, #FBF4E8, #F5EAD4);
+  border-radius: 16px;
+  margin: 14px 0 20px;
+  padding: 20px 16px 14px;
+}
+
+.manual-face .face-diagram-wrap {
+  background: none;
+  margin: 0;
+  padding: 0;
+}
+
 .manual-tap-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   text-align: center;
   font-size: 13px;
-  color: var(--muted);
-  margin: 8px 0 16px;
+  color: var(--body);
+  margin: 0 0 8px;
+}
+
+.manual-tap-icon {
+  flex-shrink: 0;
+  color: var(--magenta);
 }
 
 .manual-spot-head {

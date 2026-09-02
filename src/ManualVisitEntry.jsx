@@ -312,11 +312,19 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
         </div>
       )}
 
-      {/* The face — tap to place. Instruction sits ABOVE the diagram. */}
-      <p className="manual-tap-hint">
-        {active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went'}
-      </p>
-      <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
+      {/* The face — tap to place. The instruction (with a tap icon) sits inside
+          the beige panel, above the diagram. */}
+      <div className="manual-face">
+        <p className="manual-tap-hint">
+          <svg className="manual-tap-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 11.5V6a1.5 1.5 0 0 1 3 0v4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M12 10.5V9.5a1.5 1.5 0 0 1 3 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a4 4 0 0 1-4 4h-2a4 4 0 0 1-3.2-1.6l-2.3-3a1.4 1.4 0 0 1 2-2l1.5 1.3V11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>{active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went'}</span>
+        </p>
+        <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
+      </div>
 
       {/* Entry panel for the tapped spot */}
       {active && (
