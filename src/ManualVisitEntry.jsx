@@ -2,7 +2,7 @@ import { useState } from 'react'
 import FaceDiagram from './FaceDiagram'
 import { FACE_REGIONS } from './faceRegions'
 import { getCoordinates } from './faceCoordinates'
-import { MIRROR_AXIS } from './faceGeometry'
+import { MIRROR_AXIS, FULL_FACE } from './faceGeometry'
 import { categoryColor, categoryMark } from './treatmentColors'
 import { PRODUCT_MENU, PRESETS, doseConfigFor } from './manualEntry'
 
@@ -237,9 +237,12 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
     const c = getCoordinates(p.regionLabel)
     if (!c) return
     const color = categoryColor(p.categoryKey)
-    const bucket = categoryMark(p.categoryKey) === 'field' ? halos : dots
-    bucket.push({ id: `p${i}`, x: c.x, y: c.y, color })
-    if (p.mirror) bucket.push({ id: `p${i}m`, x: 2 * MIRROR_AXIS - c.x, y: c.y, color })
+    const isField = categoryMark(p.categoryKey) === 'field'
+    const bucket = isField ? halos : dots
+    // A whole-face field treatment draws one large halo, not a small one.
+    const r = isField && p.regionLabel === 'Full face' ? FULL_FACE.radius : undefined
+    bucket.push({ id: `p${i}`, x: c.x, y: c.y, color, r })
+    if (p.mirror) bucket.push({ id: `p${i}m`, x: 2 * MIRROR_AXIS - c.x, y: c.y, color, r })
   })
   if (active) {
     const c = getCoordinates(active.regionLabel)
@@ -365,6 +368,19 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
         </p>
         <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
       </div>
+
+      {/* Whole-face shortcut — for lasers, peels, Ultherapy done over the whole
+          face, so you don't have to hunt for the exact centre to tap. */}
+      <button
+        type="button"
+        className="manual-fullface-btn"
+        onClick={() => {
+          setPendingPreset(null)
+          setActive({ regionLabel: 'Full face', mirror: false })
+        }}
+      >
+        Whole-face treatment (laser, peel, Ultherapy…)
+      </button>
 
       {/* Entry panel for the tapped spot */}
       {active && (
