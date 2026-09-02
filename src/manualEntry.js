@@ -26,21 +26,21 @@ export const PRODUCT_MENU = [
   {
     key: 'rha',
     label: 'HA filler',
-    products: ['Juvéderm', 'Restylane', 'RHA', 'Revanesse Versa', 'Belotero'],
+    products: ['Juvéderm', 'Restylane', 'RHA', 'Revanesse Versa', 'Belotero', 'Skinvive'],
   },
   { key: 'radiesse', label: 'Radiesse', products: ['Radiesse'] },
   { key: 'radiesse-light', label: 'Diluted Radiesse', products: ['Diluted Radiesse'] },
   {
     key: 'energy',
     label: 'Energy / ultrasound',
-    products: ['Ultherapy', 'Morpheus8', 'RF microneedling'],
+    products: ['Ultherapy', 'Morpheus8', 'RF microneedling', 'Thermage', 'Sofwave'],
   },
   {
     key: 'resurfacing',
     label: 'Laser / peel',
-    products: ['Laser resurfacing', 'Chemical peel', 'Microneedling'],
+    products: ['Chemical peel', 'Microneedling', 'Fraxel', 'CO2 laser', 'Clear + Brilliant', 'Laser resurfacing'],
   },
-  { key: 'light', label: 'LED / light therapy', products: ['LED therapy'] },
+  { key: 'light', label: 'LED / IPL / light', products: ['LED therapy', 'IPL / photofacial', 'BBL'] },
   // No product list: pick this and type the name. The one typing fallback.
   { key: 'other', label: 'Something else', products: [] },
 ]
@@ -54,7 +54,8 @@ export const PRODUCT_MENU = [
  * it here.
  */
 export const PRESETS = [
-  { label: 'Nefertiti lift', key: 'xeomin', product: 'Botox', regions: ['Jawline', 'Neck'] },
+  { label: 'Nefertiti lift', key: 'xeomin', product: 'Botox', regions: ['Jawline', 'Neck bands'] },
+  { label: 'Neck bands', key: 'xeomin', product: 'Botox', regions: ['Neck bands'] },
   { label: 'Lip flip', key: 'xeomin', product: 'Botox', regions: ['Lips'] },
   { label: 'Jaw slimming', key: 'xeomin', product: 'Botox', regions: ['Masseter'] },
   { label: 'Forehead & 11s', key: 'xeomin', product: 'Botox', regions: ['Forehead', 'Between the brows'] },

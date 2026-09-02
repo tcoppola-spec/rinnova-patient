@@ -45,6 +45,7 @@ export const FACE_REGIONS = [
   { label: 'Masseter', midline: false },
   { label: 'Jawline', midline: false },
   { label: 'Neck', midline: true },
+  { label: 'Neck bands', midline: false },
   // For field treatments (laser, Ultherapy, peels) done everywhere. Resolves to
   // the face centre (on-axis, so midline: true — no "one side" for a whole-face
   // treatment). FaceDiagram draws it as one large halo, not a mark at a point.

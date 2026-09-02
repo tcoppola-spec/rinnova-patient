@@ -150,6 +150,12 @@ const COORDINATES = {
   'upper neck': { x: 114.9, y: 286.3 },
   'neck': { x: 114.9, y: 286.3 },
   'platysma': { x: 114.9, y: 286.3 },
+  // The two platysmal bands — off-axis so they render as a pair (the usual way
+  // neck tox / a Nefertiti lift is done). Stored on the left; FaceDiagram
+  // mirrors to the right.
+  'neck bands': { x: 100, y: 288 },
+  'neck band': { x: 100, y: 288 },
+  'platysmal bands': { x: 100, y: 288 },
 
   // --- Whole face ---
   // For field treatments (laser, Ultherapy, peels) done everywhere. Resolves to
