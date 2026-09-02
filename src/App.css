@@ -809,7 +809,7 @@
   font-family: var(--f-body);
   font-size: 9px;
   letter-spacing: 0.02em;
-  color: #8F8060;
+  color: var(--face-line); /* exact same tan as the face line art (#D9CEBA) */
   pointer-events: none;
 }
 
