@@ -36,6 +36,7 @@ export const TREATMENT_CATEGORIES = {
   kybella: { color: '#1668D9', mark: 'point', label: 'Fat dissolver' }, // Kybella — strong blue
   prp: { color: '#C79A2E', mark: 'point', label: 'PRP / PRF' }, // regenerative — gold
   threads: { color: '#566270', mark: 'point', label: 'Threads' }, // PDO threads — slate
+  dissolver: { color: '#6B4E3D', mark: 'point', label: 'Dissolver' }, // hyaluronidase — brown
 
   // --- Non-injectables: a field, in new tones distinct from the injectables ---
   // Cool teal for energy devices (Ultherapy, RF, ultrasound) — reads as the

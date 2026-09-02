@@ -332,6 +332,7 @@
 .treatment-dot-kybella { background: var(--kybella); }
 .treatment-dot-prp { background: var(--prp); }
 .treatment-dot-threads { background: var(--threads); }
+.treatment-dot-dissolver { background: var(--dissolver); }
 
 /* A field treatment (energy, resurfacing) is a ZONE, not a point. In the legend
    and treatment lists its swatch is a soft ring rather than a solid dot, so it

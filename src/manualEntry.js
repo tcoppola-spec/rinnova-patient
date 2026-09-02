@@ -33,6 +33,7 @@ export const PRODUCT_MENU = [
   { key: 'kybella', label: 'Fat dissolver (Kybella)', products: ['Kybella'] },
   { key: 'prp', label: 'PRP / PRF', products: ['PRP', 'PRF'] },
   { key: 'threads', label: 'PDO threads', products: ['PDO thread lift'] },
+  { key: 'dissolver', label: 'Dissolver (Hylenex)', products: ['Hylenex', 'Vitrase', 'Hyaluronidase'] },
   {
     key: 'energy',
     label: 'Energy / ultrasound',
@@ -90,6 +91,8 @@ export function doseConfigFor(key) {
       return { units: ['vial', 'cc'], quick: { vial: ['1', '2', '3'], cc: ['1', '2', '4'] } }
     case 'threads':
       return { units: ['threads'], quick: { threads: ['2', '4', '6'] } }
+    case 'dissolver':
+      return { units: ['units', 'cc'], quick: { units: ['10', '20', '30'], cc: ['0.1', '0.2', '0.5'] } }
     default:
       return null // energy / resurfacing / light / other aren't dosed numerically
   }

@@ -57,7 +57,7 @@ OUTPUT FORMAT (valid JSON, no markdown, no prose):
       "summary": "One-line description of what this product IS (general knowledge is fine here)",
       "total_dose": "Total amount WITH units, ONLY if literally stated; else null",
       "lot_number": "Lot number if stated; else null",
-      "color_key": "xeomin | radiesse | radiesse-light | rha | biostimulator | kybella | prp | threads | energy | light | resurfacing | other"
+      "color_key": "xeomin | radiesse | radiesse-light | rha | biostimulator | kybella | prp | threads | dissolver | energy | light | resurfacing | other"
     }
   ],
   "treatment_areas": [
@@ -144,8 +144,7 @@ color_key (a COLOR category, pick the closest):
 - PLLA biostimulators (Sculptra, Bellafill) → "biostimulator". (Radiesse is a
   biostimulator too but keeps its own "radiesse"/"radiesse-light".)
 - Fat dissolver / deoxycholic acid (Kybella) → "kybella".
-- Hyaluronidase / filler dissolver (Hylenex, Vitrase) → "other" (it's injected,
-  so it's a treatment, but it isn't one of the categories above).
+- Hyaluronidase / filler dissolver (Hylenex, Vitrase) → "dissolver".
 - PRP / PRF / platelet-rich plasma or fibrin → "prp".
 - PDO / thread lift / any absorbable-thread lift → "threads".
 - Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
