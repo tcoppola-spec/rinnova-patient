@@ -309,11 +309,11 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
         </div>
       )}
 
-      {/* The face — tap to place */}
-      <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
+      {/* The face — tap to place. Instruction sits ABOVE the diagram. */}
       <p className="manual-tap-hint">
         {active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went'}
       </p>
+      <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
 
       {/* Entry panel for the tapped spot */}
       {active && (
