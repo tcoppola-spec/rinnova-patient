@@ -108,20 +108,26 @@ preserved in "clinical_name", so nothing is lost.
   not state, or softening a dose. The rules above still govern what exists.
 
 TREATMENTS vs PRODUCTS — put each line item in the right place:
-- "treatments" = things injected OR administered at the visit. This includes
-  injectables (neurotoxins: Botox, Xeomin, Dysport, Jeuveau, Daxxify; fillers:
-  Radiesse, RHA, Restylane, Juvederm; biostimulators: Sculptra), AND
-  non-injected in-office procedures done to the FACE: energy/ultrasound devices
-  (Ultherapy, Sofwave, Thermage, RF microneedling, Morpheus8), light therapy
-  (LED / red light, phototherapy, photofacial), and resurfacing (laser
-  resurfacing, CO2, Fraxel, IPL/BBL, chemical peels, microneedling,
-  dermaplaning, HydraFacial).
-- "products" = things the patient takes HOME: serums, creams, cleansers,
-  supplements, skincare, at-home devices. These are NOT administered in office
-  and have NO location on the face. Do not put them in treatments, and never
-  give them a treatment_area. If unsure whether a line is administered or
-  retail, and it names a skincare/supplement-sounding product, treat it as a
-  product.
+- "treatments" = ANYTHING injected or administered at the visit. Injectables
+  include: neurotoxins (Botox, Xeomin, Dysport, Jeuveau, Daxxify); HA fillers of
+  ANY brand (Juvederm, Restylane, RHA, Revanesse/Versa, Belotero, Evolysse /
+  Evolus "Smooth", and skin boosters like Skinvive and Profhilo); Radiesse and
+  other biostimulators (Sculptra, Bellafill); fat dissolvers (Kybella);
+  regeneratives (PRP, PRF); hyaluronidase / filler dissolvers (Hylenex,
+  Vitrase); and PDO threads. It ALSO includes non-injected in-office procedures
+  on the FACE: energy/ultrasound (Ultherapy, Sofwave, Thermage, Morpheus8, RF
+  microneedling), light therapy (LED / red light, photofacial), and resurfacing
+  (laser, CO2, Fraxel, IPL/BBL, chemical peels, microneedling, dermaplaning,
+  HydraFacial).
+- DEFAULT TO TREATMENT for anything given at the visit. A line is a "product"
+  ONLY if it is clearly take-home retail — a serum, cream, cleanser, sunscreen,
+  supplement, or at-home device. An unfamiliar or newer BRAND NAME on an
+  aesthetic receipt is almost always an injectable or an in-office procedure,
+  NOT retail — do NOT send it to products just because you don't recognise it.
+  When unsure and the line is not obviously take-home skincare, make it a
+  treatment.
+- "products" are NOT administered in office and have NO location on the face.
+  Never give a product a treatment_area.
 - A $0.00 line that is just a service label (e.g. "Aesthetic Injection $0.00")
   is not itself a product — the actual product is the named one below it.
 - BODY treatments (lymphatic/sculpting massage, body contouring, CoolSculpting)
@@ -132,11 +138,14 @@ TREATMENTS vs PRODUCTS — put each line item in the right place:
 color_key (a COLOR category, pick the closest):
 - Any neurotoxin/tox → "xeomin".
 - Radiesse → "radiesse"; diluted/hyperdilute Radiesse → "radiesse-light".
-- Any HA filler, incl. skin boosters (RHA, Restylane, Juvederm, Belotero,
-  Skinvive, Profhilo, etc.) → "rha".
+- Any HA filler, incl. newer brands and skin boosters (RHA, Restylane, Juvederm,
+  Belotero, Revanesse/Versa, Evolysse / Evolus "Smooth", Skinvive, Profhilo,
+  etc.) → "rha".
 - PLLA biostimulators (Sculptra, Bellafill) → "biostimulator". (Radiesse is a
   biostimulator too but keeps its own "radiesse"/"radiesse-light".)
 - Fat dissolver / deoxycholic acid (Kybella) → "kybella".
+- Hyaluronidase / filler dissolver (Hylenex, Vitrase) → "other" (it's injected,
+  so it's a treatment, but it isn't one of the categories above).
 - PRP / PRF / platelet-rich plasma or fibrin → "prp".
 - PDO / thread lift / any absorbable-thread lift → "threads".
 - Energy / ultrasound / RF devices (Ultherapy, Sofwave, Thermage, Morpheus8,
