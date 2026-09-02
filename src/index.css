@@ -61,7 +61,7 @@ html, body {
   background: var(--cream);
   color: var(--body);
   font-family: var(--f-body);
-  font-size: 15px;
+  font-size: 16px; /* was 15px — bumped to the standard for readability */
   line-height: 1.45;
   font-feature-settings: 'ss01', 'cv11';
 }
