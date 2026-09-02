@@ -2596,6 +2596,22 @@
   color: var(--body);
 }
 
+.manual-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.manual-list-icon {
+  background: none;
+  border: none;
+  color: var(--magenta);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
 .manual-list-remove {
   flex-shrink: 0;
   background: none;

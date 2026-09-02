@@ -564,16 +564,28 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
                     {p.dose ? ` · ${p.dose}` : ''}
                   </span>
                 </button>
-                <button
-                  type="button"
-                  className="manual-list-remove"
-                  onClick={() => removePlacement(i)}
-                  aria-label={`Remove ${p.productName} at ${p.regionLabel}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
-                </button>
+                <div className="manual-list-actions">
+                  <button
+                    type="button"
+                    className="manual-list-icon"
+                    onClick={() => editPlacement(i)}
+                    aria-label={`Edit ${p.productName}`}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                      <path d="M10.5 1.5 L12.5 3.5 L4 12 L1.5 12.5 L2 10 L10.5 1.5 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="manual-list-remove"
+                    onClick={() => removePlacement(i)}
+                    aria-label={`Remove ${p.productName} at ${p.regionLabel}`}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
