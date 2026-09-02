@@ -1282,12 +1282,12 @@
 }
 
 .product-confirm-yes {
-  padding: 4px 10px;
+  padding: 8px 16px;
   background: #DC2626;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -1304,12 +1304,12 @@
 }
 
 .product-confirm-no {
-  padding: 4px 10px;
+  padding: 8px 14px;
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 13px;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
