@@ -343,7 +343,7 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
       <div className="manual-presets">
         <button
           type="button"
-          className="manual-preset"
+          className={`manual-preset${active?.regionLabel === 'Full face' ? ' is-selected' : ''}`}
           onClick={() => {
             setPendingPreset(null)
             setActive({ regionLabel: 'Full face', mirror: false })
@@ -352,7 +352,12 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
           Whole face
         </button>
         {PRESETS.map((p) => (
-          <button key={p.label} type="button" className="manual-preset" onClick={() => applyPreset(p)}>
+          <button
+            key={p.label}
+            type="button"
+            className={`manual-preset${pendingPreset?.label === p.label ? ' is-selected' : ''}`}
+            onClick={() => applyPreset(p)}
+          >
             {p.label}
           </button>
         ))}

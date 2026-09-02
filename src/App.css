@@ -2664,6 +2664,12 @@
   cursor: pointer;
 }
 
+/* Filled pink while it's the one being worked on. */
+.manual-preset.is-selected {
+  background: var(--magenta);
+  color: #fff;
+}
+
 .manual-cats {
   display: flex;
   flex-wrap: wrap;
