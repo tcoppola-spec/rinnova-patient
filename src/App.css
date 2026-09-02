@@ -4,7 +4,7 @@
   padding: 80px 24px;
   text-align: center;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .error-state {
@@ -19,7 +19,7 @@
 
 .error-detail {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .page {
@@ -39,7 +39,7 @@
 
 .signout-btn {
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   background: transparent;
   border: 1px solid var(--line);
@@ -78,7 +78,7 @@
 }
 
 .greeting-subtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
   font-weight: 400;
 }
@@ -119,7 +119,7 @@
 }
 
 .hero-card-subtext {
-  font-size: 13px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 18px;
   line-height: 1.45;
@@ -129,7 +129,7 @@
    — it's a steady reference point under the headline's insight, not a second
    message competing with it. */
 .hero-card-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.66);
   margin-bottom: 18px;
   line-height: 1.4;
@@ -149,7 +149,7 @@
   padding: 10px 16px;
   background: white;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   border-radius: 999px;
   text-decoration: none;
@@ -200,7 +200,7 @@
 }
 
 .log-prompt-sub {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--body);
   line-height: 1.4;
 }
@@ -235,7 +235,7 @@
 }
 
 .section-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-weight: 400;
 }
@@ -245,7 +245,7 @@
   background: var(--line-soft);
   border-radius: 12px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -297,13 +297,13 @@
 }
 
 .visit-card-meta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   margin-bottom: 12px;
 }
 
 .visit-card-cta {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--magenta);
   display: flex;
@@ -356,7 +356,7 @@
   border-radius: 12px;
   color: var(--muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -429,13 +429,13 @@
 }
 
 .product-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink);
 }
 
 .product-notes {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
   margin-top: 2px;
   line-height: 1.4;
@@ -453,7 +453,7 @@
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--magenta);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -490,7 +490,7 @@
 }
 
 .subscription-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink);
 }
@@ -520,7 +520,7 @@
 }
 
 .subscription-cadence {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -648,7 +648,7 @@
 }
 
 .modal-provider {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -696,14 +696,14 @@
 }
 
 .modal-treatment-summary {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
   line-height: 1.45;
   margin-bottom: 4px;
 }
 
 .modal-treatment-dose {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -724,7 +724,7 @@
 }
 
 .modal-area-name {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   font-weight: 500;
 }
@@ -759,7 +759,7 @@
 }
 
 .modal-cost-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -772,7 +772,7 @@
 }
 
 .modal-cost-empty {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--magenta);
 }
 
@@ -843,7 +843,7 @@
 }
 
 .legend-name {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--body);
 }
 /* ============ VISIT CARD COST EDITOR (Chunk 4) ============ */
@@ -895,7 +895,7 @@
   border: none;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
   transition: background 0.15s ease;
 }
@@ -905,18 +905,18 @@
 }
 
 .cost-trigger-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .cost-trigger-value {
   font-weight: 500;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .cost-trigger-empty {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--magenta);
   font-weight: 500;
 }
@@ -934,7 +934,7 @@
 
 .cost-editor-prefix {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -945,7 +945,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   font-family: inherit;
   outline: none;
@@ -967,7 +967,7 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -1011,7 +1011,7 @@
 
 .cost-editor-error {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: #DC2626;
 }
 
@@ -1060,7 +1060,7 @@
 
 .visit-meta-sep {
   color: var(--line);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .cost-link {
@@ -1071,7 +1071,7 @@
   border: none;
   padding: 4px 0;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
   cursor: pointer;
   text-decoration: underline;
@@ -1135,7 +1135,7 @@
   border-radius: 8px;
   background: var(--card);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   outline: none;
   transition: border-color 0.15s ease;
@@ -1181,7 +1181,7 @@
 
 .form-error {
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: #DC2626;
 }
 
@@ -1196,7 +1196,7 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -1218,7 +1218,7 @@
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
@@ -1277,7 +1277,7 @@
 }
 
 .product-confirm-text {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -1287,7 +1287,7 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -1309,7 +1309,7 @@
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
@@ -1485,7 +1485,7 @@
   padding: 60px 20px;
   text-align: center;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .lightbox-meta {
@@ -1493,7 +1493,7 @@
 }
 
 .lightbox-date {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1513,7 +1513,7 @@
    serif suited a three-word caption and gets tiring over a paragraph. */
 .lightbox-caption-text {
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   line-height: 1.5;
   font-family: var(--f-body);
@@ -1523,7 +1523,7 @@
 
 .lightbox-caption-empty {
   flex: 1;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   font-style: italic;
 }
@@ -1533,7 +1533,7 @@
   border: none;
   padding: 2px 0;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--magenta);
   cursor: pointer;
   text-decoration: underline;
@@ -1558,7 +1558,7 @@
   padding: 10px 18px;
   border-radius: 10px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1576,7 +1576,7 @@
 }
 
 .lightbox-confirm-text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
   flex: 1;
   min-width: 0;
@@ -1627,7 +1627,7 @@
 }
 
 .logvisit-flow-sub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
   line-height: 1.4;
   margin: 0;
@@ -1640,7 +1640,7 @@
   border-radius: 10px;
   background: var(--card);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   line-height: 1.5;
   outline: none;
@@ -1680,7 +1680,7 @@
 }
 
 .logvisit-parsing-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -1713,7 +1713,7 @@
 }
 
 .logvisit-saved-sub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   max-width: 320px;
 }
@@ -1749,7 +1749,7 @@
 }
 
 .parsed-meta-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1757,7 +1757,7 @@
 }
 
 .parsed-meta-value {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   text-align: right;
   font-weight: 500;
@@ -1790,7 +1790,7 @@
 }
 
 .parsed-product {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   padding: 3px 0;
 }
@@ -1819,14 +1819,14 @@
 
 .parsed-treatment-name {
   font-family: var(--f-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   color: var(--ink);
   margin-bottom: 2px;
 }
 
 .parsed-treatment-summary {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--body);
   line-height: 1.4;
   margin-bottom: 2px;
@@ -1854,7 +1854,7 @@
 }
 
 .parsed-area-name {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--ink);
   font-weight: 500;
 }
@@ -1933,7 +1933,7 @@
 }
 
 .logvisit-choice-sub {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--body);
   line-height: 1.35;
 }
@@ -2031,7 +2031,7 @@
   border: none;
   padding: 6px 8px;
   font-family: var(--f-body);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -2065,7 +2065,7 @@
   margin: 64px 0 0;
   flex-shrink: 0;
   font-family: var(--f-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2114,7 +2114,7 @@
   max-width: 270px;
   min-height: 94px;
   font-family: var(--f-body);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.55;
   color: var(--body);
 }
@@ -2172,7 +2172,7 @@
 
 .onboarding-or {
   font-family: var(--f-body);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -2263,7 +2263,7 @@
   padding: 4px 0;
   margin-top: 10px;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--magenta);
   cursor: pointer;
@@ -2338,7 +2338,7 @@
 
 .visit-photos-empty {
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -2392,7 +2392,7 @@
 .visit-photos-picker-label {
   display: block;
   margin-bottom: 10px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--body);
 }
@@ -2413,7 +2413,7 @@
 }
 
 .lightbox-visit-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
 }
 
@@ -2441,7 +2441,7 @@
   border-radius: 999px;
   background: var(--card);
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2480,7 +2480,7 @@
 
 .qa-section-sub {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--body);
 }
@@ -2494,7 +2494,7 @@
 }
 
 .qa-question {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
   margin-bottom: 2px;
@@ -2502,7 +2502,7 @@
 
 .qa-sub {
   margin: 0 0 12px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -2517,7 +2517,7 @@
 }
 
 .manual-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--muted);
 }
@@ -2580,7 +2580,7 @@
 }
 
 .manual-list-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin: 0 0 8px;
 }
@@ -2592,7 +2592,7 @@
 }
 
 .manual-list-areas {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--body);
 }
 
@@ -2630,7 +2630,7 @@
 }
 
 .manual-section-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   margin: 14px 0 10px;
@@ -2658,7 +2658,7 @@
   border-radius: 999px;
   background: var(--magenta-soft);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--magenta);
   cursor: pointer;
@@ -2682,7 +2682,7 @@
   border-radius: 10px;
   background: var(--card);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2726,7 +2726,7 @@
   margin-top: 18px;
   padding: 12px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--magenta);
   background: var(--magenta-soft);
@@ -2760,7 +2760,7 @@
   justify-content: center;
   gap: 5px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
   margin: 0 0 8px;
 }
@@ -2785,7 +2785,7 @@
 }
 
 .manual-spot-retap {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -2798,7 +2798,7 @@
   align-items: center;
   gap: 9px;
   margin-top: 14px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -2821,7 +2821,7 @@
 }
 
 .manual-chosen-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
 }
@@ -2830,7 +2830,7 @@
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   cursor: pointer;
   text-decoration: underline;
@@ -2862,7 +2862,7 @@
 }
 
 .manual-dose-unit {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
   min-width: 42px;
 }
@@ -2883,7 +2883,7 @@
   border-radius: 999px;
   background: var(--card);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2928,7 +2928,7 @@
 }
 
 .qa-side-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--body);
 }
 
@@ -2946,7 +2946,7 @@
   border: none;
   background: var(--card);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2960,7 +2960,7 @@
 
 .qa-notsure-note {
   margin: 12px 0 0;
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -2982,7 +2982,7 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   box-shadow: 0 6px 24px rgba(23, 23, 46, 0.16);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--ink);
   white-space: nowrap;
@@ -3041,7 +3041,7 @@
 }
 
 .namecap-sub {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--body);
   margin-bottom: 24px;
 }
@@ -3065,7 +3065,7 @@
 }
 
 .namecap-error {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   margin-bottom: 12px;
 }
@@ -3093,7 +3093,7 @@
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
   text-decoration: underline;
@@ -3133,7 +3133,7 @@
 }
 
 .consent-lead {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--body);
   text-align: center;
@@ -3147,7 +3147,7 @@
 }
 
 .consent-points li {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--body);
   padding: 13px 0;
@@ -3173,7 +3173,7 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--ink);
   cursor: pointer;
@@ -3189,7 +3189,7 @@
 }
 
 .consent-error {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   margin: 0 0 14px;
 }
@@ -3223,7 +3223,7 @@
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
   text-decoration: underline;
@@ -3240,14 +3240,14 @@
 }
 
 .delete-account-warning {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--body);
   margin: 0 0 14px;
 }
 
 .delete-account-error {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   margin: 0 0 12px;
 }
@@ -3256,7 +3256,7 @@
   width: 100%;
   padding: 12px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   color: #fff;
   background: var(--magenta);
@@ -3275,7 +3275,7 @@
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
   text-decoration: underline;
@@ -3340,7 +3340,7 @@
 }
 
 .cadence-card-label {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -3388,7 +3388,7 @@
 
 .cadence-footnote {
   margin-top: 12px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -3400,7 +3400,7 @@
   padding: 12px 14px;
   border-radius: 10px;
   background: var(--magenta-soft);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--ink);
 }
@@ -3416,7 +3416,7 @@
 
 .area-entry-date {
   font-family: var(--f-display);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--ink);
 }
 
@@ -3431,7 +3431,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
 }
 
@@ -3448,7 +3448,7 @@
 
 .area-entry-gap {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -3497,7 +3497,7 @@
 }
 
 .install-text {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--muted);
   margin-bottom: 14px;
@@ -3510,7 +3510,7 @@
   border: none;
   border-radius: 999px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s ease;
@@ -3524,7 +3524,7 @@
 .install-steps {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--body);
 }
@@ -3626,7 +3626,7 @@
 
 .landing-mock-card-title {
   font-family: var(--f-display);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   margin-bottom: 3px;
 }
@@ -3662,7 +3662,7 @@
   border: none;
   padding: 4px 0;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -3678,7 +3678,7 @@
 }
 
 .request-intro {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--body);
   margin-bottom: 16px;
@@ -3686,7 +3686,7 @@
 
 .request-label {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--body);
   margin-bottom: 5px;
@@ -3711,7 +3711,7 @@
 }
 
 .request-error {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.45;
   color: var(--magenta);
   margin-bottom: 10px;
@@ -3728,7 +3728,7 @@
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -3753,7 +3753,7 @@
 }
 
 .request-sent-body {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -3783,7 +3783,7 @@
 }
 
 .landing-feature-body {
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.55;
   color: var(--muted);
 }
@@ -3809,7 +3809,7 @@
 .install-landing .install-btn {
   width: 100%;
   padding: 14px 24px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .install-landing .install-steps {
@@ -3824,7 +3824,7 @@
   border-radius: 999px;
   background: var(--card);
   color: var(--ink);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   text-align: center;
   text-decoration: none;
@@ -3839,7 +3839,7 @@
 
 .landing-invite {
   text-align: center;
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--muted);
   max-width: 38ch;
@@ -3857,7 +3857,7 @@
 
 .landing-footer-brand {
   font-family: var(--f-display);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--ink);
 }
 
@@ -3903,7 +3903,7 @@
 .update-banner-text {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.35;
   color: #fff;
 }
@@ -3916,7 +3916,7 @@
   background: var(--magenta);
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s ease;
@@ -3964,7 +3964,7 @@
 
 .ds-sub,
 .ds-note {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
   color: var(--muted);
 }
@@ -4016,7 +4016,7 @@
 
 .ds-token {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink);
 }
 
@@ -4028,7 +4028,7 @@
 }
 
 .ds-role {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--muted);
 }
@@ -4102,12 +4102,12 @@
 
 .ds-rule-title {
   font-family: var(--f-display);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--ink);
 }
 
 .ds-rule-why {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -4115,7 +4115,7 @@
 .ds-footer {
   padding-top: 24px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -4131,7 +4131,7 @@
 }
 
 .footer-link {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   text-decoration: none;
   transition: color 0.15s ease;
@@ -4142,7 +4142,7 @@
 }
 
 .footer-dot {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--line);
 }
 
@@ -4158,7 +4158,7 @@
   display: inline-block;
   margin-top: 16px;
   padding: 8px 18px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--magenta);
   background: var(--magenta-soft);
@@ -4188,7 +4188,7 @@
 .info-back {
   display: inline-block;
   margin-bottom: 22px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--magenta);
   text-decoration: none;
 }
@@ -4203,7 +4203,7 @@
 }
 
 .info-updated {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin-bottom: 22px;
 }
@@ -4211,7 +4211,7 @@
 /* The opening paragraph carries the summary, so it gets a touch more weight
    than the body — most people read this line and nothing else. */
 .info-lead {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   color: var(--ink);
   margin-bottom: 8px;
@@ -4227,7 +4227,7 @@
 }
 
 .info-p {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.65;
   color: var(--body);
   margin-bottom: 10px;
@@ -4239,7 +4239,7 @@
 }
 
 .info-list li {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
   color: var(--body);
   margin-bottom: 6px;
@@ -4261,7 +4261,7 @@
   margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -4367,7 +4367,7 @@
   background: transparent;
   color: var(--body);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -4426,7 +4426,7 @@
 }
 
 .logvisit-dup-text {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--ink);
   margin-bottom: 12px;
@@ -4443,7 +4443,7 @@
   display: block;
   margin-top: 12px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--magenta);
   text-decoration: underline;
   text-underline-offset: 2px;
