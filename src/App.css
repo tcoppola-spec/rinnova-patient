@@ -2606,7 +2606,7 @@
 .manual-list-icon {
   background: none;
   border: none;
-  color: var(--magenta);
+  color: var(--muted);
   cursor: pointer;
   padding: 4px;
   display: flex;
