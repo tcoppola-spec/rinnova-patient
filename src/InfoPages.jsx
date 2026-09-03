@@ -250,6 +250,15 @@ export function Help() {
         </a>
         . If a visit was read incorrectly, you can delete it and add it again.
       </p>
+
+      <h2 className="info-h2">Questions?</h2>
+      <p className="info-p">
+        Email us anytime at{' '}
+        <a href={`mailto:${CONTACT_EMAIL}`} className="info-link">
+          {CONTACT_EMAIL}
+        </a>
+        {' '}— we&apos;re happy to help.
+      </p>
     </InfoLayout>
   )
 }
