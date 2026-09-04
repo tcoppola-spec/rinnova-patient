@@ -561,8 +561,13 @@
   font-style: italic;
 }
 
-.provider-primary-btn {
+.provider-links {
+  display: flex;
+  gap: 16px;
   margin-top: 4px;
+}
+
+.provider-link-btn {
   padding: 2px 0;
   background: transparent;
   border: none;

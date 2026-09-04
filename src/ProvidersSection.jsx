@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { addProvider, setPrimary, deleteProvider, formatPhone } from './patientProviders'
+import { addProvider, setPrimary, deleteProvider, updateProvider, formatPhone } from './patientProviders'
 
 /**
  * ProvidersSection
@@ -57,6 +57,34 @@ function ProviderRow({ provider, soloPrimary, onRefetch }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(provider.name)
+  const [phone, setPhone] = useState(provider.phone || '')
+
+  function startEdit() {
+    setError(null)
+    setName(provider.name)
+    setPhone(provider.phone || '')
+    setEditing(true)
+  }
+
+  async function handleSaveEdit() {
+    setError(null)
+    if (name.trim() === '') {
+      setError('A name is required')
+      return
+    }
+    setBusy(true)
+    try {
+      await updateProvider(provider.id, { name, phone })
+      setEditing(false)
+      if (onRefetch) await onRefetch()
+    } catch (e) {
+      setError(e.message || 'Could not save')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function handleMakePrimary() {
     setError(null)
@@ -84,6 +112,47 @@ function ProviderRow({ provider, soloPrimary, onRefetch }) {
     }
   }
 
+  if (editing) {
+    return (
+      <li className="provider-item">
+        <div className="add-product-form">
+          <input
+            type="text"
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Provider name"
+            disabled={busy}
+            autoFocus
+          />
+          <input
+            type="tel"
+            inputMode="tel"
+            className="form-input"
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="Phone number (optional)"
+            disabled={busy}
+          />
+          {error && <div className="form-error">{error}</div>}
+          <div className="form-actions">
+            <button type="button" className="form-save-btn" onClick={handleSaveEdit} disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="form-cancel-btn"
+              onClick={() => { setEditing(false); setError(null) }}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </li>
+    )
+  }
+
   return (
     <li className="provider-item">
       <div className="provider-row">
@@ -99,17 +168,27 @@ function ProviderRow({ provider, soloPrimary, onRefetch }) {
           ) : (
             <div className="provider-phone provider-phone-missing">No number yet</div>
           )}
-          {/* Only offer "Make primary" when there's a choice to make. */}
-          {!provider.is_primary && !soloPrimary && (
+          <div className="provider-links">
             <button
               type="button"
-              className="provider-primary-btn"
-              onClick={handleMakePrimary}
+              className="provider-link-btn"
+              onClick={startEdit}
               disabled={busy}
             >
-              Make primary
+              Edit
             </button>
-          )}
+            {/* Only offer "Make primary" when there's a choice to make. */}
+            {!provider.is_primary && !soloPrimary && (
+              <button
+                type="button"
+                className="provider-link-btn"
+                onClick={handleMakePrimary}
+                disabled={busy}
+              >
+                Make primary
+              </button>
+            )}
+          </div>
         </div>
 
         {!confirming ? (
