@@ -863,6 +863,19 @@
   color: var(--muted);
 }
 
+.plan-suggestion-note {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+/* The face leads the plan, like "Areas you treat" — give it a little breathing
+   room above the breakdown. */
+.plan-body .face-diagram-wrap {
+  margin-bottom: 14px;
+}
+
 .plan-add-controls {
   margin-top: 12px;
 }

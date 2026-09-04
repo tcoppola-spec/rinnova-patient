@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { categoryOf } from './treatmentColors'
+import { categoryOf, categoryColor } from './treatmentColors'
+import { computeAreaCadence } from './areaCadence'
+import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
+import FaceDiagram from './FaceDiagram'
 import {
   defaultPlanYear,
   doneCount,
@@ -44,6 +47,7 @@ function Pencil() {
 }
 
 function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
+  const [now] = useState(() => Date.now())
   const [expanded, setExpanded] = useState(false)
   const [year, setYear] = useState(() => defaultPlanYear(planItems))
   const [editing, setEditing] = useState(false)
@@ -57,6 +61,33 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
 
   const hasVisits = visits.length > 0
+
+  // The face leads the section, same weighted-dot map as "Areas you treat": it
+  // answers "what does my year cover?" at a glance before any row is read. Built
+  // from the patient's own history via areaCadence — the plan is category-level
+  // (no locations of its own), so the map comes from where they actually treat.
+  const areas = computeAreaCadence(visits, now)
+  const maxCount = areas.reduce((m, a) => Math.max(m, a.count), 0) || 1
+  const dots = []
+  for (const area of areas) {
+    if (area.x == null || area.y == null) continue
+    const strength = area.count / maxCount
+    const r = DOT_RADIUS * (0.62 + 0.38 * strength)
+    const opacity = 0.4 + 0.6 * strength
+    const color = categoryColor(area.colorKeys[0])
+    dots.push({ id: area.key, x: area.x, y: area.y, r, opacity, color })
+    if (area.mirror && Math.abs(area.x - MIRROR_AXIS) > 0.01) {
+      dots.push({ id: `${area.key}-m`, x: mirrorX(area.x), y: area.y, r, opacity, color })
+    }
+  }
+
+  // Default to a plan SEEDED from history rather than an empty box: when there's
+  // no saved plan for this year, show the suggestion (computed, not yet stored)
+  // so the section is useful on first open. Editing turns it into a real,
+  // saved plan.
+  const suggested = yearItems.length === 0 ? suggestPlanItems(visits) : []
+  const showingSuggestion = yearItems.length === 0 && suggested.length > 0
+  const viewItems = yearItems.length > 0 ? yearItems : suggested
 
   // ---- edit-mode helpers ----
   function toEditable(rows) {
@@ -136,7 +167,7 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     setShowPicker(false)
   }
 
-  const total = planTotal(editing ? draft : yearItems)
+  const total = planTotal(editing ? draft : viewItems)
 
   return (
     <section className="section">
@@ -186,8 +217,12 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
               </button>
             </div>
 
-            {!editing && yearItems.length > 0 && (
-              <button type="button" className="plan-link-btn" onClick={() => enterEdit()}>
+            {!editing && viewItems.length > 0 && (
+              <button
+                type="button"
+                className="plan-link-btn"
+                onClick={() => enterEdit(showingSuggestion ? suggested : [])}
+              >
                 Edit
                 <Pencil />
               </button>
@@ -271,22 +306,15 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
           ) : (
             /* ---- VIEW MODE ---- */
             <>
-              {yearItems.length === 0 ? (
+              {dots.length > 0 && <FaceDiagram dots={dots} legend={null} />}
+
+              {viewItems.length === 0 ? (
                 <div className="plan-empty">
                   <p className="plan-empty-text">
                     Plan out {year}: how often you expect each treatment, and what
                     to budget. A rough draft you can change anytime.
                   </p>
                   <div className="plan-add-row">
-                    {hasVisits && (
-                      <button
-                        type="button"
-                        className="plan-add-btn"
-                        onClick={() => enterEdit(suggestPlanItems(visits))}
-                      >
-                        Suggest from my history
-                      </button>
-                    )}
                     <button type="button" className="plan-add-btn" onClick={() => enterEdit()}>
                       <span aria-hidden="true">+</span> Build it myself
                     </button>
@@ -294,9 +322,20 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
                 </div>
               ) : (
                 <>
+                  {showingSuggestion && (
+                    <p className="plan-suggestion-note">
+                      Suggested from your history — <strong>Edit</strong> to adjust
+                      and save.
+                    </p>
+                  )}
                   <ul className="plan-list">
-                    {yearItems.map((item) => (
-                      <PlanViewRow key={item.id} item={item} visits={visits} year={year} />
+                    {viewItems.map((item, i) => (
+                      <PlanViewRow
+                        key={item.id || `s-${i}`}
+                        item={item}
+                        visits={visits}
+                        year={year}
+                      />
                     ))}
                   </ul>
                   {total > 0 && (
