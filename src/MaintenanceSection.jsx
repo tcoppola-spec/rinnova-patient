@@ -145,6 +145,14 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
 
   const estimateValue = savedEstimateRow?.est_cost != null ? Number(savedEstimateRow.est_cost) : null
 
+  // Actual spend for the current year — the sum of logged visit costs. Real
+  // money, so no "about"; it's the total of what's been recorded this year.
+  const spentThisYear = visits.reduce((s, v) => {
+    if (!v?.visit_date || Number(v.visit_date.slice(0, 4)) !== current) return s
+    const c = Number(v.cost)
+    return c && !Number.isNaN(c) ? s + c : s
+  }, 0)
+
   // The face follows the draft while editing, the plan while viewing next year,
   // and the history map for "this year".
   const dots = editing
@@ -378,11 +386,15 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
                   />
                 ))}
               </ul>
-              {estimateValue != null && (
-                <p className="plan-total">
-                  Estimated cost for {year}: about {fmtUSD(estimateValue)}.
-                </p>
-              )}
+              {mode === 'this'
+                ? spentThisYear > 0 && (
+                    <p className="plan-total">Total this year: {fmtUSD(spentThisYear)}.</p>
+                  )
+                : estimateValue != null && (
+                    <p className="plan-total">
+                      Estimated cost for {year}: about {fmtUSD(estimateValue)}.
+                    </p>
+                  )}
             </>
           )}
         </>
