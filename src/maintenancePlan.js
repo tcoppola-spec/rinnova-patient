@@ -151,8 +151,11 @@ export async function savePlan(year, draft = [], original = []) {
   for (const d of cleaned) {
     const row = {
       plan_year: year,
-      kind: 'treatment',
-      category: d.category || 'other',
+      // A plan is AREA + times; the category is not part of it (the product can
+      // change). One row per year may be kind 'product' — the carrier for the
+      // single optional annual estimated cost (see MaintenanceSection).
+      kind: d.kind === 'product' ? 'product' : 'treatment',
+      category: d.category ?? null,
       title: d.title.trim(),
       planned_count: Math.max(1, Number(d.planned_count) || 1),
       est_cost:

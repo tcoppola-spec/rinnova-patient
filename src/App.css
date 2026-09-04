@@ -968,6 +968,16 @@
   margin: 6px 0 0 18px;
 }
 
+.plan-estimate-edit {
+  margin-top: 12px;
+}
+
+.plan-estimate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .plan-add-controls {
   margin-top: 12px;
 }

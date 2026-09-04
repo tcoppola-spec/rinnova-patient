@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { categoryOf, categoryColor } from './treatmentColors'
 import { computeAreaCadence } from './areaCadence'
 import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
+import { FACE_REGIONS } from './faceRegions'
 import FaceDiagram from './FaceDiagram'
 import AreaDetailModal from './AreaDetailModal'
 import {
@@ -9,29 +10,34 @@ import {
   areaKeyForName,
   areaDoneInYear,
   suggestAreaPlan,
-  treatmentCategoryOptions,
-  planTotal,
   savePlan,
 } from './maintenancePlan'
 
 /**
  * MaintenanceSection — "Areas you treat" (docs/your-year-brief.md).
  *
- * Merges the old cadence view and the yearly plan into ONE section: a weighted
- * face map, then a per-AREA breakdown that toggles between:
- *   - THIS YEAR  — descriptive, from the record ("Under eyes · 2× this year"),
- *                  or progress against a saved plan ("2 of 4 done").
- *   - PLAN NEXT YEAR — an editable draft seeded from history.
+ * A weighted face map (toggle sits ABOVE it), then a per-AREA breakdown that
+ * switches between:
+ *   - THIS YEAR — descriptive, from the record ("Under eyes · 2× this year"),
+ *     or progress against a saved plan ("2 of 4 done"). Shows the treatment dot.
+ *   - PLAN {next} — an editable draft seeded from history. A plan is just AREA +
+ *     estimated number of times — NOT a product (that can change), and NOT a
+ *     per-area cost (too hard to pin down). One optional annual estimated cost
+ *     sits at the bottom, something the patient sets with their provider.
  *
- * Each row is an AREA (heading) with its dominant treatment category (the dot).
- * Descriptive, never prescriptive — "this year" reads the record; the plan is a
- * rough draft the patient adjusts.
+ * Descriptive, never prescriptive.
+ *
+ * The single annual estimate is stored as a kind='product' plan_items row (the
+ * only such row per year) — a carrier, so it needs no schema change. Area rows
+ * are kind='treatment'.
  *
  * Props:
  *   planItems: all plan_items rows (any year) from data.planItems
  *   visits: visits with nested treatments + treatment_areas
  *   onRefetch: reload data after a save
  */
+
+const ESTIMATE_TITLE = 'Estimated annual cost'
 
 const fmtUSD = (n) =>
   new Intl.NumberFormat('en-US', {
@@ -53,6 +59,9 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   const [mode, setMode] = useState('this') // 'this' | 'next'
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState([])
+  const [estimateInput, setEstimateInput] = useState('') // annual estimate, string
+  const [estimateRowId, setEstimateRowId] = useState(null)
+  const [showEstimate, setShowEstimate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [showPicker, setShowPicker] = useState(false)
@@ -61,17 +70,15 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   const { current, next } = planYears(new Date(now))
   const year = mode === 'this' ? current : next
 
-  // All-time area map — drives the face (stable across the toggle) and the
-  // this-year descriptive rows and the tap-through detail.
   const allAreas = computeAreaCadence(visits, now)
   const areaByKey = new Map(allAreas.map((a) => [a.key, a]))
 
-  const savedItems = planItems
-    .filter((i) => i.plan_year === year)
+  const savedItems = planItems.filter((i) => i.plan_year === year)
+  const savedAreas = savedItems
+    .filter((i) => i.kind !== 'product')
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+  const savedEstimateRow = savedItems.find((i) => i.kind === 'product') || null
 
-  // Nothing to show at all → hide the section (don't explain a feature the
-  // patient can't use yet), same discipline as the old cadence section.
   if (allAreas.length === 0 && planItems.length === 0) return null
 
   // ---- face dots (all-time weighted) ----
@@ -89,17 +96,16 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     }
   }
 
-  // ---- what to render in view mode ----
+  // ---- view rows ----
   const suggested = suggestAreaPlan(visits, now)
-  const hasSavedPlan = savedItems.length > 0
+  const hasSavedPlan = savedAreas.length > 0
   const isPastOrCurrent = year <= current
 
   let viewRows
   let showingSuggestion = false
   if (hasSavedPlan) {
-    viewRows = savedItems.map((i) => ({ ...i, variant: isPastOrCurrent ? 'progress' : 'plan' }))
+    viewRows = savedAreas.map((i) => ({ ...i, variant: isPastOrCurrent ? 'progress' : 'plan' }))
   } else if (mode === 'this') {
-    // Descriptive: areas treated THIS year, from the record.
     viewRows = allAreas
       .map((a) => ({
         title: a.label,
@@ -109,32 +115,29 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
       }))
       .filter((r) => r.done > 0)
   } else {
-    // Next year, no saved plan → the suggestion (editable via Edit).
     viewRows = suggested.map((s) => ({ ...s, variant: 'plan' }))
     showingSuggestion = suggested.length > 0
   }
 
-  const total = planTotal(editing ? draft : viewRows)
+  const estimateValue = savedEstimateRow?.est_cost != null ? Number(savedEstimateRow.est_cost) : null
 
   // ---- edit helpers ----
-  function toEditable(rows) {
-    return rows.map((i) => ({
-      id: i.id,
-      category: i.category,
-      title: i.title,
-      planned_count: i.planned_count || 1,
-      est_cost: i.est_cost == null ? '' : String(i.est_cost),
-      notes: i.notes || '',
-      source: i.source,
-    }))
-  }
-
   function enterEdit() {
     setError(null)
     setShowPicker(false)
-    // Edit the saved plan for this year, or seed a fresh draft from history.
-    const seed = hasSavedPlan ? savedItems : suggested
-    setDraft(toEditable(seed))
+    const seed = hasSavedPlan ? savedAreas : suggested
+    setDraft(
+      seed.map((i) => ({
+        id: i.id,
+        title: i.title,
+        planned_count: i.planned_count || 1,
+        category: i.category ?? null,
+        source: i.source,
+      }))
+    )
+    setEstimateInput(estimateValue != null ? String(estimateValue) : '')
+    setEstimateRowId(savedEstimateRow?.id || null)
+    setShowEstimate(estimateValue != null)
     setEditing(true)
   }
 
@@ -144,11 +147,11 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   function removeDraft(idx) {
     setDraft((prev) => prev.filter((_, i) => i !== idx))
   }
-  function addArea(opt) {
+  function addArea(region) {
     setShowPicker(false)
     setDraft((prev) => [
       ...prev,
-      { category: opt.key, title: '', planned_count: 1, est_cost: '', notes: '', source: 'manual' },
+      { title: region.label, planned_count: 1, category: null, source: 'manual' },
     ])
   }
 
@@ -156,7 +159,23 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     setError(null)
     setSaving(true)
     try {
-      await savePlan(year, draft, savedItems)
+      // Area rows + (optionally) the single estimate carrier row.
+      const rows = draft.map((d) => ({ ...d, kind: 'treatment' }))
+      const est = estimateInput.trim()
+      if (est !== '' && !Number.isNaN(Number(est))) {
+        rows.push({
+          id: estimateRowId || undefined,
+          kind: 'product',
+          title: ESTIMATE_TITLE,
+          planned_count: 1,
+          est_cost: est,
+          category: null,
+          source: 'manual',
+        })
+      }
+      // original = ALL saved rows for the year (areas + estimate), so a cleared
+      // estimate is deleted by the diff.
+      await savePlan(year, rows, savedItems)
       setEditing(false)
       setDraft([])
       if (onRefetch) await onRefetch()
@@ -184,16 +203,14 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
         <h2 className="section-title">Areas you treat</h2>
       </div>
 
-      {dots.length > 0 && <FaceDiagram dots={dots} legend={null} />}
-
-      {/* This year / Plan next year toggle */}
+      {/* Toggle ABOVE the diagram. */}
       <div className="plan-toggle" role="tablist" aria-label="Plan view">
         <button
           type="button"
           role="tab"
           aria-selected={mode === 'this'}
           className={'plan-toggle-btn' + (mode === 'this' ? ' is-active' : '')}
-          onClick={() => { if (editing) return; setMode('this') }}
+          onClick={() => { if (!editing) setMode('this') }}
           disabled={editing}
         >
           This year
@@ -203,20 +220,22 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
           role="tab"
           aria-selected={mode === 'next'}
           className={'plan-toggle-btn' + (mode === 'next' ? ' is-active' : '')}
-          onClick={() => { if (editing) return; setMode('next') }}
+          onClick={() => { if (!editing) setMode('next') }}
           disabled={editing}
         >
           Plan {next}
         </button>
       </div>
 
+      {dots.length > 0 && <FaceDiagram dots={dots} legend={null} />}
+
       {editing ? (
-        /* ---- EDIT MODE ---- */
+        /* ---- EDIT MODE (plan a year) ---- */
         <>
           {draft.length === 0 && (
             <p className="plan-empty-hint">
-              Add the areas you plan to treat. It’s a rough draft you can change
-              anytime.
+              Add the areas you expect to treat and roughly how often. A rough
+              draft you can change anytime.
             </p>
           )}
 
@@ -232,15 +251,14 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
           <div className="plan-add-controls">
             {showPicker ? (
               <div className="plan-picker">
-                {treatmentCategoryOptions().map((opt) => (
+                {FACE_REGIONS.map((region) => (
                   <button
-                    key={opt.key}
+                    key={region.label}
                     type="button"
                     className="plan-picker-chip"
-                    onClick={() => addArea(opt)}
+                    onClick={() => addArea(region)}
                   >
-                    <span className="plan-dot" style={{ background: opt.color }} />
-                    {opt.label}
+                    {region.label}
                   </button>
                 ))}
                 <button type="button" className="plan-picker-cancel" onClick={() => setShowPicker(false)}>
@@ -254,7 +272,31 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
             )}
           </div>
 
-          {total > 0 && <p className="plan-total">About {fmtUSD(total)} planned this year.</p>}
+          {/* Single optional annual estimate — set with your provider. */}
+          <div className="plan-estimate-edit">
+            {showEstimate ? (
+              <label className="plan-estimate-field">
+                <span className="plan-field-label">Estimated cost for the year</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className="form-input plan-cost-input"
+                  value={estimateInput}
+                  onChange={(e) => setEstimateInput(e.target.value)}
+                  placeholder="—"
+                />
+              </label>
+            ) : (
+              <button
+                type="button"
+                className="plan-add-btn"
+                onClick={() => setShowEstimate(true)}
+              >
+                <span aria-hidden="true">+</span> Add estimated cost
+              </button>
+            )}
+          </div>
+
           {error && <div className="form-error">{error}</div>}
 
           <div className="form-actions" style={{ marginTop: 12 }}>
@@ -269,7 +311,6 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
       ) : (
         /* ---- VIEW MODE ---- */
         <>
-          {/* Edit affordance — plan a year (or adjust the saved plan). */}
           <div className="plan-viewbar">
             {showingSuggestion && (
               <span className="plan-suggestion-note">Suggested from your history</span>
@@ -286,7 +327,7 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
             <p className="plan-empty-text">
               {mode === 'this'
                 ? `Nothing logged for ${year} yet.`
-                : `Plan ${next}: tap Edit to set how often you expect to treat each area.`}
+                : `Plan ${next}: tap Edit to set the areas you expect to treat.`}
             </p>
           ) : (
             <>
@@ -302,7 +343,11 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
                   />
                 ))}
               </ul>
-              {total > 0 && <p className="plan-total">About {fmtUSD(total)} planned this year.</p>}
+              {estimateValue != null && (
+                <p className="plan-total">
+                  Estimated cost for {year}: about {fmtUSD(estimateValue)}.
+                </p>
+              )}
             </>
           )}
         </>
@@ -313,11 +358,13 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   )
 }
 
-/** A read-only area row: area name, dot + category, and a frequency line. */
+/** A read-only area row. Descriptive rows show the treatment dot; plan rows are
+ *  just area + number (a plan isn't tied to a product). */
 function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
-  const cat = categoryOf(row.category)
+  const isDescriptive = row.variant === 'descriptive'
+  const cat = isDescriptive ? categoryOf(row.category) : null
   const planned = Math.max(1, row.planned_count || 1)
-  const done = row.variant === 'descriptive' ? row.done : areaDoneInYear(visits, row.title, year)
+  const done = isDescriptive ? row.done : areaDoneInYear(visits, row.title, year)
   const over = done > planned
   const pct = row.variant === 'progress' ? Math.min(100, Math.round((done / planned) * 100)) : 0
 
@@ -325,21 +372,22 @@ function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
     <>
       <div className="plan-item-head">
         <span className="plan-item-area">{row.title}</span>
-        {row.est_cost != null && row.est_cost !== '' && (
-          <span className="plan-item-cost">~{fmtUSD(Number(row.est_cost))} each</span>
-        )}
       </div>
       <div className="plan-item-sub">
-        <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
-        <span className="plan-item-cat">{cat.label}</span>
+        {isDescriptive && (
+          <>
+            <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
+            <span className="plan-item-cat">{cat.label}</span>
+          </>
+        )}
         <span className="plan-item-freq">
-          {row.variant === 'descriptive' && `· ${done}× this year`}
-          {row.variant === 'plan' && `· plan ${planned}×`}
+          {row.variant === 'descriptive' && `${isDescriptive ? '· ' : ''}${done}× this year`}
+          {row.variant === 'plan' && `about ${planned}× a year`}
           {row.variant === 'progress' && (
             over ? (
-              <>· {done} done · planned {planned}<span className="plan-ahead">ahead</span></>
+              <>{done} done · planned {planned}<span className="plan-ahead">ahead</span></>
             ) : (
-              <>· {done} of {planned} done</>
+              <>{done} of {planned} done</>
             )
           )}
         </span>
@@ -365,15 +413,12 @@ function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
   return <li className="plan-item">{body}</li>
 }
 
-/** An editable area row: area name, category dot, planned count, est cost. */
+/** An editable plan row: area name + estimated times. No product, no per-row cost. */
 function PlanEditRow({ row, onChange, onRemove }) {
-  const cat = categoryOf(row.category)
   const n = Math.max(1, Number(row.planned_count) || 1)
-
   return (
     <div className="plan-edit-row">
       <div className="plan-edit-top">
-        <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
         <input
           type="text"
           className="form-input plan-edit-title"
@@ -387,26 +432,14 @@ function PlanEditRow({ row, onChange, onRemove }) {
           </svg>
         </button>
       </div>
-      <div className="plan-edit-cat">{cat.label}</div>
       <div className="plan-edit-fields">
         <div className="plan-field">
-          <span className="plan-field-label">Times</span>
+          <span className="plan-field-label">Times a year</span>
           <div className="plan-stepper">
             <button type="button" onClick={() => onChange('planned_count', Math.max(1, n - 1))} aria-label="Fewer">−</button>
             <span className="plan-stepper-n">{n}×</span>
             <button type="button" onClick={() => onChange('planned_count', n + 1)} aria-label="More">+</button>
           </div>
-        </div>
-        <div className="plan-field">
-          <span className="plan-field-label">Est. $ each</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            className="form-input plan-cost-input"
-            value={row.est_cost}
-            onChange={(e) => onChange('est_cost', e.target.value)}
-            placeholder="—"
-          />
         </div>
       </div>
     </div>
