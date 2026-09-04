@@ -1175,7 +1175,9 @@
   .form-input,
   .form-textarea,
   .cost-editor-input,
-  .logvisit-textarea {
+  .logvisit-textarea,
+  .edit-product-name,
+  .edit-product-notes {
     font-size: 16px;
   }
 }
@@ -1779,13 +1781,15 @@
 }
 
 /* Take-home products, shown separately from injected treatments */
-.parsed-products {
+/* Editable take-home products on the log-visit confirm view (Slice 0). Replaces
+   the old read-only .parsed-products list. */
+.edit-products {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
 
-.parsed-products-label {
+.edit-products-label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -1794,14 +1798,69 @@
   margin-bottom: 8px;
 }
 
-.parsed-product {
-  font-size: 15px;
-  color: var(--ink);
-  padding: 3px 0;
+.edit-products-empty {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0 0 10px;
 }
 
-.parsed-product-notes {
+.edit-product {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.edit-product-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-product-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-product-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
   color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  transition: color 0.15s ease;
+}
+
+.edit-product-remove:hover {
+  color: var(--magenta);
+}
+
+.edit-product-notes {
+  width: 100%;
+  min-height: 44px;
+  resize: vertical;
+}
+
+.edit-product-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: var(--magenta);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.edit-product-add-plus {
+  font-size: 17px;
+  line-height: 1;
 }
 
 .parsed-treatment-head {

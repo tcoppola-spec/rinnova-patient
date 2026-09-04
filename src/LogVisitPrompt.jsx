@@ -127,6 +127,11 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
   const [saveError, setSaveError] = useState(null)
   const [saved, setSaved] = useState(false)
   const [savedNote, setSavedNote] = useState('')
+  // Take-home products, editable on the confirm view. Seeded from the parse (or
+  // empty, for manual entry) when we reach the result step; merged back into the
+  // payload at save. Kept OUT of `parsed` so typing directions doesn't re-run the
+  // face-map computation on every keystroke.
+  const [products, setProducts] = useState([])
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -260,6 +265,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
         return
       }
       setParsed(data.parsed)
+      setProducts(data.parsed.products || [])
       setAreaAnswers({}) // answers belong to one parse; a new parse starts clean
       setStep('result')
     } catch (e) {
@@ -296,6 +302,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
         return
       }
       setParsed(data.parsed)
+      setProducts(data.parsed.products || [])
       setAreaAnswers({}) // answers belong to one parse; a new parse starts clean
       setStep('result')
     } catch (e) {
@@ -309,6 +316,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
     pages.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
     setPages([])
     setParsed(null)
+    setProducts([])
     setAreaAnswers({})
     setError(null)
     setSaveError(null)
@@ -400,7 +408,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
     const priorVisitIds = new Set((visits || []).map((v) => v.id))
     try {
       const { usedToday, unplaced, savedProducts, mappedCount, hasTreatments } =
-        await saveParsedVisit(mergeAreaAnswers(parsed))
+        await saveParsedVisit(mergeAreaAnswers({ ...parsed, products }))
       const notes = []
       if (usedToday) {
         notes.push("We used today's date since the note didn't include one.")
@@ -564,6 +572,7 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
         onCancel={onClose}
         onBuilt={(built) => {
           setParsed(built)
+          setProducts(built.products || [])
           setAreaAnswers({})
           setSaveError(null)
           setStep('result')
@@ -701,6 +710,11 @@ function LogVisitFlow({ onClose, onRefetch, visits = [], patientName = '', provi
         </div>
         <ParsedVisitPreview parsed={parsed} />
 
+        {/* Take-home products, editable before save: see what the parser found,
+            add directions ("2× daily for 6 months"), remove a mis-read item, or
+            add one the receipt missed. Shared by the AI-parse and manual paths. */}
+        <EditableProducts products={products} onChange={setProducts} />
+
         {/* Guided Q&A — only for treatments the document gave no location for
             (the receipt case). The patient's picks come from our own region
             vocabulary, so they always land on the face map. */}
@@ -826,7 +840,6 @@ function regionsSummary(labels) {
 
 function ParsedVisitPreview({ parsed }) {
   const { visit, treatments, treatment_areas } = parsed
-  const products = parsed.products || []
 
   const areasByTreatment = {}
   for (const area of treatment_areas || []) {
@@ -950,18 +963,78 @@ function ParsedVisitPreview({ parsed }) {
           )}
         </div>
       ))}
+    </div>
+  )
+}
 
-      {products.length > 0 && (
-        <div className="parsed-products">
-          <div className="parsed-products-label">Products (take-home)</div>
-          {products.map((p, idx) => (
-            <div key={idx} className="parsed-product">
-              <span className="parsed-product-name">{p.name}</span>
-              {p.notes && <span className="parsed-product-notes"> · {p.notes}</span>}
+/**
+ * EditableProducts — take-home products on the confirm view, editable before
+ * save. The AI parser used to file products silently; this lets the patient see
+ * what was found, add directions ("2× daily for 6 months") that map to the
+ * existing products.notes column, remove a mis-read item, or add one the receipt
+ * missed. Manual entry reaches the same result step, so this is also how a
+ * hand-entered visit records its take-home products. Blank-name rows are skipped
+ * on save (saveVisit filters them), so an empty extra row is harmless.
+ *
+ * Props:
+ *   products — [{ name, notes }]
+ *   onChange — (nextProducts) => void
+ */
+function EditableProducts({ products, onChange }) {
+  function update(i, field, value) {
+    onChange(products.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)))
+  }
+  function remove(i) {
+    onChange(products.filter((_, idx) => idx !== i))
+  }
+  function add() {
+    onChange([...products, { name: '', notes: '' }])
+  }
+
+  return (
+    <div className="edit-products">
+      <div className="edit-products-label">Take-home products</div>
+      {products.length === 0 ? (
+        <p className="edit-products-empty">
+          Creams, serums or supplements you took home. Optional — add any with how
+          to use them.
+        </p>
+      ) : (
+        products.map((p, i) => (
+          <div key={i} className="edit-product">
+            <div className="edit-product-row">
+              <input
+                type="text"
+                className="form-input edit-product-name"
+                value={p.name || ''}
+                onChange={(e) => update(i, 'name', e.target.value)}
+                placeholder="Product name"
+              />
+              <button
+                type="button"
+                className="edit-product-remove"
+                onClick={() => remove(i)}
+                aria-label={p.name ? `Remove ${p.name}` : 'Remove product'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
-          ))}
-        </div>
+            <textarea
+              className="form-textarea edit-product-notes"
+              value={p.notes || ''}
+              onChange={(e) => update(i, 'notes', e.target.value)}
+              placeholder="Directions or notes — e.g. use 2× daily for 6 months"
+              rows={2}
+            />
+          </div>
+        ))
       )}
+      <button type="button" className="edit-product-add" onClick={add}>
+        <span className="edit-product-add-plus" aria-hidden="true">+</span>
+        Add a product
+      </button>
     </div>
   )
 }
