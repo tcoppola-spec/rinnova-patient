@@ -568,13 +568,28 @@
 }
 
 .provider-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 0;
   background: transparent;
   border: none;
-  color: var(--magenta);
+  color: var(--body);
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+.provider-link-btn:hover {
+  color: var(--ink);
+}
+
+/* The grey edit affordance, matching the cost-editor pencil: quiet grey text
+   with a lighter grey pencil after it. Shared by the provider Edit link and the
+   product note link. */
+.edit-pencil {
+  color: var(--muted);
+  flex-shrink: 0;
 }
 
 .provider-remove-btn {
@@ -618,16 +633,21 @@
 /* The quiet text-link affordance used for cost editing, not a button: a row
    per product with a real button would make this calm list feel like a form. */
 .product-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 4px;
   padding: 2px 0;
   background: transparent;
   border: none;
   font-family: inherit;
   font-size: 13px;
-  color: var(--magenta);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: var(--body);
   cursor: pointer;
+}
+
+.product-note-btn:hover {
+  color: var(--ink);
 }
 
 .product-note-edit {

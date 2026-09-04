@@ -168,6 +168,9 @@ function ProductRow({ product, onRefetch }) {
                 }}
               >
                 {product.notes ? 'Edit note' : 'Add a note'}
+                <svg className="edit-pencil" width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M10.5 1.5 L12.5 3.5 L4 12 L1.5 12.5 L2 10 L10.5 1.5 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
+                </svg>
               </button>
             </>
           )}
