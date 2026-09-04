@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { categoryOf, categoryColor } from './treatmentColors'
 import { computeAreaCadence } from './areaCadence'
+import { getCoordinates } from './faceCoordinates'
 import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
 import { FACE_REGIONS } from './faceRegions'
 import FaceDiagram from './FaceDiagram'
@@ -81,19 +82,42 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
 
   if (allAreas.length === 0 && planItems.length === 0) return null
 
-  // ---- face dots (all-time weighted) ----
+  // ---- face dots ----
+  // "This year" shows the all-time weighted history map; the PLAN (view or edit)
+  // shows exactly the plan's areas, so adding/removing a row adds/removes its dot.
   const maxCount = allAreas.reduce((m, a) => Math.max(m, a.count), 0) || 1
-  const dots = []
+  const historyDots = []
   for (const area of allAreas) {
     if (area.x == null || area.y == null) continue
     const strength = area.count / maxCount
     const r = DOT_RADIUS * (0.62 + 0.38 * strength)
     const opacity = 0.4 + 0.6 * strength
     const color = categoryColor(area.colorKeys[0])
-    dots.push({ id: area.key, x: area.x, y: area.y, r, opacity, color })
+    historyDots.push({ id: area.key, x: area.x, y: area.y, r, opacity, color })
     if (area.mirror && Math.abs(area.x - MIRROR_AXIS) > 0.01) {
-      dots.push({ id: `${area.key}-m`, x: mirrorX(area.x), y: area.y, r, opacity, color })
+      historyDots.push({ id: `${area.key}-m`, x: mirrorX(area.x), y: area.y, r, opacity, color })
     }
+  }
+
+  // Dots for a set of plan rows: one per placeable area, coloured by its
+  // (dominant/derived) category and sized by planned times.
+  function planDots(rows) {
+    const maxN = rows.reduce((m, r) => Math.max(m, r.planned_count || 1), 0) || 1
+    const out = []
+    for (const r of rows) {
+      const coord = getCoordinates(r.title)
+      if (!coord) continue
+      const cat = r.category || areaByKey.get(areaKeyForName(r.title))?.colorKeys[0] || 'other'
+      const strength = (r.planned_count || 1) / maxN
+      const rad = DOT_RADIUS * (0.62 + 0.38 * strength)
+      const opacity = 0.4 + 0.6 * strength
+      const color = categoryColor(cat)
+      out.push({ id: r.title, x: coord.x, y: coord.y, r: rad, opacity, color })
+      if (Math.abs(coord.x - MIRROR_AXIS) > 0.01) {
+        out.push({ id: `${r.title}-m`, x: mirrorX(coord.x), y: coord.y, r: rad, opacity, color })
+      }
+    }
+    return out
   }
 
   // ---- view rows ----
@@ -120,6 +144,14 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   }
 
   const estimateValue = savedEstimateRow?.est_cost != null ? Number(savedEstimateRow.est_cost) : null
+
+  // The face follows the draft while editing, the plan while viewing next year,
+  // and the history map for "this year".
+  const dots = editing
+    ? planDots(draft)
+    : mode === 'next'
+      ? planDots(viewRows)
+      : historyDots
 
   // ---- edit helpers ----
   function enterEdit() {
@@ -149,9 +181,12 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   }
   function addArea(region) {
     setShowPicker(false)
+    // Colour the dot from history if we've treated this area before, else grey.
+    // This is a visual tie to the face, not a committed "product".
+    const cat = areaByKey.get(areaKeyForName(region.label))?.colorKeys[0] || 'other'
     setDraft((prev) => [
       ...prev,
-      { title: region.label, planned_count: 1, category: null, source: 'manual' },
+      { title: region.label, planned_count: 1, category: cat, source: 'manual' },
     ])
   }
 
@@ -362,7 +397,9 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
  *  just area + number (a plan isn't tied to a product). */
 function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
   const isDescriptive = row.variant === 'descriptive'
-  const cat = isDescriptive ? categoryOf(row.category) : null
+  // The dot always shows (a visual tie to the face); the category LABEL only on
+  // the descriptive "this year" rows — a plan isn't tied to a product.
+  const cat = categoryOf(row.category || 'other')
   const planned = Math.max(1, row.planned_count || 1)
   const done = isDescriptive ? row.done : areaDoneInYear(visits, row.title, year)
   const over = done > planned
@@ -374,14 +411,10 @@ function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
         <span className="plan-item-area">{row.title}</span>
       </div>
       <div className="plan-item-sub">
-        {isDescriptive && (
-          <>
-            <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
-            <span className="plan-item-cat">{cat.label}</span>
-          </>
-        )}
+        <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
+        {isDescriptive && <span className="plan-item-cat">{cat.label}</span>}
         <span className="plan-item-freq">
-          {row.variant === 'descriptive' && `${isDescriptive ? '· ' : ''}${done}× this year`}
+          {row.variant === 'descriptive' && `· ${done}× this year`}
           {row.variant === 'plan' && `about ${planned}× a year`}
           {row.variant === 'progress' && (
             over ? (
@@ -419,6 +452,11 @@ function PlanEditRow({ row, onChange, onRemove }) {
   return (
     <div className="plan-edit-row">
       <div className="plan-edit-top">
+        <span
+          className="plan-dot"
+          style={{ background: categoryOf(row.category || 'other').color }}
+          aria-hidden="true"
+        />
         <input
           type="text"
           className="form-input plan-edit-title"
