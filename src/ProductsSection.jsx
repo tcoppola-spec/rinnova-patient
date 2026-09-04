@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient'
  * "Products you use" section. Three operations:
  *   - View product list (read)
  *   - Add product (inline form)
- *   - Delete product (trash icon + inline confirm)
+ *   - Delete product (× remove control + inline confirm)
  *
  * Props:
  *   products: array of product objects from data.products
@@ -43,7 +43,7 @@ function ProductsSection({ products, onRefetch }) {
 /**
  * ProductRow
  *
- * A single product item with a trash icon. Tapping the trash icon
+ * A single product item with an × remove control. Tapping it
  * reveals an inline "Delete? · Yes · No" confirmation. Tap Yes →
  * deletes the product and refetches.
  */
@@ -178,13 +178,13 @@ function ProductRow({ product, onRefetch }) {
             type="button"
             onClick={() => { setError(null); setConfirming(true) }}
             className="product-trash-btn"
-            aria-label="Delete product"
+            aria-label={`Remove ${product.name}`}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M4 7h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M10 4h4a1 1 0 0 1 1 1v2H9V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            {/* × (not a trash can): matches the provider list and the log-visit /
+                manual remove controls. The inline "Delete?" confirm carries the
+                destructive weight, so the icon just needs to mean "remove this." */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
         ) : (
