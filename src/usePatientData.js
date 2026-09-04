@@ -73,12 +73,31 @@ export function usePatientData() {
 
       if (subscriptionsError) throw subscriptionsError
 
+      // 6. Fetch the patient's providers (their own contact list for booking).
+      // TOLERANT on purpose: this table ships with a migration that must be run
+      // in Supabase. Until it is, the query errors — but that must NOT take down
+      // the whole app. On any error we default to an empty list, and the hero
+      // CTA falls back to the patient's existing provider fields.
+      let providers = []
+      try {
+        const { data: provs, error: provError } = await supabase
+          .from('patient_providers')
+          .select('*')
+          .order('is_primary', { ascending: false })
+          .order('name', { ascending: true })
+        if (provError) throw provError
+        providers = provs || []
+      } catch (provErr) {
+        console.warn('[usePatientData] patient_providers unavailable (run the migration?):', provErr?.message)
+      }
+
       setData({
         patient,
         visits: visits || [],
         photos: photos || [],
         products: products || [],
         subscriptions: subscriptions || [],
+        providers,
       })
     } catch (err) {
       console.error('Error fetching patient data:', err)

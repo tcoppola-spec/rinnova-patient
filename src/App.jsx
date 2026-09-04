@@ -9,6 +9,7 @@ import VisitsTimeline from './VisitsTimeline'
 import AreaCadenceSection from './AreaCadenceSection'
 import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
+import ProvidersSection from './ProvidersSection'
 import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
 import VisitDetailModal from './VisitDetailModal'
@@ -163,8 +164,22 @@ function App() {
     )
   }
 
-  const { patient, visits, photos, products, subscriptions } = data
+  const { patient, visits, photos, products, subscriptions, providers = [] } = data
   const lastVisit = visits[0]
+
+  // Providers for the hero "Book" menu. Prefer the patient's own provider list;
+  // before that migration is run (or before they've added anyone), fall back to
+  // the single provider already on the patient record so the CTA still works and
+  // Roberta doesn't disappear. The fallback is display-only — it isn't a real
+  // patient_providers row, so it never shows in the (editable) Providers section.
+  const fallbackName = patient.primary_provider?.name || patient.provider_name
+  const fallbackPhone = patient.primary_provider?.phone || patient.provider_phone
+  const heroProviders =
+    providers.length > 0
+      ? providers
+      : fallbackName
+        ? [{ id: 'fallback', name: fallbackName, phone: fallbackPhone || '', is_primary: true }]
+        : []
 
   // First-run onboarding, gated on the patient's own DB flag so it follows the
   // account across devices. This sits AFTER the dataLoading check on purpose:
@@ -212,7 +227,8 @@ function App() {
           visits={visits}
           lastVisitDate={lastVisit?.visit_date}
           providerName={patient.primary_provider?.name || patient.provider_name}
-          providerPhone={patient.primary_provider?.phone || patient.provider_phone}
+          providers={heroProviders}
+          onRefetch={refetch}
         />
 
         <LogVisitPrompt
@@ -244,6 +260,11 @@ function App() {
         />
 
         <ProductsSection products={products} onRefetch={refetch} />
+
+        {/* The patient's own providers — the contacts the hero "Book" menu
+            dials. Sits near Products for now; moves under Maintenance when that
+            section ships (docs/booking-providers-brief.md). */}
+        <ProvidersSection providers={providers} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />
 

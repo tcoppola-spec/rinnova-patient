@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { computeRenewals, formatMonths } from './renewals'
+import { addProvider } from './patientProviders'
 
 /**
  * HeroCard
@@ -16,15 +17,17 @@ import { computeRenewals, formatMonths } from './renewals'
  * Copy rules: "typically" + ranges, never prescriptive — this is information
  * about the patient's own record, not medical advice.
  *
- * The CTA still books with the patient's own provider (single provider per
- * patient is a V1 decision — see docs/providers-and-invites-brief.md; the
- * provider-from-data upgrade lands with that brief).
+ * The "Book an appointment" CTA opens a menu built from the patient's own
+ * provider list (name + phone): tap a provider to dial (tel:), or add a new one
+ * inline. With no providers, tapping goes straight to the add form. See
+ * docs/booking-providers-brief.md.
  *
  * Props:
  *   visits: visits with nested treatments (renewals are computed from these)
  *   lastVisitDate: string (ISO date) | null — fallback headline
- *   providerName: string — the patient's provider display name
- *   providerPhone: string — provider phone for the tel: link
+ *   providerName: string — provider display name, used only in the days-since copy
+ *   providers: [{ id, name, phone, is_primary }] — the booking list (primary first)
+ *   onRefetch: reload data after adding a provider inline
  */
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
@@ -49,21 +52,20 @@ function relativeDay(days) {
   return `in about ${weeks} weeks`
 }
 
-function HeroCard({ visits = [], lastVisitDate, providerName, providerPhone }) {
+function HeroCard({ visits = [], lastVisitDate, providerName, providers = [], onRefetch }) {
   // Captured once per mount: keeps render pure (no Date.now() during render,
   // which is impure and was a long-standing lint error in this file). A page
   // lives for minutes; renewal math cares about months.
   const [now] = useState(() => Date.now())
+  // Booking menu open/closed. Opening with no providers jumps straight to the
+  // add form (see BookingMenu).
+  const [booking, setBooking] = useState(false)
 
   const renewals = computeRenewals(visits, now)
   const top = renewals[0] || null
 
   const daysSince = lastVisitDate
     ? Math.floor((now - new Date(lastVisitDate + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
-    : null
-
-  const telHref = providerPhone
-    ? `tel:${providerPhone.replace(/[^\d+]/g, '')}`
     : null
 
   const fmtDate = (d) =>
@@ -127,13 +129,137 @@ function HeroCard({ visits = [], lastVisitDate, providerName, providerPhone }) {
           <p className="hero-card-meta">{daysSinceLabel(daysSince)}</p>
         )}
 
-        {telHref && (
-          <a href={telHref} className="hero-card-cta">
-            Make an appointment <span aria-hidden="true">→</span>
-          </a>
+        {!booking ? (
+          <button
+            type="button"
+            className="hero-card-cta"
+            onClick={() => setBooking(true)}
+          >
+            Book an appointment <span aria-hidden="true">→</span>
+          </button>
+        ) : (
+          <BookingMenu
+            providers={providers}
+            onRefetch={onRefetch}
+            onClose={() => setBooking(false)}
+          />
         )}
       </div>
     </section>
+  )
+}
+
+/**
+ * BookingMenu — opens under the CTA. Lists each provider as a dial link (primary
+ * first, since the list is ordered that way), and always offers "Add new
+ * provider". With no providers yet, the add form is shown straight away.
+ */
+function BookingMenu({ providers, onRefetch, onClose }) {
+  const telFor = (p) => `tel:${(p.phone || '').replace(/[^\d+]/g, '')}`
+
+  return (
+    <div className="hero-book-menu">
+      {providers.map((p) =>
+        (p.phone || '').trim() ? (
+          <a key={p.id} href={telFor(p)} className="hero-book-item">
+            Book with {p.name}
+            <span aria-hidden="true">→</span>
+          </a>
+        ) : (
+          <div key={p.id} className="hero-book-item hero-book-item-nophone">
+            {p.name} · no number yet
+          </div>
+        )
+      )}
+
+      <AddProviderInline
+        autoOpen={providers.length === 0}
+        makePrimary={providers.length === 0}
+        onAdded={onRefetch}
+      />
+
+      <button type="button" className="hero-book-close" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  )
+}
+
+/**
+ * AddProviderInline — the "Add new provider" row inside the booking menu. Writes
+ * via the shared helper, then refetches so the new provider appears in the list
+ * (and can be dialed). autoOpen shows the form immediately (the no-provider case).
+ */
+function AddProviderInline({ autoOpen, makePrimary, onAdded }) {
+  const [open, setOpen] = useState(!!autoOpen)
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function save() {
+    setError(null)
+    if (name.trim() === '') {
+      setError('Enter a name')
+      return
+    }
+    setSaving(true)
+    try {
+      await addProvider({ name, phone, makePrimary })
+      setName('')
+      setPhone('')
+      setOpen(false)
+      if (onAdded) await onAdded()
+    } catch (e) {
+      setError(e.message || 'Could not add provider')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="hero-book-add-toggle" onClick={() => setOpen(true)}>
+        <span aria-hidden="true">+</span> Add new provider
+      </button>
+    )
+  }
+
+  return (
+    <div className="hero-book-add">
+      <input
+        type="text"
+        className="form-input"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Provider name"
+        disabled={saving}
+        autoFocus
+      />
+      <input
+        type="tel"
+        inputMode="tel"
+        className="form-input"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="Phone number"
+        disabled={saving}
+      />
+      {error && <div className="form-error">{error}</div>}
+      <div className="form-actions">
+        <button type="button" className="form-save-btn" onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          type="button"
+          className="form-cancel-btn"
+          onClick={() => { setOpen(false); setError(null) }}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   )
 }
 

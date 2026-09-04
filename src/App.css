@@ -151,14 +151,87 @@
   color: var(--ink);
   font-size: 14px;
   font-weight: 500;
+  border: none;
   border-radius: 999px;
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .hero-card-cta:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Booking menu — a white panel that drops under the CTA, on the gradient card. */
+.hero-book-menu {
+  margin-top: 12px;
+  background: white;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.hero-book-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--magenta);
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.hero-book-item:hover {
+  opacity: 0.92;
+}
+
+.hero-book-item-nophone {
+  background: var(--line-soft);
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.hero-book-add-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  color: var(--magenta);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hero-book-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 6px 4px;
+}
+
+.hero-book-close {
+  background: none;
+  border: none;
+  padding: 8px 14px 4px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
 /* ============ LOG VISIT PROMPT ============ */
@@ -427,6 +500,97 @@
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
+}
+
+/* ============ PROVIDERS ============ */
+.providers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-item {
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.provider-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.provider-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.provider-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.provider-primary-pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  background: var(--magenta-soft);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.provider-phone {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.provider-phone-missing {
+  font-style: italic;
+}
+
+.provider-primary-btn {
+  margin-top: 4px;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  color: var(--magenta);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.provider-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.provider-remove-btn:hover {
+  background: var(--line-soft);
+  color: var(--magenta);
 }
 
 .product-name {
@@ -1273,7 +1437,7 @@
 
 .product-trash-btn:hover {
   background: var(--line-soft);
-  color: #DC2626;
+  color: var(--magenta);
 }
 
 .product-confirm-row {
@@ -1288,9 +1452,11 @@
   color: var(--muted);
 }
 
+/* Magenta, not red: destructive confirms use the one action color (CLAUDE.md
+   §8/§13). Shared by the products and providers delete confirms. */
 .product-confirm-yes {
   padding: 8px 16px;
-  background: #DC2626;
+  background: var(--magenta);
   color: white;
   border: none;
   border-radius: 8px;
