@@ -189,7 +189,7 @@ function ProductRow({ product, onRefetch }) {
           </button>
         ) : (
           <div className="product-confirm-row">
-            <span className="product-confirm-text">Delete?</span>
+            <span className="product-confirm-text">Remove?</span>
             <button
               type="button"
               onClick={handleDelete}
