@@ -1213,11 +1213,14 @@
   cursor: not-allowed;
 }
 
+/* Secondary button: white fill, magenta outline + text. The counterpart to the
+   primary (magenta fill, white text). A grey-on-grey outline read as disabled,
+   which is why Cancel looked switched off mid-flow. */
 .form-cancel-btn {
   padding: 8px 14px;
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--magenta);
+  border: 1px solid var(--magenta);
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -1226,8 +1229,9 @@
 }
 
 .form-cancel-btn:hover:not(:disabled) {
-  color: var(--ink);
-  border-color: var(--muted);
+  background: var(--magenta-soft);
+  border-color: var(--magenta);
+  color: var(--magenta);
 }
 
 .form-cancel-btn:disabled {

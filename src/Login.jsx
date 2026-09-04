@@ -98,6 +98,17 @@ function clearPendingEmail() {
   }
 }
 
+// A deliberately loose sanity check — one @, and a dot in the domain. It exists
+// to catch typos ("tracy@gmail", "tracy@gmial") BEFORE we ask Supabase to send a
+// code that would silently go nowhere and leave the tester stuck on the code
+// screen. It is NOT security: a valid-looking but wrong address still passes and
+// is caught the only way it can be — by the code never arriving. So keep it
+// permissive; a regex that rejects a real unusual address is worse than one that
+// lets an obvious typo reach the (self-validating) code step.
+function looksLikeEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+}
+
 function Login() {
   const navigate = useNavigate()
   // Lazy initialisers run once, on mount: if a fresh code is pending, resume on
@@ -147,6 +158,10 @@ function Login() {
     e.preventDefault()
     if (!email.trim()) {
       setError('Enter your email address.')
+      return
+    }
+    if (!looksLikeEmail(email)) {
+      setError('That email doesn’t look right. Check it and try again.')
       return
     }
     // Reviewer: no real code to send (no inbox) — go straight to code entry,
