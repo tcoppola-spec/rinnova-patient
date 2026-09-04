@@ -173,7 +173,6 @@ function BookingMenu({ providers, onRefetch, onClose }) {
       )}
 
       <AddProviderInline
-        autoOpen={providers.length === 0}
         makePrimary={providers.length === 0}
         onAdded={onRefetch}
       />
@@ -188,10 +187,11 @@ function BookingMenu({ providers, onRefetch, onClose }) {
 /**
  * AddProviderInline — the "Add new provider" row inside the booking menu. Writes
  * via the shared helper, then refetches so the new provider appears in the list
- * (and can be dialed). autoOpen shows the form immediately (the no-provider case).
+ * (and can be dialed). Always starts collapsed as a "+ Add new provider" toggle
+ * — quieter than an open form, even when there are no providers yet.
  */
-function AddProviderInline({ autoOpen, makePrimary, onAdded }) {
-  const [open, setOpen] = useState(!!autoOpen)
+function AddProviderInline({ makePrimary, onAdded }) {
+  const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
