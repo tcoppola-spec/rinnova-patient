@@ -654,6 +654,368 @@
   margin-top: 6px;
 }
 
+/* ============ MAINTENANCE (yearly plan) ============ */
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.plan-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.plan-header-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.plan-chevron {
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.plan-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.plan-body {
+  margin-top: 14px;
+}
+
+.plan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.plan-year {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-year-arrow {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--body);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.plan-year-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.plan-year-label {
+  font-family: var(--f-display);
+  font-size: 18px;
+  color: var(--ink);
+  min-width: 48px;
+  text-align: center;
+}
+
+.plan-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  color: var(--body);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.plan-link-btn:hover {
+  color: var(--ink);
+}
+
+.plan-empty {
+  padding: 4px 0 8px;
+}
+
+.plan-empty-text {
+  font-size: 14px;
+  color: var(--body);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.plan-empty-hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+
+.plan-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-item {
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.plan-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.plan-item-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-item-cost {
+  font-size: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.plan-item-notes {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.plan-progress {
+  margin-top: 8px;
+}
+
+.plan-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.plan-progress-fill {
+  height: 100%;
+  background: var(--magenta);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.plan-progress-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--body);
+}
+
+/* Over-plan cue: quiet, positive-neutral. Magenta, never red, never an alert. */
+.plan-ahead {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  background: var(--magenta-soft);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.plan-total {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.plan-add-controls {
+  margin-top: 12px;
+}
+
+.plan-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plan-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--magenta-soft);
+  border: none;
+  border-radius: 999px;
+  color: var(--magenta);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.plan-add-btn:hover {
+  background: var(--magenta-soft-2);
+}
+
+.plan-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plan-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.plan-picker-chip:hover {
+  border-color: var(--magenta);
+}
+
+.plan-picker-cancel {
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ---- edit rows ---- */
+.plan-edit-row {
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.plan-edit-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-edit-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  transition: color 0.15s ease;
+}
+
+.plan-remove:hover {
+  color: var(--magenta);
+}
+
+.plan-edit-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.plan-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.plan-stepper button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--body);
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.plan-stepper-n {
+  min-width: 34px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.plan-cost-input {
+  width: 96px;
+}
+
+.plan-notes-input {
+  margin-top: 10px;
+}
+
 /* ============ SUBSCRIPTIONS ============ */
 
 .subscriptions-list {

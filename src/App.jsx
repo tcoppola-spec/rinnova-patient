@@ -9,6 +9,7 @@ import VisitsTimeline from './VisitsTimeline'
 import AreaCadenceSection from './AreaCadenceSection'
 import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
+import MaintenanceSection from './MaintenanceSection'
 import ProvidersSection from './ProvidersSection'
 import SubscriptionsSection from './SubscriptionsSection'
 import PageFooter from './PageFooter'
@@ -164,7 +165,7 @@ function App() {
     )
   }
 
-  const { patient, visits, photos, products, subscriptions, providers = [] } = data
+  const { patient, visits, photos, products, subscriptions, providers = [], planItems = [] } = data
   const lastVisit = visits[0]
 
   // Providers for the hero "Book" menu. Prefer the patient's own provider list;
@@ -261,9 +262,13 @@ function App() {
 
         <ProductsSection products={products} onRefetch={refetch} />
 
+        {/* The yearly plan — a rough draft of what the patient expects this year,
+            with computed progress. Descriptive, never prescriptive
+            (docs/your-year-brief.md). */}
+        <MaintenanceSection planItems={planItems} visits={visits} onRefetch={refetch} />
+
         {/* The patient's own providers — the contacts the hero "Book" menu
-            dials. Sits near Products for now; moves under Maintenance when that
-            section ships (docs/booking-providers-brief.md). */}
+            dials. Now sits under Maintenance (docs/booking-providers-brief.md). */}
         <ProvidersSection providers={providers} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />

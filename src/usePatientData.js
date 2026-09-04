@@ -91,6 +91,21 @@ export function usePatientData() {
         console.warn('[usePatientData] patient_providers unavailable (run the migration?):', provErr?.message)
       }
 
+      // 7. Fetch the Maintenance plan items. Tolerant, same as providers: the
+      // table ships with a migration, so until it's run this errors — default to
+      // an empty list rather than taking down the whole app.
+      let planItems = []
+      try {
+        const { data: plans, error: planError } = await supabase
+          .from('plan_items')
+          .select('*')
+          .order('display_order', { ascending: true })
+        if (planError) throw planError
+        planItems = plans || []
+      } catch (planErr) {
+        console.warn('[usePatientData] plan_items unavailable (run the migration?):', planErr?.message)
+      }
+
       setData({
         patient,
         visits: visits || [],
@@ -98,6 +113,7 @@ export function usePatientData() {
         products: products || [],
         subscriptions: subscriptions || [],
         providers,
+        planItems,
       })
     } catch (err) {
       console.error('Error fetching patient data:', err)
