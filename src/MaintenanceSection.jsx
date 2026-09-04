@@ -3,31 +3,33 @@ import { categoryOf, categoryColor } from './treatmentColors'
 import { computeAreaCadence } from './areaCadence'
 import { mirrorX, MIRROR_AXIS, DOT_RADIUS } from './faceGeometry'
 import FaceDiagram from './FaceDiagram'
+import AreaDetailModal from './AreaDetailModal'
 import {
-  defaultPlanYear,
-  doneCount,
-  suggestPlanItems,
+  planYears,
+  areaKeyForName,
+  areaDoneInYear,
+  suggestAreaPlan,
   treatmentCategoryOptions,
   planTotal,
   savePlan,
 } from './maintenancePlan'
 
 /**
- * MaintenanceSection — the "Maintenance" yearly plan (docs/your-year-brief.md).
+ * MaintenanceSection — "Areas you treat" (docs/your-year-brief.md).
  *
- * A collapsible section (collapsed by default, no price in the header). Expanded,
- * it shows the plan for one calendar year as rows: treatments with a planned
- * count and COMPUTED progress ("1 of 4 done"), products with directions. The
- * pencil enters an edit mode where every field is editable, rows can be added
- * (treatment or product) or removed, and the draft can be seeded from the
- * patient's own recent history.
+ * Merges the old cadence view and the yearly plan into ONE section: a weighted
+ * face map, then a per-AREA breakdown that toggles between:
+ *   - THIS YEAR  — descriptive, from the record ("Under eyes · 2× this year"),
+ *                  or progress against a saved plan ("2 of 4 done").
+ *   - PLAN NEXT YEAR — an editable draft seeded from history.
  *
- * Discipline: descriptive, never prescriptive. It's the patient's rough draft,
- * seeded from their data and freely adjusted — Rinnova never says "you need".
+ * Each row is an AREA (heading) with its dominant treatment category (the dot).
+ * Descriptive, never prescriptive — "this year" reads the record; the plan is a
+ * rough draft the patient adjusts.
  *
  * Props:
  *   planItems: all plan_items rows (any year) from data.planItems
- *   visits: visits with nested treatments (progress is computed from these)
+ *   visits: visits with nested treatments + treatment_areas
  *   onRefetch: reload data after a save
  */
 
@@ -48,28 +50,34 @@ function Pencil() {
 
 function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
   const [now] = useState(() => Date.now())
-  const [expanded, setExpanded] = useState(false)
-  const [year, setYear] = useState(() => defaultPlanYear(planItems))
+  const [mode, setMode] = useState('this') // 'this' | 'next'
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [showPicker, setShowPicker] = useState(false)
+  const [openArea, setOpenArea] = useState(null)
 
-  const yearItems = planItems
+  const { current, next } = planYears(new Date(now))
+  const year = mode === 'this' ? current : next
+
+  // All-time area map — drives the face (stable across the toggle) and the
+  // this-year descriptive rows and the tap-through detail.
+  const allAreas = computeAreaCadence(visits, now)
+  const areaByKey = new Map(allAreas.map((a) => [a.key, a]))
+
+  const savedItems = planItems
     .filter((i) => i.plan_year === year)
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
 
-  const hasVisits = visits.length > 0
+  // Nothing to show at all → hide the section (don't explain a feature the
+  // patient can't use yet), same discipline as the old cadence section.
+  if (allAreas.length === 0 && planItems.length === 0) return null
 
-  // The face leads the section, same weighted-dot map as "Areas you treat": it
-  // answers "what does my year cover?" at a glance before any row is read. Built
-  // from the patient's own history via areaCadence — the plan is category-level
-  // (no locations of its own), so the map comes from where they actually treat.
-  const areas = computeAreaCadence(visits, now)
-  const maxCount = areas.reduce((m, a) => Math.max(m, a.count), 0) || 1
+  // ---- face dots (all-time weighted) ----
+  const maxCount = allAreas.reduce((m, a) => Math.max(m, a.count), 0) || 1
   const dots = []
-  for (const area of areas) {
+  for (const area of allAreas) {
     if (area.x == null || area.y == null) continue
     const strength = area.count / maxCount
     const r = DOT_RADIUS * (0.62 + 0.38 * strength)
@@ -81,75 +89,74 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     }
   }
 
-  // Default to a plan SEEDED from history rather than an empty box: when there's
-  // no saved plan for this year, show the suggestion (computed, not yet stored)
-  // so the section is useful on first open. Editing turns it into a real,
-  // saved plan.
-  const suggested = yearItems.length === 0 ? suggestPlanItems(visits) : []
-  const showingSuggestion = yearItems.length === 0 && suggested.length > 0
-  const viewItems = yearItems.length > 0 ? yearItems : suggested
+  // ---- what to render in view mode ----
+  const suggested = suggestAreaPlan(visits, now)
+  const hasSavedPlan = savedItems.length > 0
+  const isPastOrCurrent = year <= current
 
-  // ---- edit-mode helpers ----
+  let viewRows
+  let showingSuggestion = false
+  if (hasSavedPlan) {
+    viewRows = savedItems.map((i) => ({ ...i, variant: isPastOrCurrent ? 'progress' : 'plan' }))
+  } else if (mode === 'this') {
+    // Descriptive: areas treated THIS year, from the record.
+    viewRows = allAreas
+      .map((a) => ({
+        title: a.label,
+        category: a.colorKeys[0] || 'other',
+        done: areaDoneInYear(visits, a.label, year),
+        variant: 'descriptive',
+      }))
+      .filter((r) => r.done > 0)
+  } else {
+    // Next year, no saved plan → the suggestion (editable via Edit).
+    viewRows = suggested.map((s) => ({ ...s, variant: 'plan' }))
+    showingSuggestion = suggested.length > 0
+  }
+
+  const total = planTotal(editing ? draft : viewRows)
+
+  // ---- edit helpers ----
   function toEditable(rows) {
     return rows.map((i) => ({
       id: i.id,
-      kind: i.kind,
       category: i.category,
       title: i.title,
-      planned_count: i.planned_count,
+      planned_count: i.planned_count || 1,
       est_cost: i.est_cost == null ? '' : String(i.est_cost),
       notes: i.notes || '',
       source: i.source,
     }))
   }
 
-  function enterEdit(seed = []) {
+  function enterEdit() {
     setError(null)
     setShowPicker(false)
-    // Merge suggestions but skip categories already present, so "suggest" never
-    // duplicates a row the patient already has.
-    const base = toEditable(yearItems)
-    const have = new Set(base.filter((r) => r.kind === 'treatment').map((r) => r.category))
-    const extra = seed.filter((s) => !(s.kind === 'treatment' && have.has(s.category)))
-    setDraft([...base, ...extra])
+    // Edit the saved plan for this year, or seed a fresh draft from history.
+    const seed = hasSavedPlan ? savedItems : suggested
+    setDraft(toEditable(seed))
     setEditing(true)
   }
 
   function updateDraft(idx, field, value) {
     setDraft((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)))
   }
-
   function removeDraft(idx) {
     setDraft((prev) => prev.filter((_, i) => i !== idx))
   }
-
-  function addTreatment(opt) {
+  function addArea(opt) {
     setShowPicker(false)
     setDraft((prev) => [
       ...prev,
-      { kind: 'treatment', category: opt.key, title: opt.label, planned_count: 1, est_cost: '', notes: '', source: 'manual' },
+      { category: opt.key, title: '', planned_count: 1, est_cost: '', notes: '', source: 'manual' },
     ])
-  }
-
-  function addProduct() {
-    setDraft((prev) => [
-      ...prev,
-      { kind: 'product', category: null, title: '', planned_count: 1, est_cost: '', notes: '', source: 'manual' },
-    ])
-  }
-
-  function addSuggestions() {
-    const have = new Set(draft.filter((r) => r.kind === 'treatment').map((r) => r.category))
-    const extra = suggestPlanItems(visits).filter((s) => !have.has(s.category))
-    if (extra.length === 0) return
-    setDraft((prev) => [...prev, ...extra])
   }
 
   async function handleSave() {
     setError(null)
     setSaving(true)
     try {
-      await savePlan(year, draft, yearItems)
+      await savePlan(year, draft, savedItems)
       setEditing(false)
       setDraft([])
       if (onRefetch) await onRefetch()
@@ -159,7 +166,6 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
       setSaving(false)
     }
   }
-
   function handleCancel() {
     setEditing(false)
     setDraft([])
@@ -167,260 +173,213 @@ function MaintenanceSection({ planItems = [], visits = [], onRefetch }) {
     setShowPicker(false)
   }
 
-  const total = planTotal(editing ? draft : viewItems)
+  function openDetail(row) {
+    const area = areaByKey.get(areaKeyForName(row.title))
+    if (area) setOpenArea(area)
+  }
 
   return (
     <section className="section">
-      {/* Header toggles expand/collapse. No price here — deliberately quiet. */}
-      <button
-        type="button"
-        className="plan-header"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        <div className="plan-header-text">
-          <h2 className="section-title">Maintenance</h2>
-          <span className="plan-header-sub">Your yearly plan</span>
-        </div>
-        <svg
-          className={'plan-chevron' + (expanded ? ' is-open' : '')}
-          width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+      <div className="section-head">
+        <h2 className="section-title">Areas you treat</h2>
+      </div>
+
+      {dots.length > 0 && <FaceDiagram dots={dots} legend={null} />}
+
+      {/* This year / Plan next year toggle */}
+      <div className="plan-toggle" role="tablist" aria-label="Plan view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'this'}
+          className={'plan-toggle-btn' + (mode === 'this' ? ' is-active' : '')}
+          onClick={() => { if (editing) return; setMode('this') }}
+          disabled={editing}
         >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+          This year
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'next'}
+          className={'plan-toggle-btn' + (mode === 'next' ? ' is-active' : '')}
+          onClick={() => { if (editing) return; setMode('next') }}
+          disabled={editing}
+        >
+          Plan {next}
+        </button>
+      </div>
 
-      {expanded && (
-        <div className="plan-body">
-          {/* Year switcher + edit affordance. Year arrows disabled while editing
-              (the draft belongs to one year). */}
-          <div className="plan-toolbar">
-            <div className="plan-year">
-              <button
-                type="button"
-                className="plan-year-arrow"
-                onClick={() => setYear((y) => y - 1)}
-                disabled={editing}
-                aria-label="Previous year"
-              >
-                ‹
-              </button>
-              <span className="plan-year-label">{year}</span>
-              <button
-                type="button"
-                className="plan-year-arrow"
-                onClick={() => setYear((y) => y + 1)}
-                disabled={editing}
-                aria-label="Next year"
-              >
-                ›
-              </button>
-            </div>
+      {editing ? (
+        /* ---- EDIT MODE ---- */
+        <>
+          {draft.length === 0 && (
+            <p className="plan-empty-hint">
+              Add the areas you plan to treat. It’s a rough draft you can change
+              anytime.
+            </p>
+          )}
 
-            {!editing && viewItems.length > 0 && (
-              <button
-                type="button"
-                className="plan-link-btn"
-                onClick={() => enterEdit(showingSuggestion ? suggested : [])}
-              >
-                Edit
+          {draft.map((row, idx) => (
+            <PlanEditRow
+              key={idx}
+              row={row}
+              onChange={(field, value) => updateDraft(idx, field, value)}
+              onRemove={() => removeDraft(idx)}
+            />
+          ))}
+
+          <div className="plan-add-controls">
+            {showPicker ? (
+              <div className="plan-picker">
+                {treatmentCategoryOptions().map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className="plan-picker-chip"
+                    onClick={() => addArea(opt)}
+                  >
+                    <span className="plan-dot" style={{ background: opt.color }} />
+                    {opt.label}
+                  </button>
+                ))}
+                <button type="button" className="plan-picker-cancel" onClick={() => setShowPicker(false)}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="plan-add-btn" onClick={() => setShowPicker(true)}>
+                <span aria-hidden="true">+</span> Add an area
+              </button>
+            )}
+          </div>
+
+          {total > 0 && <p className="plan-total">About {fmtUSD(total)} planned this year.</p>}
+          {error && <div className="form-error">{error}</div>}
+
+          <div className="form-actions" style={{ marginTop: 12 }}>
+            <button type="button" className="form-save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save plan'}
+            </button>
+            <button type="button" className="form-cancel-btn" onClick={handleCancel} disabled={saving}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        /* ---- VIEW MODE ---- */
+        <>
+          {/* Edit affordance — plan a year (or adjust the saved plan). */}
+          <div className="plan-viewbar">
+            {showingSuggestion && (
+              <span className="plan-suggestion-note">Suggested from your history</span>
+            )}
+            {(mode === 'next' || hasSavedPlan) && (
+              <button type="button" className="plan-link-btn" onClick={enterEdit}>
+                {hasSavedPlan ? 'Edit' : 'Edit & save'}
                 <Pencil />
               </button>
             )}
           </div>
 
-          {/* ---- EDIT MODE ---- */}
-          {editing ? (
-            <>
-              {draft.length === 0 && (
-                <p className="plan-empty-hint">
-                  Add what you expect this year. It’s a rough draft you can change
-                  anytime.
-                </p>
-              )}
-
-              {draft.map((row, idx) => (
-                <PlanEditRow
-                  key={idx}
-                  row={row}
-                  onChange={(field, value) => updateDraft(idx, field, value)}
-                  onRemove={() => removeDraft(idx)}
-                />
-              ))}
-
-              {/* Add controls */}
-              <div className="plan-add-controls">
-                {showPicker ? (
-                  <div className="plan-picker">
-                    {treatmentCategoryOptions().map((opt) => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        className="plan-picker-chip"
-                        onClick={() => addTreatment(opt)}
-                      >
-                        <span className="plan-dot" style={{ background: opt.color }} />
-                        {opt.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className="plan-picker-cancel"
-                      onClick={() => setShowPicker(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div className="plan-add-row">
-                    <button type="button" className="plan-add-btn" onClick={() => setShowPicker(true)}>
-                      <span aria-hidden="true">+</span> Add treatment
-                    </button>
-                    <button type="button" className="plan-add-btn" onClick={addProduct}>
-                      <span aria-hidden="true">+</span> Add product
-                    </button>
-                    {hasVisits && (
-                      <button type="button" className="plan-add-btn" onClick={addSuggestions}>
-                        Suggest from my history
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {total > 0 && (
-                <p className="plan-total">About {fmtUSD(total)} planned this year.</p>
-              )}
-
-              {error && <div className="form-error">{error}</div>}
-
-              <div className="form-actions" style={{ marginTop: 12 }}>
-                <button type="button" className="form-save-btn" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save plan'}
-                </button>
-                <button type="button" className="form-cancel-btn" onClick={handleCancel} disabled={saving}>
-                  Cancel
-                </button>
-              </div>
-            </>
+          {viewRows.length === 0 ? (
+            <p className="plan-empty-text">
+              {mode === 'this'
+                ? `Nothing logged for ${year} yet.`
+                : `Plan ${next}: tap Edit to set how often you expect to treat each area.`}
+            </p>
           ) : (
-            /* ---- VIEW MODE ---- */
             <>
-              {dots.length > 0 && <FaceDiagram dots={dots} legend={null} />}
-
-              {viewItems.length === 0 ? (
-                <div className="plan-empty">
-                  <p className="plan-empty-text">
-                    Plan out {year}: how often you expect each treatment, and what
-                    to budget. A rough draft you can change anytime.
-                  </p>
-                  <div className="plan-add-row">
-                    <button type="button" className="plan-add-btn" onClick={() => enterEdit()}>
-                      <span aria-hidden="true">+</span> Build it myself
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {showingSuggestion && (
-                    <p className="plan-suggestion-note">
-                      Suggested from your history — <strong>Edit</strong> to adjust
-                      and save.
-                    </p>
-                  )}
-                  <ul className="plan-list">
-                    {viewItems.map((item, i) => (
-                      <PlanViewRow
-                        key={item.id || `s-${i}`}
-                        item={item}
-                        visits={visits}
-                        year={year}
-                      />
-                    ))}
-                  </ul>
-                  {total > 0 && (
-                    <p className="plan-total">About {fmtUSD(total)} planned this year.</p>
-                  )}
-                </>
-              )}
+              <ul className="plan-list">
+                {viewRows.map((row, i) => (
+                  <PlanViewRow
+                    key={row.id || `r-${i}`}
+                    row={row}
+                    visits={visits}
+                    year={year}
+                    hasDetail={!!areaByKey.get(areaKeyForName(row.title))}
+                    onOpen={() => openDetail(row)}
+                  />
+                ))}
+              </ul>
+              {total > 0 && <p className="plan-total">About {fmtUSD(total)} planned this year.</p>}
             </>
           )}
-        </div>
+        </>
       )}
+
+      {openArea && <AreaDetailModal area={openArea} onClose={() => setOpenArea(null)} />}
     </section>
   )
 }
 
-/** A read-only plan row: treatment (with progress) or product (with directions). */
-function PlanViewRow({ item, visits, year }) {
-  const isTreatment = item.kind !== 'product'
-  const cat = isTreatment ? categoryOf(item.category) : null
-  const planned = Math.max(1, item.planned_count || 1)
-  const done = isTreatment ? doneCount(visits, item.category, year) : 0
+/** A read-only area row: area name, dot + category, and a frequency line. */
+function PlanViewRow({ row, visits, year, hasDetail, onOpen }) {
+  const cat = categoryOf(row.category)
+  const planned = Math.max(1, row.planned_count || 1)
+  const done = row.variant === 'descriptive' ? row.done : areaDoneInYear(visits, row.title, year)
   const over = done > planned
-  const pct = Math.min(100, Math.round((done / planned) * 100))
-  const costEach = item.est_cost != null ? fmtUSD(Number(item.est_cost)) : null
+  const pct = row.variant === 'progress' ? Math.min(100, Math.round((done / planned) * 100)) : 0
 
-  return (
-    <li className="plan-item">
+  const body = (
+    <>
       <div className="plan-item-head">
-        {isTreatment && (
-          <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
-        )}
-        <span className="plan-item-title">{item.title}</span>
-        {costEach && (
-          <span className="plan-item-cost">
-            ~{costEach}{isTreatment ? ' each' : ''}
-          </span>
+        <span className="plan-item-area">{row.title}</span>
+        {row.est_cost != null && row.est_cost !== '' && (
+          <span className="plan-item-cost">~{fmtUSD(Number(row.est_cost))} each</span>
         )}
       </div>
-
-      {isTreatment ? (
-        <div className="plan-progress">
-          <div className="plan-progress-bar">
-            <div className="plan-progress-fill" style={{ width: pct + '%' }} />
-          </div>
-          <div className="plan-progress-text">
-            {over ? (
-              <>
-                {done} done · planned {planned}
-                <span className="plan-ahead">ahead</span>
-              </>
+      <div className="plan-item-sub">
+        <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
+        <span className="plan-item-cat">{cat.label}</span>
+        <span className="plan-item-freq">
+          {row.variant === 'descriptive' && `· ${done}× this year`}
+          {row.variant === 'plan' && `· plan ${planned}×`}
+          {row.variant === 'progress' && (
+            over ? (
+              <>· {done} done · planned {planned}<span className="plan-ahead">ahead</span></>
             ) : (
-              <>{done} of {planned} done</>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          {item.notes && <div className="plan-item-notes">{item.notes}</div>}
-          {item.planned_count > 1 && (
-            <div className="plan-item-notes">Restock about {item.planned_count}× this year</div>
+              <>· {done} of {planned} done</>
+            )
           )}
-        </>
+        </span>
+      </div>
+      {row.variant === 'progress' && (
+        <div className="plan-progress-bar">
+          <div className="plan-progress-fill" style={{ width: pct + '%' }} />
+        </div>
       )}
-    </li>
+    </>
   )
+
+  if (hasDetail) {
+    return (
+      <li className="plan-item">
+        <button type="button" className="plan-item-btn" onClick={onOpen}>
+          {body}
+          <span className="plan-item-chevron" aria-hidden="true">›</span>
+        </button>
+      </li>
+    )
+  }
+  return <li className="plan-item">{body}</li>
 }
 
-/** An editable plan row. */
+/** An editable area row: area name, category dot, planned count, est cost. */
 function PlanEditRow({ row, onChange, onRemove }) {
-  const isTreatment = row.kind !== 'product'
-  const cat = isTreatment ? categoryOf(row.category) : null
+  const cat = categoryOf(row.category)
   const n = Math.max(1, Number(row.planned_count) || 1)
 
   return (
     <div className="plan-edit-row">
       <div className="plan-edit-top">
-        {isTreatment && (
-          <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
-        )}
+        <span className="plan-dot" style={{ background: cat.color }} aria-hidden="true" />
         <input
           type="text"
           className="form-input plan-edit-title"
           value={row.title}
           onChange={(e) => onChange('title', e.target.value)}
-          placeholder={isTreatment ? 'Treatment' : 'Product name'}
+          placeholder="Area (e.g. Under eyes)"
         />
         <button type="button" className="plan-remove" onClick={onRemove} aria-label="Remove">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -428,31 +387,16 @@ function PlanEditRow({ row, onChange, onRemove }) {
           </svg>
         </button>
       </div>
-
+      <div className="plan-edit-cat">{cat.label}</div>
       <div className="plan-edit-fields">
-        {isTreatment ? (
-          <div className="plan-field">
-            <span className="plan-field-label">Times</span>
-            <div className="plan-stepper">
-              <button
-                type="button"
-                onClick={() => onChange('planned_count', Math.max(1, n - 1))}
-                aria-label="Fewer"
-              >
-                −
-              </button>
-              <span className="plan-stepper-n">{n}×</span>
-              <button
-                type="button"
-                onClick={() => onChange('planned_count', n + 1)}
-                aria-label="More"
-              >
-                +
-              </button>
-            </div>
+        <div className="plan-field">
+          <span className="plan-field-label">Times</span>
+          <div className="plan-stepper">
+            <button type="button" onClick={() => onChange('planned_count', Math.max(1, n - 1))} aria-label="Fewer">−</button>
+            <span className="plan-stepper-n">{n}×</span>
+            <button type="button" onClick={() => onChange('planned_count', n + 1)} aria-label="More">+</button>
           </div>
-        ) : null}
-
+        </div>
         <div className="plan-field">
           <span className="plan-field-label">Est. $ each</span>
           <input
@@ -465,16 +409,6 @@ function PlanEditRow({ row, onChange, onRemove }) {
           />
         </div>
       </div>
-
-      {!isTreatment && (
-        <input
-          type="text"
-          className="form-input plan-notes-input"
-          value={row.notes}
-          onChange={(e) => onChange('notes', e.target.value)}
-          placeholder="Directions — e.g. use 2× daily"
-        />
-      )}
     </div>
   )
 }

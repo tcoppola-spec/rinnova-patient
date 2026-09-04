@@ -870,10 +870,102 @@
   margin: 0 0 10px;
 }
 
-/* The face leads the plan, like "Areas you treat" — give it a little breathing
-   room above the breakdown. */
-.plan-body .face-diagram-wrap {
-  margin-bottom: 14px;
+/* This year / Plan next year toggle — a segmented control. */
+.plan-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--line-soft);
+  border-radius: 999px;
+  margin: 10px 0 14px;
+}
+
+.plan-toggle-btn {
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--body);
+  cursor: pointer;
+}
+
+.plan-toggle-btn.is-active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.plan-toggle-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.plan-viewbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+  margin-bottom: 10px;
+}
+
+/* Area row: area name (heading), then dot + category + frequency beneath. */
+.plan-item-area {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-item-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--body);
+}
+
+.plan-item-cat {
+  color: var(--body);
+}
+
+.plan-item-freq {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.plan-item-btn {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0 20px 0 0;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.plan-item-chevron {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.plan-edit-cat {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 0 18px;
 }
 
 .plan-add-controls {

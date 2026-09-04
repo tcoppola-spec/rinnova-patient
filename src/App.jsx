@@ -6,7 +6,6 @@ import Greeting from './Greeting'
 import HeroCard from './HeroCard'
 import LogVisitPrompt from './LogVisitPrompt'
 import VisitsTimeline from './VisitsTimeline'
-import AreaCadenceSection from './AreaCadenceSection'
 import PhotosSection from './PhotosSection'
 import ProductsSection from './ProductsSection'
 import MaintenanceSection from './MaintenanceSection'
@@ -245,9 +244,11 @@ function App() {
           onRefetch={refetch}
         />
 
-        {/* Sits under the timeline: it's a reading OF the visits, so it should
-            follow them rather than compete with them for the top of the page. */}
-        <AreaCadenceSection visits={visits} />
+        {/* "Areas you treat" — the merged cadence + yearly-plan section. A
+            reading OF the visits, so it follows the timeline. Toggles between
+            this year (from the record) and next year (an editable plan seeded
+            from history). See docs/your-year-brief.md. */}
+        <MaintenanceSection planItems={planItems} visits={visits} onRefetch={refetch} />
 
         <PhotosSection
           photos={photos}
@@ -262,13 +263,8 @@ function App() {
 
         <ProductsSection products={products} onRefetch={refetch} />
 
-        {/* The yearly plan — a rough draft of what the patient expects this year,
-            with computed progress. Descriptive, never prescriptive
-            (docs/your-year-brief.md). */}
-        <MaintenanceSection planItems={planItems} visits={visits} onRefetch={refetch} />
-
         {/* The patient's own providers — the contacts the hero "Book" menu
-            dials. Now sits under Maintenance (docs/booking-providers-brief.md). */}
+            dials (docs/booking-providers-brief.md). */}
         <ProvidersSection providers={providers} onRefetch={refetch} />
 
         <SubscriptionsSection subscriptions={subscriptions} />

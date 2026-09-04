@@ -1,19 +1,24 @@
 /**
  * maintenancePlan.js
  *
- * Logic for the "Maintenance" yearly plan (docs/your-year-brief.md):
- *   - which calendar year to show by default
- *   - COMPUTED progress ("1 of 4 done") from the patient's logged visits
- *   - a projection that SEEDS a draft from the patient's own recent history
- *   - batch save of an edited plan
+ * Logic for the merged "Areas you treat" section (docs/your-year-brief.md): a
+ * face map, then a per-AREA breakdown that toggles between THIS YEAR (what the
+ * record shows) and PLAN NEXT YEAR (an editable draft seeded from history).
+ *
+ * Rows are keyed by AREA (Under eyes, Lips, Cheeks…), each carrying its dominant
+ * treatment category (the coloured dot). Plan rows store the area name in
+ * `title` and the color_key in `category`; face coordinates are resolved from the
+ * name at render, the same as everywhere else.
  *
  * Discipline (same as renewals.js / areaCadence.js): descriptive, from the
- * patient's OWN data. The projection is a rough starting draft the patient
- * edits, never a recommendation.
+ * patient's OWN data. "This year" is a reading of the record; "Plan next year"
+ * is a rough draft the patient edits — never a recommendation.
  */
 
 import { supabase } from './supabaseClient'
-import { TREATMENT_CATEGORIES, categoryOf } from './treatmentColors'
+import { getCoordinates } from './faceCoordinates'
+import { computeAreaCadence } from './areaCadence'
+import { TREATMENT_CATEGORIES } from './treatmentColors'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
@@ -23,89 +28,81 @@ async function myPatientId() {
   return data.id
 }
 
-/**
- * Which year to show first. Prefer the current calendar year if the patient has
- * a plan for it; otherwise, late in the year (Oct+) with nothing planned yet,
- * point at next year — there's little of this one left to plan.
- */
-export function defaultPlanYear(planItems = [], now = new Date()) {
-  const cy = now.getFullYear()
-  if (planItems.some((i) => i.plan_year === cy)) return cy
-  if (now.getMonth() >= 9) return cy + 1
-  return cy
+/** The two years the toggle offers. */
+export function planYears(now = new Date()) {
+  const y = now.getFullYear()
+  return { current: y, next: y + 1 }
 }
 
 /**
- * Distinct visit DATES in `year` that included a treatment of `category`. A date
- * is one event, not a row (same rule as area cadence): Radiesse + diluted
- * Radiesse on the same day is one filler event, not two.
+ * Canonical key for "the same place on the face", matching areaCadence: resolve
+ * the name through the coordinate table and group by the POINT, so "Zygoma" and
+ * "Cheekbones" are one area. Falls back to the normalised name when unplaceable.
  */
-export function doneCount(visits = [], category, year) {
+export function areaKeyForName(name) {
+  const c = getCoordinates(name)
+  if (c) return `pt:${c.x},${c.y}`
+  const n = (name || '').trim().toLowerCase()
+  return n ? `name:${n}` : null
+}
+
+function areaKeyForRow(area) {
+  const c = getCoordinates(area.clinical_name) || getCoordinates(area.friendly_name)
+  if (c) return `pt:${c.x},${c.y}`
+  const n = (area.friendly_name || area.clinical_name || '').trim().toLowerCase()
+  return n ? `name:${n}` : null
+}
+
+/**
+ * Distinct treatment DATES in `year` at the area whose name is `name`. A date is
+ * one event, not a row (Radiesse + diluted Radiesse the same day in one cheek is
+ * one treatment of that cheek).
+ */
+export function areaDoneInYear(visits = [], name, year) {
+  const key = areaKeyForName(name)
+  if (!key) return 0
   const dates = new Set()
   for (const v of visits) {
     if (!v?.visit_date) continue
     if (Number(v.visit_date.slice(0, 4)) !== year) continue
-    const hit = (v.treatments || []).some((t) => (t.color_key || 'other') === category)
+    let hit = false
+    for (const t of v.treatments || []) {
+      for (const a of t.treatment_areas || []) {
+        if (areaKeyForRow(a) === key) { hit = true; break }
+      }
+      if (hit) break
+    }
     if (hit) dates.add(v.visit_date)
   }
   return dates.size
 }
 
-// Rough industry cadence (times per year) — only a FALLBACK for the projection
-// when the patient has no recent history for a category. Their own recent count
-// wins. Tunable, like renewals.js DURATIONS.
-const TIMES_PER_YEAR = {
-  xeomin: 3,
-  rha: 1,
-  radiesse: 1,
-  'radiesse-light': 1,
-  biostimulator: 1,
-  kybella: 1,
-  prp: 3,
-  threads: 1,
-  dissolver: 0,
-  energy: 1,
-  light: 4,
-  resurfacing: 2,
-  other: 1,
-}
-
 /**
- * Seed a draft plan from the patient's OWN recent history: one row per treatment
- * category they've had in the last 365 days, with planned_count = how many times
- * they had it in that window (their real rhythm). Cost is left blank — visit
- * cost is per-visit, not per-category, so we don't invent a per-category price.
- *
- * Returns draft rows (no ids) ready to merge into the editor.
+ * Seed a draft plan from the patient's OWN history: one row per area they treat,
+ * with planned_count = how many times they treated it in the last 365 days
+ * (their real rhythm; falls back to 1). Category = the area's dominant treatment.
+ * Cost is left blank — we never invent a per-area price.
  */
-export function suggestPlanItems(visits = [], now = new Date()) {
-  const cutoff = now.getTime() - 365 * MS_PER_DAY
-  const counts = {} // category -> Set of dates in the window
-  for (const v of visits) {
-    if (!v?.visit_date) continue
-    const t = new Date(v.visit_date + 'T00:00:00').getTime()
-    if (t < cutoff) continue
-    for (const tr of v.treatments || []) {
-      const cat = tr.color_key || 'other'
-      if (!counts[cat]) counts[cat] = new Set()
-      counts[cat].add(v.visit_date)
-    }
-  }
-  const rows = Object.entries(counts).map(([category, dates]) => ({
-    kind: 'treatment',
-    category,
-    title: categoryOf(category).label,
-    planned_count: dates.size || TIMES_PER_YEAR[category] || 1,
-    est_cost: null,
-    notes: null,
-    source: 'projection',
-  }))
-  // Most-frequent first, then alphabetical, so the draft reads sensibly.
-  rows.sort((a, b) => b.planned_count - a.planned_count || a.title.localeCompare(b.title))
-  return rows
+export function suggestAreaPlan(visits = [], now = Date.now()) {
+  const cutoff = now - 365 * MS_PER_DAY
+  const areas = computeAreaCadence(visits, now)
+  return areas
+    .filter((a) => a.label)
+    .map((a) => {
+      const recent = a.dates.filter((d) => d.getTime() >= cutoff).length
+      return {
+        kind: 'treatment',
+        category: a.colorKeys[0] || 'other',
+        title: a.label,
+        planned_count: recent || 1,
+        est_cost: '',
+        notes: '',
+        source: 'projection',
+      }
+    })
 }
 
-/** Category options for the "add a treatment" picker (all known categories). */
+/** Category options for the dot picker in the editor. */
 export function treatmentCategoryOptions() {
   return Object.entries(TREATMENT_CATEGORIES).map(([key, v]) => ({
     key,
@@ -114,7 +111,7 @@ export function treatmentCategoryOptions() {
   }))
 }
 
-/** Estimated annual total for a year's rows: planned_count × est_cost. */
+/** Estimated annual total for a set of rows: planned_count × est_cost. */
 export function planTotal(rows = []) {
   return rows.reduce((sum, r) => {
     const cost = Number(r.est_cost)
@@ -125,9 +122,8 @@ export function planTotal(rows = []) {
 }
 
 /**
- * Persist an edited plan for one year. Simple and robust rather than clever:
- * delete rows the patient removed, insert new rows, update the rest. Blank-title
- * rows are dropped. One refetch happens in the caller afterward.
+ * Persist an edited plan for one year: delete removed rows, insert new, update
+ * the rest. Blank-title rows are dropped. One refetch happens in the caller.
  */
 export async function savePlan(year, draft = [], original = []) {
   const patientId = await myPatientId()
@@ -138,7 +134,6 @@ export async function savePlan(year, draft = [], original = []) {
 
   const keptIds = new Set(cleaned.filter((d) => d.id).map((d) => d.id))
 
-  // Deletes
   for (const o of original) {
     if (!keptIds.has(o.id)) {
       const { data, error } = await supabase
@@ -153,12 +148,11 @@ export async function savePlan(year, draft = [], original = []) {
     }
   }
 
-  // Inserts + updates
   for (const d of cleaned) {
     const row = {
       plan_year: year,
-      kind: d.kind === 'product' ? 'product' : 'treatment',
-      category: d.kind === 'product' ? null : d.category || null,
+      kind: 'treatment',
+      category: d.category || 'other',
       title: d.title.trim(),
       planned_count: Math.max(1, Number(d.planned_count) || 1),
       est_cost:
