@@ -1,4 +1,17 @@
-# "Maintenance" — yearly plan / roadmap (design brief)
+# "Areas you treat" — cadence + yearly plan (design brief)
+
+> **UPDATE Sep 4 2026 — MERGED & SHIPPED.** The Maintenance plan and the
+> standalone "Areas you treat" (cadence) turned out to be two views of the same
+> truth, so they were merged into ONE section titled **"Areas you treat"**, in
+> the Maintenance look: a weighted face map, then per-AREA rows (area name +
+> dominant treatment dot/label + frequency), with a **This year / Plan {next
+> year}** toggle. "This year" is descriptive (from the record — "2× this year",
+> or "2 of 4 done" against a saved plan); "Plan next year" is an editable draft
+> seeded from history. Rows tap through to the cadence detail. Plan rows are
+> area-based (`plan_items.title` = area name, `category` = color_key). The
+> standalone cadence section was removed. The category-level design below is the
+> ORIGINAL plan; it's kept for the reasoning, but the shipped shape is area-based
+> per this note.
 
 > Status: **draft for review — shape signed off by Tracy (Sep 2026).** Not built.
 > Captures the shape, the hard constraints, and a sliced build path. Reacts to
