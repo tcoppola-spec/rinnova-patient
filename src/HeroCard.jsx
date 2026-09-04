@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { computeRenewals, formatMonths } from './renewals'
-import { addProvider } from './patientProviders'
+import { addProvider, formatPhone } from './patientProviders'
 
 /**
  * HeroCard
@@ -241,7 +241,7 @@ function AddProviderInline({ makePrimary, onAdded }) {
         inputMode="tel"
         className="form-input"
         value={phone}
-        onChange={(e) => setPhone(e.target.value)}
+        onChange={(e) => setPhone(formatPhone(e.target.value))}
         placeholder="Phone number"
         disabled={saving}
       />

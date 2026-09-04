@@ -12,6 +12,23 @@
 
 import { supabase } from './supabaseClient'
 
+/**
+ * Standardize a US phone number to "(305) 705-6675" — used both as the field is
+ * typed and before storing, so every provider number in the record looks the
+ * same. Strips a leading US country code, caps at 10 digits, and formats
+ * progressively so it reads sensibly mid-typing. US-centric on purpose (the
+ * pilot is US); idempotent on an already-formatted number.
+ */
+export function formatPhone(value) {
+  const digits = (value || '').replace(/\D/g, '')
+  const d = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits
+  const p = d.slice(0, 10)
+  if (p.length === 0) return ''
+  if (p.length < 4) return `(${p}`
+  if (p.length < 7) return `(${p.slice(0, 3)}) ${p.slice(3)}`
+  return `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}`
+}
+
 async function myPatientId() {
   const { data, error } = await supabase.from('patients').select('id').single()
   if (error || !data) throw new Error('Could not find your patient record')
@@ -43,7 +60,7 @@ export async function addProvider({ name, phone, makePrimary = false }) {
   const payload = {
     patient_id: patientId,
     name: trimmedName,
-    phone: (phone || '').trim() || null,
+    phone: formatPhone(phone) || null,
     is_primary: !!makePrimary,
   }
   const { data, error } = await supabase
@@ -78,7 +95,7 @@ export async function updateProvider(id, { name, phone }) {
   if (!trimmedName) throw new Error('A name is required')
   const { data, error } = await supabase
     .from('patient_providers')
-    .update({ name: trimmedName, phone: (phone || '').trim() || null, updated_at: new Date().toISOString() })
+    .update({ name: trimmedName, phone: formatPhone(phone) || null, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('id')
   if (error) throw error

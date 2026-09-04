@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { addProvider, setPrimary, deleteProvider } from './patientProviders'
+import { addProvider, setPrimary, deleteProvider, formatPhone } from './patientProviders'
 
 /**
  * ProvidersSection
@@ -227,7 +227,7 @@ function AddProviderForm({ hasExisting, onSaved }) {
           type="tel"
           inputMode="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
           onKeyDown={handleKeyDown}
           placeholder="Phone number (optional)"
           className="form-input"
