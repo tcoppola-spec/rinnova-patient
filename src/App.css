@@ -1482,6 +1482,42 @@
   pointer-events: none;
 }
 
+/* Zoom controls, bottom-right of the face panel (log-a-visit only). */
+.face-zoom-controls {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.face-zoom-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.face-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.face-zoom-reset {
+  color: var(--magenta);
+}
+
 .face-diagram-svg .area-dot circle {
   stroke: #FFFFFF;
   stroke-width: 1.5;

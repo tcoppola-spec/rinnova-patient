@@ -549,9 +549,9 @@ function ManualVisitEntry({ onBuilt, onCancel }) {
             <path d="M12 10.5V9.5a1.5 1.5 0 0 1 3 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             <path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a4 4 0 0 1-4 4h-2a4 4 0 0 1-3.2-1.6l-2.3-3a1.4 1.4 0 0 1 2-2l1.5 1.3V11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span>{active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went'}</span>
+          <span>{active ? `Spot: ${active.regionLabel}` : 'Tap the face where the treatment went — pinch or + to zoom in'}</span>
         </p>
-        <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} />
+        <FaceDiagram dots={dots} halos={halos} legend={null} onPointTap={handleTap} zoomable />
       </div>
 
       {/* What's been placed so far — tap one to edit / add an amount */}

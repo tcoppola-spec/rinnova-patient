@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useRef, useState } from 'react'
 import {
   VIEWBOX,
   MIRROR_AXIS,
@@ -46,6 +46,10 @@ import { categoryColor, categoryMark } from './treatmentColors'
  *     becomes tappable (used by manual entry — tap the face, snap to a region).
  *     Coordinates are converted through the SVG's own CTM, so they're exact
  *     regardless of how the image is scaled or letterboxed on screen.
+ *   zoomable: optional. Adds pinch-to-zoom + drag-to-pan + zoom buttons so a
+ *     patient can get in close and place a mark precisely (log-a-visit). Zoom is
+ *     done by narrowing the SVG viewBox, NOT a CSS transform, so getScreenCTM
+ *     still maps a tap to the exact spot. A single tap (no drag) still places.
  */
 
 
@@ -78,23 +82,132 @@ function FaceArt() {
   )
 }
 
-function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend, onPointTap }) {
+function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend, onPointTap, zoomable = false }) {
   // useId can contain ':', which is not valid inside a url(#...) reference.
   const uid = useId().replace(/:/g, '')
   const clipId = `face-half-${uid}`
 
-  // Convert a screen tap into the SVG's own coordinate space via its CTM, so it
-  // maps correctly no matter how the image is scaled/letterboxed. Off unless a
-  // caller wants taps (manual entry).
-  function handleSvgTap(e) {
-    const svg = e.currentTarget
+  // ---- zoom / pan (viewBox-based, only when `zoomable`) ----
+  const FULL = { x: 0, y: 0, w: VIEWBOX.width, h: VIEWBOX.height }
+  const MIN_W = VIEWBOX.width / 4 // deepest zoom = 4×
+  const ASPECT = VIEWBOX.height / VIEWBOX.width
+  const svgRef = useRef(null)
+  const pointers = useRef(new Map())
+  const gesture = useRef(null)
+  const moved = useRef(false)
+  const [view, setView] = useState(FULL)
+  const isZoomed = view.w < FULL.w - 0.5
+
+  function clampView(v) {
+    const w = Math.min(FULL.w, Math.max(MIN_W, v.w))
+    const h = w * ASPECT
+    const x = Math.min(FULL.w - w, Math.max(0, v.x))
+    const y = Math.min(FULL.h - h, Math.max(0, v.y))
+    return { x, y, w, h }
+  }
+
+  function svgRect() {
+    return svgRef.current.getBoundingClientRect()
+  }
+
+  function screenToUser(clientX, clientY) {
+    const svg = svgRef.current
     const ctm = svg.getScreenCTM()
-    if (!ctm) return
+    if (!ctm) return null
     const pt = svg.createSVGPoint()
-    pt.x = e.clientX
-    pt.y = e.clientY
-    const p = pt.matrixTransform(ctm.inverse())
-    onPointTap(p.x, p.y)
+    pt.x = clientX
+    pt.y = clientY
+    return pt.matrixTransform(ctm.inverse())
+  }
+
+  // Convert a screen tap into the SVG's own coordinate space via its CTM (the
+  // dynamic viewBox is baked into the CTM), so it maps correctly no matter how
+  // the image is scaled, letterboxed, or zoomed. Used only for the non-zoomable
+  // click path; the zoomable path taps from pointerup.
+  function handleSvgTap(e) {
+    const p = screenToUser(e.clientX, e.clientY)
+    if (p) onPointTap(p.x, p.y)
+  }
+
+  function onPointerDown(e) {
+    const svg = svgRef.current
+    svg.setPointerCapture?.(e.pointerId)
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size === 1) {
+      gesture.current = { mode: 'pan', startX: e.clientX, startY: e.clientY, startView: view }
+      moved.current = false
+    } else if (pointers.current.size === 2) {
+      const pts = [...pointers.current.values()]
+      gesture.current = {
+        mode: 'pinch',
+        startDist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1,
+        startView: view,
+      }
+      moved.current = true // a pinch is never a tap
+    }
+  }
+
+  function onPointerMove(e) {
+    if (!pointers.current.has(e.pointerId)) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const g = gesture.current
+    if (!g) return
+    const r = svgRect()
+    if (g.mode === 'pinch' && pointers.current.size >= 2) {
+      const pts = [...pointers.current.values()]
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1
+      const midX = (pts[0].x + pts[1].x) / 2
+      const midY = (pts[0].y + pts[1].y) / 2
+      let w = Math.min(FULL.w, Math.max(MIN_W, g.startView.w * (g.startDist / dist)))
+      const h = w * ASPECT
+      // Keep the point under the pinch midpoint fixed.
+      const ux = g.startView.x + ((midX - r.left) / r.width) * g.startView.w
+      const uy = g.startView.y + ((midY - r.top) / r.height) * g.startView.h
+      setView(clampView({
+        x: ux - ((midX - r.left) / r.width) * w,
+        y: uy - ((midY - r.top) / r.height) * h,
+        w,
+        h,
+      }))
+    } else if (g.mode === 'pan' && pointers.current.size === 1) {
+      const dxpx = e.clientX - g.startX
+      const dypx = e.clientY - g.startY
+      if (Math.hypot(dxpx, dypx) > 6) moved.current = true
+      if (g.startView.w < FULL.w - 0.5) {
+        setView(clampView({
+          x: g.startView.x - (dxpx / r.width) * g.startView.w,
+          y: g.startView.y - (dypx / r.height) * g.startView.h,
+          w: g.startView.w,
+          h: g.startView.h,
+        }))
+      }
+    }
+  }
+
+  function onPointerUp(e) {
+    const wasSingle = pointers.current.size === 1
+    pointers.current.delete(e.pointerId)
+    const g = gesture.current
+    if (wasSingle && g?.mode === 'pan' && !moved.current && onPointTap) {
+      const p = screenToUser(e.clientX, e.clientY)
+      if (p) onPointTap(p.x, p.y)
+    }
+    if (pointers.current.size === 0) {
+      gesture.current = null
+    } else {
+      // Coming out of a pinch back to one finger: resume panning, no stray tap.
+      const only = [...pointers.current.values()][0]
+      gesture.current = { mode: 'pan', startX: only.x, startY: only.y, startView: view }
+      moved.current = true
+    }
+  }
+
+  function zoomBy(factor) {
+    const cx = view.x + view.w / 2
+    const cy = view.y + view.h / 2
+    const w = Math.min(FULL.w, Math.max(MIN_W, view.w * factor))
+    const h = w * ASPECT
+    setView(clampView({ x: cx - w / 2, y: cy - h / 2, w, h }))
   }
 
   // A caller can supply its own marks (AreaCadenceSection weights dots by how
@@ -147,13 +260,25 @@ function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend
   return (
     <div className="face-diagram-wrap">
       <svg
+        ref={svgRef}
         className="face-diagram-svg"
-        viewBox={`0 0 ${VIEWBOX.width} ${VIEWBOX.height}`}
+        viewBox={
+          zoomable
+            ? `${view.x} ${view.y} ${view.w} ${view.h}`
+            : `0 0 ${VIEWBOX.width} ${VIEWBOX.height}`
+        }
         xmlns="http://www.w3.org/2000/svg"
         aria-label="Face diagram showing treatment areas"
         role="img"
-        onClick={onPointTap ? handleSvgTap : undefined}
-        style={onPointTap ? { cursor: 'crosshair' } : undefined}
+        onClick={!zoomable && onPointTap ? handleSvgTap : undefined}
+        onPointerDown={zoomable ? onPointerDown : undefined}
+        onPointerMove={zoomable ? onPointerMove : undefined}
+        onPointerUp={zoomable ? onPointerUp : undefined}
+        onPointerCancel={zoomable ? onPointerUp : undefined}
+        style={{
+          cursor: onPointTap ? 'crosshair' : undefined,
+          touchAction: zoomable ? 'none' : undefined,
+        }}
       >
         <defs>
           <clipPath id={clipId}>
@@ -215,6 +340,43 @@ function FaceDiagram({ treatments = [], dots: dotsProp, halos: halosProp, legend
         ))}
 
       </svg>
+
+      {/* Zoom controls (log-a-visit only). Buttons are a reliable path to a
+          precise placement even where pinch is awkward. */}
+      {zoomable && (
+        <div className="face-zoom-controls">
+          <button
+            type="button"
+            className="face-zoom-btn"
+            onClick={() => zoomBy(1 / 1.5)}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="face-zoom-btn"
+            onClick={() => zoomBy(1.5)}
+            disabled={!isZoomed}
+            aria-label="Zoom out"
+          >
+            −
+          </button>
+          {isZoomed && (
+            <button
+              type="button"
+              className="face-zoom-btn face-zoom-reset"
+              onClick={() => setView(FULL)}
+              aria-label="Reset zoom"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4v6h6M20 20v-6h-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M20 10a8 8 0 0 0-14-3M4 14a8 8 0 0 0 14 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Watermark, bottom-left of the beige panel (not the SVG) so it sits near
           the panel edge, well clear of the face. */}
